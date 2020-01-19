@@ -21,10 +21,9 @@
 Write values in tracker and check the actual values are written
 on the files. Note that these tests are highly platform dependant.
 """
-import os
+import os, dbus
 import time
 
-from common.utils.extractor import get_tracker_extract_output
 from common.utils.writebacktest import CommonTrackerWritebackTest as CommonTrackerWritebackTest
 import unittest2 as ut
 from common.utils.expectedFailure import expectedFailureBug
@@ -70,10 +69,6 @@ class WritebackBasicDataTest (CommonTrackerWritebackTest):
         the @prop is used.
         """
 
-        # FIXME: filename is actually a URI! :(
-        filename_real = filename[len('file://'):]
-        initial_mtime = os.stat(filename_real).st_mtime
-
         TEST_VALUE = prop.replace (":","") + "test"
         SPARQL_TMPL = """
            INSERT { ?u %s '%s' }
@@ -81,10 +76,11 @@ class WritebackBasicDataTest (CommonTrackerWritebackTest):
         """ 
         self.__clean_property (prop, filename)
         self.tracker.update (SPARQL_TMPL % (prop, TEST_VALUE, filename))
-
-        self.wait_for_file_change(filename_real, initial_mtime)
-
-        results = get_tracker_extract_output (filename, mimetype)
+        
+        # There is no way to know when the operation is finished
+        time.sleep (REASONABLE_TIMEOUT)
+        
+        results = self.extractor.get_metadata (filename, mimetype)
         keyDict = expectedKey or prop
         self.assertIn (TEST_VALUE, results[keyDict])
         self.__clean_property (prop, filename, False)
@@ -116,7 +112,7 @@ class WritebackBasicDataTest (CommonTrackerWritebackTest):
 
         time.sleep (REASONABLE_TIMEOUT)
 
-        results = get_tracker_extract_output (filename, mimetype)
+        results = self.extractor.get_metadata (filename, mimetype)
         self.assertIn ("testTag", results ["nao:hasTag"])
 
 

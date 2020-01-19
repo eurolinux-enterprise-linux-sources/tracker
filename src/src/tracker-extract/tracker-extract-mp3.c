@@ -20,6 +20,10 @@
 
 #include "config.h"
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,13 +40,11 @@
 #include <sys/mman.h>
 #endif /* G_OS_WIN32 */
 
-#ifdef HAVE_LIBMEDIAART
-#include <libmediaart/mediaart.h>
-#endif
-
 #include <libtracker-common/tracker-common.h>
 
 #include <libtracker-extract/tracker-extract.h>
+
+#include "tracker-media-art.h"
 
 #ifdef FRAME_ENABLE_TRACE
 #warning Frame traces enabled
@@ -151,14 +153,12 @@ typedef struct {
 	size_t id3v2_size;
 
 	const gchar *title;
-	const gchar *performer_name;
-	TrackerResource *performer;
-	const gchar *album_artist_name;
-	TrackerResource *album_artist;
-	const gchar *lyricist_name;
-	TrackerResource *lyricist;
-	const gchar *album_name;
-	TrackerResource *album;
+	const gchar *performer;
+	gchar *performer_uri;
+	const gchar *lyricist;
+	gchar *lyricist_uri;
+	const gchar *album;
+	gchar *album_uri;
 	const gchar *genre;
 	const gchar *text;
 	const gchar *recording_time;
@@ -166,8 +166,8 @@ typedef struct {
 	const gchar *copyright;
 	const gchar *publisher;
 	const gchar *comment;
-	const gchar *composer_name;
-	TrackerResource *composer;
+	const gchar *composer;
+	gchar *composer_uri;
 	gint track_number;
 	gint track_count;
 	gint set_number;
@@ -437,17 +437,6 @@ static gint spf_table[6] = {
 	48, 144, 144, 48, 144,  72
 };
 
-#ifndef HAVE_STRNLEN
-
-size_t
-strnlen (const char *str, size_t max)
-{
-	const char *end = memchr (str, 0, max);
-	return end ? (size_t)(end - str) : max;
-}
-
-#endif /* HAVE_STRNLEN */
-
 static void
 id3tag_free (id3tag *tags)
 {
@@ -677,21 +666,12 @@ get_encoding (const gchar *data,
               gsize        size,
               gboolean    *encoding_found)
 {
-	gdouble confidence = 1;
 	gchar *encoding;
 
 	/* Try to guess encoding */
 	encoding = (data && size ?
-	            tracker_encoding_guess (data, size, &confidence) :
+	            tracker_encoding_guess (data, size) :
 	            NULL);
-
-	if (confidence < 0.5) {
-		/* Confidence on the results was too low, bail out and
-		 * fallback to the default ISO-8859-1/Windows-1252 encoding.
-		 */
-		g_free (encoding);
-		encoding = NULL;
-	}
 
 	/* Notify if a proper detection was done */
 	if (encoding_found) {
@@ -856,7 +836,7 @@ mp3_parse_header (const gchar          *data,
                   size_t                size,
                   size_t                seek_pos,
                   const gchar          *uri,
-                  TrackerResource      *resource,
+                  TrackerSparqlBuilder *metadata,
                   MP3Data              *filedata)
 {
 	const gchar *dlna_profile, *dlna_mimetype;
@@ -973,11 +953,13 @@ mp3_parse_header (const gchar          *data,
 		return FALSE;
 	}
 
-	tracker_resource_set_string (resource, "nfo:codec", "MPEG");
+	tracker_sparql_builder_predicate (metadata, "nfo:codec");
+	tracker_sparql_builder_object_string (metadata, "MPEG");
 
 	n_channels = ((header & ch_mask) == ch_mask) ? 1 : 2;
 
-	tracker_resource_set_int (resource, "nfo:channels", n_channels);
+	tracker_sparql_builder_predicate (metadata, "nfo:channels");
+	tracker_sparql_builder_object_int64 (metadata, n_channels);
 
 	avg_bps /= frames;
 
@@ -990,26 +972,32 @@ mp3_parse_header (const gchar          *data,
 		length = spfp8 * 8 * frames / sample_rate;
 	}
 
-	tracker_resource_set_int64 (resource, "nfo:duration", length);
-	tracker_resource_set_int64 (resource, "nfo:sampleRate", sample_rate);
-	tracker_resource_set_int64 (resource, "nfo:averageBitrate", avg_bps*1000);
+	tracker_sparql_builder_predicate (metadata, "nfo:duration");
+	tracker_sparql_builder_object_int64 (metadata, length);
+
+	tracker_sparql_builder_predicate (metadata, "nfo:sampleRate");
+	tracker_sparql_builder_object_int64 (metadata, sample_rate);
+	tracker_sparql_builder_predicate (metadata, "nfo:averageBitrate");
+	tracker_sparql_builder_object_int64 (metadata, avg_bps*1000);
 
 	if (guess_dlna_profile (bitrate, sample_rate,
 	                        mpeg_ver, layer_ver, n_channels,
 	                        &dlna_profile, &dlna_mimetype)) {
-		tracker_resource_set_string (resource, "nmm:dlnaProfile", dlna_profile);
-		tracker_resource_set_string (resource, "nmm:dlnaMime", dlna_mimetype);
+		tracker_sparql_builder_predicate (metadata, "nmm:dlnaProfile");
+		tracker_sparql_builder_object_string (metadata, dlna_profile);
+		tracker_sparql_builder_predicate (metadata, "nmm:dlnaMime");
+		tracker_sparql_builder_object_string (metadata, dlna_mimetype);
 	}
 
 	return TRUE;
 }
 
-static gboolean
+static void
 mp3_parse (const gchar          *data,
            size_t                size,
            size_t                offset,
            const gchar          *uri,
-           TrackerResource      *resource,
+           TrackerSparqlBuilder *metadata,
            MP3Data              *filedata)
 {
 	guint header;
@@ -1019,23 +1007,21 @@ mp3_parse (const gchar          *data,
 	do {
 		/* Seek for frame start */
 		if (pos + sizeof (header) > size) {
-			return FALSE;
+			return;
 		}
 
 		memcpy (&header, &data[pos], sizeof (header));
 
 		if ((header & sync_mask) == sync_mask) {
 			/* Found header sync */
-			if (mp3_parse_header (data, size, pos, uri, resource, filedata)) {
-				return TRUE;
+			if (mp3_parse_header (data, size, pos, uri, metadata, filedata)) {
+				return;
 			}
 		}
 
 		pos++;
 		counter++;
 	} while (counter < MAX_MP3_SCAN_DEEP);
-
-	return FALSE;
 }
 
 static gssize
@@ -1061,7 +1047,7 @@ id3v2_strlen (const gchar  encoding,
 	switch (encoding) {
 	case 0x01:
 	case 0x02:
-
+		
 		/* UTF-16, string terminated by two NUL bytes */
 		pos = memmem (text, len, "\0\0\0", 3);
 
@@ -1238,7 +1224,7 @@ get_id3v24_tags (id3v24frame           frame,
                  size_t                csize,
                  id3tag               *info,
                  const gchar          *uri,
-                 TrackerResource      *resource,
+                 TrackerSparqlBuilder *metadata,
                  MP3Data              *filedata)
 {
 	id3v2tag *tag = &filedata->id3v24;
@@ -1287,9 +1273,6 @@ get_id3v24_tags (id3v24frame           frame,
 		offset        = 4 + text_desc_len + id3v2_nul_size (text_encode);
 		text          = &data[pos + offset]; /* <full text string according to encoding> */
 
-		if (offset >= csize)
-			break;
-
 		word = id3v24_text_to_utf8 (text_encode, text, csize - offset, info);
 
 		if (!tracker_is_empty_string (word)) {
@@ -1311,7 +1294,6 @@ get_id3v24_tags (id3v24frame           frame,
 			g_strstrip (word);
 		} else {
 			/* Can't do anything without word. */
-			g_free (word);
 			break;
 		}
 
@@ -1431,7 +1413,7 @@ get_id3v23_tags (id3v24frame           frame,
                  size_t                csize,
                  id3tag               *info,
                  const gchar          *uri,
-                 TrackerResource      *resource,
+                 TrackerSparqlBuilder *metadata,
                  MP3Data              *filedata)
 {
 	id3v2tag *tag = &filedata->id3v23;
@@ -1503,7 +1485,6 @@ get_id3v23_tags (id3v24frame           frame,
 			g_strstrip (word);
 		} else {
 			/* Can't do anything without word. */
-			g_free (word);
 			break;
 		}
 
@@ -1616,7 +1597,7 @@ get_id3v20_tags (id3v2frame            frame,
                  size_t                csize,
                  id3tag               *info,
                  const gchar          *uri,
-                 TrackerResource      *resource,
+                 TrackerSparqlBuilder *metadata,
                  MP3Data              *filedata)
 {
 	id3v2tag *tag = &filedata->id3v22;
@@ -1746,12 +1727,10 @@ parse_id3v24 (const gchar           *data,
               size_t                 size,
               id3tag                *info,
               const gchar           *uri,
-              TrackerResource       *resource,
+              TrackerSparqlBuilder  *metadata,
               MP3Data               *filedata,
               size_t                *offset_delta)
 {
-	const gint header_size = 10;
-	const gint frame_size = 10;
 	gint unsync;
 	gint ext_header;
 	gint experimental;
@@ -1759,121 +1738,52 @@ parse_id3v24 (const gchar           *data,
 	guint pos;
 	guint ext_header_size;
 
-	/* Check header, expecting (in hex), 10 bytes long:
-	 *
-	 *   $ 49 44 33 yy yy xx zz zz zz zz
-	 *
-	 * Where yy is less than $FF, xx is the 'flags' byte and zz is
-	 * less than $80.
-	 *
-	 * Here yy is the version, so v24 == 04 00.
-	 *
-	 * MP3's look like this:
-	 *
-	 *   [Header][?External Header?][Tags][Content]
-	 */
 	if ((size < 16) ||
 	    (data[0] != 0x49) ||
 	    (data[1] != 0x44) ||
 	    (data[2] != 0x33) ||
 	    (data[3] != 0x04) ||
-	    (data[4] != 0x00)) {
-		/* It's not an error, we might try another function
-		 * if we have the wrong version header here.
-		 */
+	    (data[4] != 0x00) ) {
 		return;
 	}
 
-	/* Get the flags (xx) in the header */
 	unsync = (data[5] & 0x80) > 0;
 	ext_header = (data[5] & 0x40) > 0;
 	experimental = (data[5] & 0x20) > 0;
-
-	/* Get the complete tag size (zz) in the header:
-	 * Tag size is size of the complete tag after
-	 * unsychronisation, including padding, excluding the header
-	 * but not excluding the extended header (total tag size - 10)
-	 */
 	tsize = (((data[6] & 0x7F) << 21) |
 	         ((data[7] & 0x7F) << 14) |
 	         ((data[8] & 0x7F) << 7) |
 	         ((data[9] & 0x7F) << 0));
 
-	/* We don't handle experimental cases */
-	if (experimental) {
-		g_message ("[v24] Experimental MP3s are not extracted, doing nothing");
+	if ((tsize + 10 > size) || (experimental)) {
 		return;
 	}
 
-	/* Check if we can read even the first frame, The complete
-	 * tag size (tsize) does not include the header which is 10
-	 * bytes, so we check that there is some content AFTER the
-	 * headers. */
-	if (tsize + header_size > size) {
-		g_message ("[v24] Expected MP3 tag size and header size to be within file size boundaries");
-		return;
-	}
+	pos = 10;
 
-	/* Start after the header (10 bytes long) */
-	pos = header_size;
-
-	/* Completely optional */
 	if (ext_header) {
-		/* Extended header is expected to be:
-		 *   Extended header size   $xx xx xx xx (4 chars)
-		 *   Extended Flags         $xx xx
-		 *   Size of padding        $xx xx xx xx
-		 */
 		ext_header_size = (((data[10] & 0x7F) << 21) |
 		                   ((data[11] & 0x7F) << 14) |
 		                   ((data[12] & 0x7F) << 7) |
 		                   ((data[13] & 0x7F) << 0));
+		pos += ext_header_size;
 
-		/* Where the 'Extended header size', currently 6 or 10
-		 * bytes, excludes itself. The 'Size of padding' is
-		 * simply the total tag size excluding the frames and
-		 * the headers, in other words the padding.
-		 */
-		if (tsize + header_size + ext_header_size > size) {
-			g_message ("[v24] Expected MP3 tag size and extended header size to be within file size boundaries");
+		if (pos + tsize > size) {
+			/* invalid size: extended header longer than tag */
 			return;
 		}
-
-		pos += ext_header_size;
 	}
 
-	while (pos < tsize + header_size) {
-		const char *frame_name;
+	while (pos < size) {
 		id3v24frame frame;
 		size_t csize;
 		unsigned short flags;
 
-		/* Frames are 10 bytes each and made up of:
-		 *   Frame ID       $xx xx xx xx (4 chars)
-		 *   Size           $xx xx xx xx
-		 *   Flags          $xx xx
-		 */
-		if (pos + frame_size > tsize + header_size) {
-			g_message ("[v24] Expected MP3 frame size (%d) to be within tag size (%d) boundaries, position = %d",
-			           frame_size,
-			           tsize + header_size,
-			           pos);
-			break;
+		if (pos + 10 > size) {
+			return;
 		}
 
-		frame_name = &data[pos];
-
-		/* We found padding after all frames */
-		if (frame_name[0] == '\0')
-			break;
-
-		/* We found a IDv2 footer */
-		if (frame_name[0] == '3' &&
-		    frame_name[1] == 'D' &&
-		    frame_name[2] == 'I')
-			break;
-
-		frame = id3v24_get_frame (frame_name);
+		frame = id3v24_get_frame (&data[pos]);
 
 		csize = (((data[pos+4] & 0x7F) << 21) |
 		         ((data[pos+5] & 0x7F) << 14) |
@@ -1883,41 +1793,22 @@ parse_id3v24 (const gchar           *data,
 		flags = (((unsigned char) (data[pos + 8]) << 8) +
 		         ((unsigned char) (data[pos + 9])));
 
-		pos += frame_size;
+		pos += 10;
 
 		if (frame == ID3V24_UNKNOWN) {
-			/* Ignore unknown frames */
-			g_debug ("[v24] Ignoring unknown frame '%s' (pos:%d, size:%" G_GSIZE_FORMAT ")", frame_name, pos, csize);
+			/* ignore unknown frames */
 			pos += csize;
 			continue;
-		} else {
-			g_debug ("[v24] Processing frame '%s'", frame_name);
 		}
 
-		/* If content size is more than size of file, stop. If
-		 * If content size is 0 then continue to next frame. */
-		if (pos + csize > tsize + header_size) {
-			g_debug ("[v24] Position (%d) + content size (%" G_GSIZE_FORMAT ") > tag size (%d), not processing any more frames", pos, csize, tsize + header_size);
+		if (pos + csize > size) {
 			break;
 		} else if (csize == 0) {
-			g_debug ("[v24] Content size was 0, moving to next frame");
 			continue;
 		}
 
-		/* Frame flags expected are in format of:
-		 *
-		 *   %abc00000 %ijk00000
-		 *
-		 * a - Tag alter preservation
-		 * b - File alter preservation
-		 * c - Read only
-		 * i - Compression
-		 * j - Encryption
-		 * k - Grouping identity
-		 */
 		if (((flags & 0x80) > 0) ||
 		    ((flags & 0x40) > 0)) {
-			g_debug ("[v23] Ignoring frame '%s', frame flags 0x80 or 0x40 found (compression / encryption)", frame_name);
 			pos += csize;
 			continue;
 		}
@@ -1933,16 +1824,16 @@ parse_id3v24 (const gchar           *data,
 			gchar *body;
 
 			un_unsync (&data[pos], csize, (unsigned char **) &body, &unsync_size);
-			get_id3v24_tags (frame, body, unsync_size, info, uri, resource, filedata);
+			get_id3v24_tags (frame, body, unsync_size, info, uri, metadata, filedata);
 			g_free (body);
 		} else {
-			get_id3v24_tags (frame, &data[pos], csize, info, uri, resource, filedata);
+			get_id3v24_tags (frame, &data[pos], csize, info, uri, metadata, filedata);
 		}
 
 		pos += csize;
 	}
 
-	*offset_delta = tsize + header_size;
+	*offset_delta = tsize + 10;
 }
 
 static void
@@ -1950,128 +1841,77 @@ parse_id3v23 (const gchar          *data,
               size_t                size,
               id3tag               *info,
               const gchar          *uri,
-              TrackerResource      *resource,
+              TrackerSparqlBuilder *metadata,
               MP3Data              *filedata,
               size_t               *offset_delta)
 {
-	const gint header_size = 10;
-	const gint frame_size = 10;
 	gint unsync;
 	gint ext_header;
 	gint experimental;
 	guint tsize;
 	guint pos;
 	guint ext_header_size;
+	guint padding;
 
-	/* Check header, expecting (in hex), 10 bytes long:
-	 *
-	 *   $ 49 44 33 yy yy xx zz zz zz zz
-	 *
-	 * Where yy is less than $FF, xx is the 'flags' byte and zz is
-	 * less than $80.
-	 *
-	 * Here yy is the version, so v23 == 03 00.
-	 *
-	 * MP3's look like this:
-	 *
-	 *   [Header][?External Header?][Tags][Content]
-	 */
 	if ((size < 16) ||
 	    (data[0] != 0x49) ||
 	    (data[1] != 0x44) ||
 	    (data[2] != 0x33) ||
 	    (data[3] != 0x03) ||
 	    (data[4] != 0x00)) {
-		/* It's not an error, we might try another function
-		 * if we have the wrong version header here.
-		 */
 		return;
 	}
 
-	/* Get the flags (xx) in the header */
 	unsync = (data[5] & 0x80) > 0;
 	ext_header = (data[5] & 0x40) > 0;
 	experimental = (data[5] & 0x20) > 0;
-
-	/* Get the complete tag size (zz) in the header:
-	 * Tag size is size of the complete tag after
-	 * unsychronisation, including padding, excluding the header
-	 * but not excluding the extended header (total tag size - 10)
-	 */
 	tsize = (((data[6] & 0x7F) << 21) |
 	         ((data[7] & 0x7F) << 14) |
 	         ((data[8] & 0x7F) << 7) |
 	         ((data[9] & 0x7F) << 0));
 
-	/* We don't handle experimental cases */
-	if (experimental) {
-		g_message ("[v23] Experimental MP3s are not extracted, doing nothing");
+	if ((tsize + 10 > size) || (experimental)) {
 		return;
 	}
 
-	/* Check if we can read even the first frame, The complete
-	 * tag size (tsize) does not include the header which is 10
-	 * bytes, so we check that there is some content AFTER the
-	 * headers. */
-	if (tsize + header_size > size) {
-		g_message ("[v23] Expected MP3 tag size and header size to be within file size boundaries");
-		return;
-	}
+	pos = 10;
+	padding = 0;
 
-	/* Start after the header (10 bytes long) */
-	pos = header_size;
-
-	/* Completely optional */
 	if (ext_header) {
-		/* Extended header is expected to be:
-		 *   Extended header size   $xx xx xx xx (4 chars)
-		 *   Extended Flags         $xx xx
-		 *   Size of padding        $xx xx xx xx
-		 */
 		ext_header_size = (((unsigned char)(data[10]) << 24) |
 		                   ((unsigned char)(data[11]) << 16) |
 		                   ((unsigned char)(data[12]) << 8) |
-		                   ((unsigned char)(data[13]) << 0));
+		                   ((unsigned char)(data[12]) << 0));
 
-		/* Where the 'Extended header size', currently 6 or 10
-		 * bytes, excludes itself. The 'Size of padding' is
-		 * simply the total tag size excluding the frames and
-		 * the headers, in other words the padding.
-		 */
-		if (tsize + header_size + ext_header_size > size) {
-			g_message ("[v23] Expected MP3 tag size and extended header size to be within file size boundaries");
+		padding = (((unsigned char)(data[15]) << 24) |
+		           ((unsigned char)(data[16]) << 16) |
+		           ((unsigned char)(data[17]) << 8) |
+		           ((unsigned char)(data[18]) << 0));
+
+		pos += 4 + ext_header_size;
+
+		if (padding < tsize)
+			tsize -= padding;
+		else {
 			return;
 		}
 
-		pos += ext_header_size;
+		if (pos + tsize > size) {
+			/* invalid size: extended header longer than tag */
+			return;
+		}
 	}
 
-	while (pos < tsize + header_size) {
-		const char *frame_name;
+	while (pos < size) {
 		id3v24frame frame;
 		size_t csize;
 		unsigned short flags;
 
-		/* Frames are 10 bytes each and made up of:
-		 *   Frame ID       $xx xx xx xx (4 chars)
-		 *   Size           $xx xx xx xx
-		 *   Flags          $xx xx
-		 */
-		if (pos + frame_size > tsize + header_size) {
-			g_message ("[v23] Expected MP3 frame size (%d) to be within tag size (%d) boundaries, position = %d",
-			           frame_size,
-			           tsize + header_size,
-			           pos);
-			break;
+		if (pos + 10 > size) {
+			return;
 		}
 
-		frame_name = &data[pos];
-
-		/* We found padding after all frames */
-		if (frame_name[0] == '\0')
-			break;
-
-		frame = id3v24_get_frame (frame_name);
+		frame = id3v24_get_frame (&data[pos]);
 
 		csize = (((unsigned char)(data[pos + 4]) << 24) |
 		         ((unsigned char)(data[pos + 5]) << 16) |
@@ -2081,40 +1921,21 @@ parse_id3v23 (const gchar          *data,
 		flags = (((unsigned char)(data[pos + 8]) << 8) +
 		         ((unsigned char)(data[pos + 9])));
 
-		pos += frame_size;
+		pos += 10;
 
 		if (frame == ID3V24_UNKNOWN) {
-			/* Ignore unknown frames */
-			g_debug ("[v23] Ignoring unknown frame '%s' (pos:%d, size:%" G_GSIZE_FORMAT ")", frame_name, pos, csize);
+			/* ignore unknown frames */
 			pos += csize;
 			continue;
-		} else {
-			g_debug ("[v23] Processing frame '%s'", frame_name);
 		}
 
-		/* If content size is more than size of file, stop. If
-		 * If content size is 0 then continue to next frame. */
-		if (pos + csize > tsize + header_size) {
-			g_debug ("[v23] Position (%d) + content size (%" G_GSIZE_FORMAT ") > tag size (%d), not processing any more frames", pos, csize, tsize + header_size);
+		if (pos + csize > size) {
 			break;
 		} else if (csize == 0) {
-			g_debug ("[v23] Content size was 0, moving to next frame");
+			continue;
 		}
 
-		/* Frame flags expected are in format of:
-		 *
-		 *   %abc00000 %ijk00000
-		 *
-		 * a - Tag alter preservation
-		 * b - File alter preservation
-		 * c - Read only
-		 * i - Compression
-		 * j - Encryption
-		 * k - Grouping identity
-		 */
-		if (((flags & 0x80) > 0) ||
-		    ((flags & 0x40) > 0)) {
-			g_debug ("[v23] Ignoring frame '%s', frame flags 0x80 or 0x40 found (compression / encryption)", frame_name);
+		if (((flags & 0x80) > 0) || ((flags & 0x40) > 0)) {
 			pos += csize;
 			continue;
 		}
@@ -2130,16 +1951,16 @@ parse_id3v23 (const gchar          *data,
 			gchar *body;
 
 			un_unsync (&data[pos], csize, (unsigned char **) &body, &unsync_size);
-			get_id3v23_tags (frame, body, unsync_size, info, uri, resource, filedata);
+			get_id3v23_tags (frame, body, unsync_size, info, uri, metadata, filedata);
 			g_free (body);
 		} else {
-			get_id3v23_tags (frame, &data[pos], csize, info, uri, resource, filedata);
+			get_id3v23_tags (frame, &data[pos], csize, info, uri, metadata, filedata);
 		}
 
 		pos += csize;
 	}
 
-	*offset_delta = tsize + header_size;
+	*offset_delta = tsize + 10;
 }
 
 static void
@@ -2147,12 +1968,10 @@ parse_id3v20 (const gchar          *data,
               size_t                size,
               id3tag               *info,
               const gchar          *uri,
-              TrackerResource      *resource,
+              TrackerSparqlBuilder *metadata,
               MP3Data              *filedata,
               size_t               *offset_delta)
 {
-	const gint header_size = 10;
-	const gint frame_size = 6;
 	gint unsync;
 	guint tsize;
 	guint pos;
@@ -2163,9 +1982,6 @@ parse_id3v20 (const gchar          *data,
 	    (data[2] != 0x33) ||
 	    (data[3] != 0x02) ||
 	    (data[4] != 0x00)) {
-		/* It's not an error, we might try another function
-		 * if we have the wrong version header here.
-		 */
 		return;
 	}
 
@@ -2175,54 +1991,37 @@ parse_id3v20 (const gchar          *data,
 	         ((data[8] & 0x7F) << 07) |
 	         ((data[9] & 0x7F) << 00));
 
-	if (tsize + header_size > size)  {
-		g_message ("[v20] Expected MP3 tag size and header size to be within file size boundaries");
+	if (tsize + 10 > size)  {
 		return;
 	}
+	pos = 10;
 
-	pos = header_size;
-
-	while (pos < tsize + header_size) {
-		const char *frame_name;
+	while (pos < size) {
 		id3v2frame frame;
 		size_t csize;
 
-		if (pos + frame_size > tsize + header_size)  {
-			g_message ("[v20] Expected MP3 frame size (%d) to be within tag size (%d) boundaries, position = %d",
-			           frame_size,
-			           tsize + header_size,
-			           pos);
-			break;
+		if (pos + 6 > size)  {
+			return;
 		}
 
-		frame_name = &data[pos];
-
-		/* We found padding after all frames */
-		if (frame_name[0] == '\0')
-			break;
-
-		frame = id3v2_get_frame (frame_name);
+		frame = id3v2_get_frame (&data[pos]);
 
 		csize = (((unsigned char)(data[pos + 3]) << 16) +
 		         ((unsigned char)(data[pos + 4]) << 8) +
 		         ((unsigned char)(data[pos + 5]) ) );
 
-		pos += frame_size;
+		pos += 6;
 
 		if (frame == ID3V2_UNKNOWN) {
 			/* ignore unknown frames */
-			g_debug ("[v20] Ignoring unknown frame '%s' (pos:%d, size:%" G_GSIZE_FORMAT ")", frame_name, pos, csize);
 			pos += csize;
 			continue;
 		}
 
-		/* If content size is more than size of file, stop. If
-		 * If content size is 0 then continue to next frame. */
-		if (pos + csize > tsize + header_size) {
-			g_debug ("[v20] Position (%d) + content size (%" G_GSIZE_FORMAT ") > tag size (%d), not processing any more frames", pos, csize, tsize + header_size);
+		if (pos + csize > size) {
 			break;
 		} else if (csize == 0) {
-			g_debug ("[v20] Content size was 0, moving to next frame");
+			continue;
 		}
 
 		/* Early versions do not have unsynch per frame */
@@ -2231,16 +2030,16 @@ parse_id3v20 (const gchar          *data,
 			gchar  *body;
 
 			un_unsync (&data[pos], csize, (unsigned char **) &body, &unsync_size);
-			get_id3v20_tags (frame, body, unsync_size, info, uri, resource, filedata);
+			get_id3v20_tags (frame, body, unsync_size, info, uri, metadata, filedata);
 			g_free (body);
 		} else {
-			get_id3v20_tags (frame, &data[pos], csize, info, uri, resource, filedata);
+			get_id3v20_tags (frame, &data[pos], csize, info, uri, metadata, filedata);
 		}
 
 		pos += csize;
 	}
 
-	*offset_delta = tsize + header_size;
+	*offset_delta = tsize + 10;
 }
 
 static goffset
@@ -2248,7 +2047,7 @@ parse_id3v2 (const gchar          *data,
              size_t                size,
              id3tag               *info,
              const gchar          *uri,
-             TrackerResource      *resource,
+             TrackerSparqlBuilder *metadata,
              MP3Data              *filedata)
 {
 	gboolean done = FALSE;
@@ -2256,9 +2055,9 @@ parse_id3v2 (const gchar          *data,
 
 	do {
 		size_t offset_delta = 0;
-		parse_id3v24 (data + offset, size - offset, info, uri, resource, filedata, &offset_delta);
-		parse_id3v23 (data + offset, size - offset, info, uri, resource, filedata, &offset_delta);
-		parse_id3v20 (data + offset, size - offset, info, uri, resource, filedata, &offset_delta);
+		parse_id3v24 (data + offset, size - offset, info, uri, metadata, filedata, &offset_delta);
+		parse_id3v23 (data + offset, size - offset, info, uri, metadata, filedata, &offset_delta);
+		parse_id3v20 (data + offset, size - offset, info, uri, metadata, filedata, &offset_delta);
 
 		if (offset_delta == 0) {
 			done = TRUE;
@@ -2283,9 +2082,13 @@ tracker_extract_get_metadata (TrackerExtractInfo *info)
 	goffset  buffer_size;
 	goffset audio_offset;
 	MP3Data md = { 0 };
+	TrackerSparqlBuilder *metadata, *preupdate;
 	GFile *file;
-	gboolean parsed;
-	TrackerResource *main_resource;
+	const gchar *graph;
+
+	graph = tracker_extract_info_get_graph (info);
+	metadata = tracker_extract_info_get_metadata_builder (info);
+	preupdate = tracker_extract_info_get_preupdate_builder (info);
 
 	file = tracker_extract_info_get_file (info);
 	filename = g_file_get_path (file);
@@ -2335,43 +2138,51 @@ tracker_extract_get_metadata (TrackerExtractInfo *info)
 
 	g_free (id3v1_buffer);
 
-	main_resource = tracker_resource_new (NULL);
+	if (md.id3v1.encoding != NULL) {
+		gchar *locale;
+
+		locale = tracker_locale_get (TRACKER_LOCALE_LANGUAGE);
+		if (!g_str_has_prefix (locale, "ru") &&
+		    !g_str_has_prefix (locale, "uk")) {
+			/* use guessed encoding for ID3v2 tags only in selected locales
+			   where broken ID3v2 is widespread */
+			g_free (md.id3v1.encoding);
+			md.id3v1.encoding = NULL;
+		}
+		g_free (locale);
+		locale = NULL;
+	}
 
 	/* Get other embedded tags */
 	uri = g_file_get_uri (file);
-	audio_offset = parse_id3v2 (buffer, buffer_size, &md.id3v1, uri, main_resource, &md);
+	audio_offset = parse_id3v2 (buffer, buffer_size, &md.id3v1, uri, metadata, &md);
 
 	md.title = tracker_coalesce_strip (4, md.id3v24.title2,
 	                                   md.id3v23.title2,
 	                                   md.id3v22.title2,
 	                                   md.id3v1.title);
 
-	md.lyricist_name = tracker_coalesce_strip (4, md.id3v24.text,
-	                                           md.id3v23.toly,
-	                                           md.id3v23.text,
-	                                           md.id3v22.text);
+	md.lyricist = tracker_coalesce_strip (4, md.id3v24.text,
+	                                      md.id3v23.toly,
+	                                      md.id3v23.text,
+	                                      md.id3v22.text);
 
-	md.composer_name = tracker_coalesce_strip (3, md.id3v24.composer,
-	                                           md.id3v23.composer,
-	                                           md.id3v22.composer);
+	md.composer = tracker_coalesce_strip (3, md.id3v24.composer,
+	                                      md.id3v23.composer,
+	                                      md.id3v22.composer);
 
-	md.performer_name = tracker_coalesce_strip (7, md.id3v24.performer1,
-	                                            md.id3v24.performer2,
-	                                            md.id3v23.performer1,
-	                                            md.id3v23.performer2,
-	                                            md.id3v22.performer1,
-	                                            md.id3v22.performer2,
-	                                            md.id3v1.artist);
+	md.performer = tracker_coalesce_strip (7, md.id3v24.performer1,
+	                                       md.id3v24.performer2,
+	                                       md.id3v23.performer1,
+	                                       md.id3v23.performer2,
+	                                       md.id3v22.performer1,
+	                                       md.id3v22.performer2,
+	                                       md.id3v1.artist);
 
-	md.album_artist_name = tracker_coalesce_strip (4, md.id3v24.performer2,
-	                                               md.id3v23.performer2,
-	                                               md.id3v22.performer2,
-	                                               md.performer_name);
-
-	md.album_name = tracker_coalesce_strip (4, md.id3v24.album,
-	                                        md.id3v23.album,
-	                                        md.id3v22.album,
-	                                        md.id3v1.album);
+	md.album = tracker_coalesce_strip (4, md.id3v24.album,
+	                                   md.id3v23.album,
+	                                   md.id3v22.album,
+	                                   md.id3v1.album);
 
 	md.genre = tracker_coalesce_strip (7, md.id3v24.content_type,
 	                                   md.id3v24.title1,
@@ -2443,162 +2254,259 @@ tracker_extract_get_metadata (TrackerExtractInfo *info)
 		md.set_count = md.id3v22.set_count;
 	}
 
-	if (md.performer_name) {
-		md.performer = tracker_extract_new_artist (md.performer_name);
-	}
-
-	if (md.album_artist_name) {
-		md.album_artist = tracker_extract_new_artist (md.album_artist_name);
-	}
-
-	if (md.composer_name) {
-		md.composer = tracker_extract_new_artist (md.composer_name);
-	}
-
-	if (md.lyricist_name) {
-		md.lyricist = tracker_extract_new_artist (md.lyricist_name);
-	}
-
-	if (md.album_name) {
-		char *album_uri = tracker_sparql_escape_uri_printf ("urn:album:%s", md.album_name);
-		md.album = tracker_resource_new (album_uri);
-
-		tracker_resource_set_uri (md.album, "rdf:type", "nmm:MusicAlbum");
-		/* FIXME: nmm:albumTitle is now deprecated
-		 * tracker_sparql_builder_predicate (preupdate, "nie:title");
-		 */
-		tracker_resource_set_string (md.album, "nmm:albumTitle", md.album_name);
-
-		if (md.album_artist) {
-			tracker_resource_set_relation (md.album, "nmm:albumArtist", md.album_artist);
-			g_object_unref (md.album_artist);
-		}
-
-		if (md.track_count > 0) {
-			tracker_resource_set_int (md.album, "nmm:albumTrackCount", md.track_count);
-		}
-	}
-
-	tracker_resource_add_uri (main_resource, "rdf:type", "nmm:MusicPiece");
-	tracker_resource_add_uri (main_resource, "rdf:type", "nfo:Audio");
-
-	tracker_guarantee_resource_title_from_file (main_resource,
-	                                            "nie:title",
-	                                            md.title,
-	                                            uri,
-	                                            NULL);
-
-	if (md.lyricist) {
-		tracker_resource_set_relation (main_resource, "nmm:lyricist", md.lyricist);
-		g_object_unref (md.lyricist);
-	}
-
 	if (md.performer) {
-		tracker_resource_set_relation (main_resource, "nmm:performer", md.performer);
-		g_object_unref (md.performer);
+		md.performer_uri = tracker_sparql_escape_uri_printf ("urn:artist:%s", md.performer);
+
+		tracker_sparql_builder_insert_open (preupdate, NULL);
+		if (graph) {
+			tracker_sparql_builder_graph_open (preupdate, graph);
+		}
+
+		tracker_sparql_builder_subject_iri (preupdate, md.performer_uri);
+		tracker_sparql_builder_predicate (preupdate, "a");
+		tracker_sparql_builder_object (preupdate, "nmm:Artist");
+		tracker_sparql_builder_predicate (preupdate, "nmm:artistName");
+		tracker_sparql_builder_object_unvalidated (preupdate, md.performer);
+
+		if (graph) {
+			tracker_sparql_builder_graph_close (preupdate);
+		}
+		tracker_sparql_builder_insert_close (preupdate);
 	}
 
 	if (md.composer) {
-		tracker_resource_set_relation (main_resource, "nmm:composer", md.composer);
-		g_object_unref (md.composer);
+		md.composer_uri = tracker_sparql_escape_uri_printf ("urn:artist:%s", md.composer);
+
+		tracker_sparql_builder_insert_open (preupdate, NULL);
+		if (graph) {
+			tracker_sparql_builder_graph_open (preupdate, graph);
+		}
+
+		tracker_sparql_builder_subject_iri (preupdate, md.composer_uri);
+		tracker_sparql_builder_predicate (preupdate, "a");
+		tracker_sparql_builder_object (preupdate, "nmm:Artist");
+		tracker_sparql_builder_predicate (preupdate, "nmm:artistName");
+		tracker_sparql_builder_object_unvalidated (preupdate, md.composer);
+
+		if (graph) {
+			tracker_sparql_builder_graph_close (preupdate);
+		}
+		tracker_sparql_builder_insert_close (preupdate);
+	}
+
+	if (md.lyricist) {
+		md.lyricist_uri = tracker_sparql_escape_uri_printf ("urn:artist:%s", md.lyricist);
+
+		tracker_sparql_builder_insert_open (preupdate, NULL);
+		if (graph) {
+			tracker_sparql_builder_graph_open (preupdate, graph);
+		}
+
+		tracker_sparql_builder_subject_iri (preupdate, md.lyricist_uri);
+		tracker_sparql_builder_predicate (preupdate, "a");
+		tracker_sparql_builder_object (preupdate, "nmm:Artist");
+		tracker_sparql_builder_predicate (preupdate, "nmm:artistName");
+		tracker_sparql_builder_object_unvalidated (preupdate, md.lyricist);
+
+		if (graph) {
+			tracker_sparql_builder_graph_close (preupdate);
+		}
+		tracker_sparql_builder_insert_close (preupdate);
 	}
 
 	if (md.album) {
-		tracker_resource_set_relation (main_resource, "nmm:musicAlbum", md.album);
+		md.album_uri = tracker_sparql_escape_uri_printf ("urn:album:%s", md.album);
+
+		tracker_sparql_builder_insert_open (preupdate, NULL);
+		if (graph) {
+			tracker_sparql_builder_graph_open (preupdate, graph);
+		}
+
+		tracker_sparql_builder_subject_iri (preupdate, md.album_uri);
+		tracker_sparql_builder_predicate (preupdate, "a");
+		tracker_sparql_builder_object (preupdate, "nmm:MusicAlbum");
+		/* FIXME: nmm:albumTitle is now deprecated
+		 * tracker_sparql_builder_predicate (preupdate, "nie:title");
+		 */
+		tracker_sparql_builder_predicate (preupdate, "nmm:albumTitle");
+		tracker_sparql_builder_object_unvalidated (preupdate, md.album);
+
+		if (md.performer_uri) {
+			tracker_sparql_builder_predicate (preupdate, "nmm:albumArtist");
+			tracker_sparql_builder_object_iri (preupdate, md.performer_uri);
+		}
+
+		if (graph) {
+			tracker_sparql_builder_graph_close (preupdate);
+		}
+		tracker_sparql_builder_insert_close (preupdate);
+
+		if (md.track_count > 0) {
+			tracker_sparql_builder_delete_open (preupdate, NULL);
+			tracker_sparql_builder_subject_iri (preupdate, md.album_uri);
+			tracker_sparql_builder_predicate (preupdate, "nmm:albumTrackCount");
+			tracker_sparql_builder_object_variable (preupdate, "unknown");
+			tracker_sparql_builder_delete_close (preupdate);
+			tracker_sparql_builder_where_open (preupdate);
+			tracker_sparql_builder_subject_iri (preupdate, md.album_uri);
+			tracker_sparql_builder_predicate (preupdate, "nmm:albumTrackCount");
+			tracker_sparql_builder_object_variable (preupdate, "unknown");
+			tracker_sparql_builder_where_close (preupdate);
+
+			tracker_sparql_builder_insert_open (preupdate, NULL);
+			if (graph) {
+				tracker_sparql_builder_graph_open (preupdate, graph);
+			}
+
+			tracker_sparql_builder_subject_iri (preupdate, md.album_uri);
+			tracker_sparql_builder_predicate (preupdate, "nmm:albumTrackCount");
+			tracker_sparql_builder_object_int64 (preupdate, md.track_count);
+
+			if (graph) {
+				tracker_sparql_builder_graph_close (preupdate);
+			}
+			tracker_sparql_builder_insert_close (preupdate);
+		}
+	}
+
+	tracker_sparql_builder_predicate (metadata, "a");
+	tracker_sparql_builder_object (metadata, "nmm:MusicPiece");
+	tracker_sparql_builder_object (metadata, "nfo:Audio");
+
+	tracker_guarantee_title_from_file (metadata,
+	                                   "nie:title",
+	                                   md.title,
+	                                   uri,
+	                                   NULL);
+
+	if (md.lyricist_uri) {
+		tracker_sparql_builder_predicate (metadata, "nmm:lyricist");
+		tracker_sparql_builder_object_iri (metadata, md.lyricist_uri);
+		g_free (md.lyricist_uri);
+	}
+
+	if (md.performer_uri) {
+		tracker_sparql_builder_predicate (metadata, "nmm:performer");
+		tracker_sparql_builder_object_iri (metadata, md.performer_uri);
+		g_free (md.performer_uri);
+	}
+
+	if (md.composer_uri) {
+		tracker_sparql_builder_predicate (metadata, "nmm:composer");
+		tracker_sparql_builder_object_iri (metadata, md.composer_uri);
+		g_free (md.composer_uri);
+	}
+
+	if (md.album_uri) {
+		tracker_sparql_builder_predicate (metadata, "nmm:musicAlbum");
+		tracker_sparql_builder_object_iri (metadata, md.album_uri);
 	}
 
 	if (md.recording_time) {
-		tracker_resource_set_string (main_resource, "nie:contentCreated", md.recording_time);
+		tracker_sparql_builder_predicate (metadata, "nie:contentCreated");
+		tracker_sparql_builder_object_unvalidated (metadata, md.recording_time);
 	}
 
 	if (md.genre) {
-		tracker_resource_set_string (main_resource, "nfo:genre", md.genre);
+		tracker_sparql_builder_predicate (metadata, "nfo:genre");
+		tracker_sparql_builder_object_unvalidated (metadata, md.genre);
 	}
 
 	if (md.copyright) {
-		tracker_resource_set_string (main_resource, "nie:copyright", md.copyright);
+		tracker_sparql_builder_predicate (metadata, "nie:copyright");
+		tracker_sparql_builder_object_unvalidated (metadata, md.copyright);
 	}
 
 	if (md.comment) {
-		tracker_resource_set_string (main_resource, "nie:comment", md.comment);
+		tracker_sparql_builder_predicate (metadata, "nie:comment");
+		tracker_sparql_builder_object_unvalidated (metadata, md.comment);
 	}
 
 	if (md.publisher) {
-		TrackerResource *publisher = tracker_extract_new_contact (md.publisher);
-		tracker_resource_set_relation (main_resource, "nco:publisher", publisher);
-		g_object_unref(publisher);
+		tracker_sparql_builder_predicate (metadata, "nco:publisher");
+		tracker_sparql_builder_object_blank_open (metadata);
+		tracker_sparql_builder_predicate (metadata, "a");
+		tracker_sparql_builder_object (metadata, "nco:Contact");
+		tracker_sparql_builder_predicate (metadata, "nco:fullname");
+		tracker_sparql_builder_object_unvalidated (metadata, md.publisher);
+		tracker_sparql_builder_object_blank_close (metadata);
 	}
 
 	if (md.encoded_by) {
-		tracker_resource_set_string (main_resource,  "nfo:encodedBy", md.encoded_by);
+		tracker_sparql_builder_predicate (metadata, "nfo:encodedBy");
+		tracker_sparql_builder_object_unvalidated (metadata, md.encoded_by);
 	}
 
 	if (md.track_number > 0) {
-		tracker_resource_set_int (main_resource, "nmm:trackNumber", md.track_number);
+		tracker_sparql_builder_predicate (metadata, "nmm:trackNumber");
+		tracker_sparql_builder_object_int64 (metadata, md.track_number);
 	}
 
 	if (md.album) {
-		TrackerResource *album_disc;
 		gchar *album_disc_uri;
 
 		album_disc_uri = tracker_sparql_escape_uri_printf ("urn:album-disc:%s:Disc%d",
-		                                                   md.album_name,
+		                                                   md.album,
 		                                                   md.set_number > 0 ? md.set_number : 1);
 
-		album_disc = tracker_resource_new (album_disc_uri);
-		tracker_resource_set_uri (album_disc, "rdf:type", "nmm:MusicAlbumDisc");
-		tracker_resource_set_int (album_disc, "nmm:setNumber", md.set_number > 0 ? md.set_number : 1);
-		tracker_resource_set_relation (album_disc, "nmm:albumDiscAlbum", md.album);
+		tracker_sparql_builder_delete_open (preupdate, NULL);
+		tracker_sparql_builder_subject_iri (preupdate, album_disc_uri);
+		tracker_sparql_builder_predicate (preupdate, "nmm:setNumber");
+		tracker_sparql_builder_object_variable (preupdate, "unknown");
+		tracker_sparql_builder_delete_close (preupdate);
+		tracker_sparql_builder_where_open (preupdate);
+		tracker_sparql_builder_subject_iri (preupdate, album_disc_uri);
+		tracker_sparql_builder_predicate (preupdate, "nmm:setNumber");
+		tracker_sparql_builder_object_variable (preupdate, "unknown");
+		tracker_sparql_builder_where_close (preupdate);
 
-		tracker_resource_set_relation (main_resource, "nmm:musicAlbumDisc", album_disc);
+		tracker_sparql_builder_delete_open (preupdate, NULL);
+		tracker_sparql_builder_subject_iri (preupdate, album_disc_uri);
+		tracker_sparql_builder_predicate (preupdate, "nmm:albumDiscAlbum");
+		tracker_sparql_builder_object_variable (preupdate, "unknown");
+		tracker_sparql_builder_delete_close (preupdate);
+		tracker_sparql_builder_where_open (preupdate);
+		tracker_sparql_builder_subject_iri (preupdate, album_disc_uri);
+		tracker_sparql_builder_predicate (preupdate, "nmm:albumDiscAlbum");
+		tracker_sparql_builder_object_variable (preupdate, "unknown");
+		tracker_sparql_builder_where_close (preupdate);
+
+		tracker_sparql_builder_insert_open (preupdate, NULL);
+		if (graph) {
+			tracker_sparql_builder_graph_open (preupdate, graph);
+		}
+
+		tracker_sparql_builder_subject_iri (preupdate, album_disc_uri);
+		tracker_sparql_builder_predicate (preupdate, "a");
+		tracker_sparql_builder_object (preupdate, "nmm:MusicAlbumDisc");
+		tracker_sparql_builder_predicate (preupdate, "nmm:setNumber");
+		tracker_sparql_builder_object_int64 (preupdate, md.set_number > 0 ? md.set_number : 1);
+		tracker_sparql_builder_predicate (preupdate, "nmm:albumDiscAlbum");
+		tracker_sparql_builder_object_iri (preupdate, md.album_uri);
+
+		if (graph) {
+			tracker_sparql_builder_graph_close (preupdate);
+		}
+		tracker_sparql_builder_insert_close (preupdate);
+
+		tracker_sparql_builder_predicate (metadata, "nmm:musicAlbumDisc");
+		tracker_sparql_builder_object_iri (metadata, album_disc_uri);
 
 		g_free (album_disc_uri);
-		g_object_unref (album_disc);
-		g_object_unref (md.album);
 	}
+
+	g_free (md.album_uri);
 
 	/* Get mp3 stream info */
-	parsed = mp3_parse (buffer, buffer_size, audio_offset, uri, main_resource, &md);
+	mp3_parse (buffer, buffer_size, audio_offset, uri, metadata, &md);
 
-#ifdef HAVE_LIBMEDIAART
-	if (parsed && (md.performer || md.album)) {
-		MediaArtProcess *media_art_process;
-		GError *error = NULL;
-		gboolean success = TRUE;
-
-		media_art_process = tracker_extract_info_get_media_art_process (info);
-
-		if (md.media_art_data) {
-			success = media_art_process_buffer (media_art_process,
-			                                    MEDIA_ART_ALBUM,
-			                                    MEDIA_ART_PROCESS_FLAGS_NONE,
-			                                    file,
-			                                    md.media_art_data,
-			                                    md.media_art_size,
-			                                    md.media_art_mime,
-			                                    md.performer_name,
-			                                    md.album_name,
-			                                    NULL,
-			                                    &error);
-		} else {
-			success = media_art_process_file (media_art_process,
-			                                  MEDIA_ART_ALBUM,
-			                                  MEDIA_ART_PROCESS_FLAGS_NONE,
-			                                  file,
-			                                  md.performer_name,
-			                                  md.album_name,
-			                                  NULL,
-			                                  &error);
-		}
-
-		if (!success || error) {
-			g_warning ("Could not process media art for '%s', %s",
-			           uri,
-			           error ? error->message : "No error given");
-			g_clear_error (&error);
-		}
-	}
-#endif
+	tracker_media_art_process (md.media_art_data,
+	                           md.media_art_size,
+	                           md.media_art_mime,
+	                           TRACKER_MEDIA_ART_ALBUM,
+	                           md.performer,
+	                           md.album,
+	                           uri);
 	g_free (md.media_art_data);
 	g_free (md.media_art_mime);
 
@@ -2611,13 +2519,9 @@ tracker_extract_get_metadata (TrackerExtractInfo *info)
 	munmap (buffer, buffer_size);
 #endif
 
-	if (main_resource) {
-		tracker_extract_info_set_resource (info, main_resource);
-		g_object_unref (main_resource);
-	}
-
 	g_free (filename);
 	g_free (uri);
 
-	return parsed;
+	return TRUE;
 }
+

@@ -72,41 +72,14 @@ tracker_priority_queue_unref (TrackerPriorityQueue *queue)
 	}
 }
 
-static void
-queue_insert_before_link (GQueue *queue,
-                          GList  *sibling,
-                          GList  *link_)
-{
-	if (sibling == queue->head)
-		g_queue_push_head_link (queue, link_);
-	else {
-		link_->next = sibling;
-		link_->prev = sibling->prev;
-		sibling->prev->next = link_;
-		sibling->prev = link_;
-		queue->length++;
-	}
-}
-
-static void
-queue_insert_after_link (GQueue *queue,
-                         GList  *sibling,
-                         GList  *link_)
-{
-	if (sibling == queue->tail)
-		g_queue_push_tail_link (queue, link_);
-	else
-		queue_insert_before_link (queue, sibling->next, link_);
-}
-
-static void
-insert_node (TrackerPriorityQueue *queue,
-             gint                  priority,
-             GList                *node)
+static GList *
+priority_segment_alloc_node (TrackerPriorityQueue *queue,
+                             gint                  priority)
 {
 	PrioritySegment *segment = NULL;
 	gboolean found = FALSE;
 	gint l, r, c;
+	GList *node;
 
 	/* Perform binary search to find out the segment for
 	 * the given priority, create one if it isn't found.
@@ -137,8 +110,8 @@ insert_node (TrackerPriorityQueue *queue,
 		g_assert (segment != NULL);
 		g_assert (segment->priority == priority);
 
-		queue_insert_after_link (&queue->queue, segment->last_elem, node);
-		segment->last_elem = node;
+		g_queue_insert_after (&queue->queue, segment->last_elem, NULL);
+		node = segment->last_elem = segment->last_elem->next;
 	} else {
 		PrioritySegment new_segment = { 0 };
 
@@ -154,10 +127,12 @@ insert_node (TrackerPriorityQueue *queue,
 			 */
 			if (segment->priority > priority) {
 				/* We have to insert to the left of this element */
-				queue_insert_before_link (&queue->queue, segment->first_elem, node);
+				g_queue_insert_before (&queue->queue, segment->first_elem, NULL);
+				node = segment->first_elem->prev;
 			} else {
 				/* We have to insert to the right of this element */
-				queue_insert_after_link (&queue->queue, segment->last_elem, node);
+				g_queue_insert_after (&queue->queue, segment->last_elem, NULL);
+				node = segment->last_elem->next;
 				c++;
 			}
 
@@ -168,12 +143,15 @@ insert_node (TrackerPriorityQueue *queue,
 			g_assert (queue->segments->len == 0);
 			g_assert (g_queue_get_length (&queue->queue) == 0);
 
+			node = g_list_alloc ();
 			g_queue_push_head_link (&queue->queue, node);
 			new_segment.first_elem = new_segment.last_elem = node;
 
 			g_array_append_val (queue->segments, new_segment);
 		}
 	}
+
+	return node;
 }
 
 void
@@ -210,7 +188,6 @@ tracker_priority_queue_foreach_remove (TrackerPriorityQueue *queue,
 	segment = &g_array_index (queue->segments, PrioritySegment, n_segment);
 
 	while (list) {
-		gboolean fetch_segment = FALSE;
 		GList *elem;
 
 		elem = list;
@@ -223,14 +200,18 @@ tracker_priority_queue_foreach_remove (TrackerPriorityQueue *queue,
 				/* Last element of segment, remove it */
 				g_array_remove_index (queue->segments,
 				                      n_segment);
-				fetch_segment = TRUE;
+
+				if (list) {
+					/* Fetch the next one */
+					segment = &g_array_index (queue->segments,
+					                          PrioritySegment,
+					                          n_segment);
+				}
 			} else if (elem == segment->first_elem) {
 				/* First elemen in segment */
 				segment->first_elem = elem->next;
 			} else if (elem == segment->last_elem) {
 				segment->last_elem = elem->prev;
-				n_segment++;
-				fetch_segment = TRUE;
 			}
 
 			if (destroy_notify) {
@@ -244,16 +225,12 @@ tracker_priority_queue_foreach_remove (TrackerPriorityQueue *queue,
 			    elem == segment->last_elem) {
 				/* Move on to the next segment */
 				n_segment++;
-				fetch_segment = TRUE;
-			}
-		}
+				g_assert (n_segment < queue->segments->len);
 
-		if (list && fetch_segment) {
-			/* Fetch the next segment */
-			g_assert (n_segment < queue->segments->len);
-			segment = &g_array_index (queue->segments,
-			                          PrioritySegment,
-			                          n_segment);
+				segment = &g_array_index (queue->segments,
+				                          PrioritySegment,
+				                          n_segment);
+			}
 		}
 	}
 
@@ -276,63 +253,20 @@ tracker_priority_queue_get_length (TrackerPriorityQueue *queue)
 	return g_queue_get_length (&queue->queue);
 }
 
-GList *
+void
 tracker_priority_queue_add (TrackerPriorityQueue *queue,
                             gpointer              data,
                             gint                  priority)
 {
 	GList *node;
 
-	g_return_val_if_fail (queue != NULL, NULL);
-	g_return_val_if_fail (data != NULL, NULL);
+	g_return_if_fail (queue != NULL);
+	g_return_if_fail (data != NULL);
 
-	node = g_list_alloc ();
+	node = priority_segment_alloc_node (queue, priority);
+	g_assert (node != NULL);
+
 	node->data = data;
-	insert_node (queue, priority, node);
-
-	return node;
-}
-
-void
-tracker_priority_queue_add_node (TrackerPriorityQueue *queue,
-                                 GList                *node,
-                                 gint                  priority)
-{
-	g_return_if_fail (queue != NULL);
-	g_return_if_fail (node != NULL);
-
-	insert_node (queue, priority, node);
-}
-
-void
-tracker_priority_queue_remove_node (TrackerPriorityQueue *queue,
-                                    GList                *node)
-{
-	guint i;
-
-	g_return_if_fail (queue != NULL);
-
-	/* Check if it is the first or last of a segment */
-	for (i = 0; i < queue->segments->len; i++) {
-		PrioritySegment *segment;
-
-		segment = &g_array_index (queue->segments, PrioritySegment, i);
-
-		if (segment->first_elem == node) {
-			if (segment->last_elem == node)
-				g_array_remove_index (queue->segments, i);
-			else
-				segment->first_elem = node->next;
-			break;
-		}
-
-		if (segment->last_elem == node) {
-			segment->last_elem = node->prev;
-			break;
-		}
-	}
-
-	g_queue_delete_link (&queue->queue, node);
 }
 
 gpointer
@@ -382,7 +316,7 @@ tracker_priority_queue_peek (TrackerPriorityQueue *queue,
 {
 	g_return_val_if_fail (queue != NULL, NULL);
 
-	if (priority_out && queue->segments->len > 0) {
+	if (priority_out) {
 		PrioritySegment *segment;
 
 		segment = &g_array_index (queue->segments, PrioritySegment, 0);
@@ -395,23 +329,6 @@ tracker_priority_queue_peek (TrackerPriorityQueue *queue,
 gpointer
 tracker_priority_queue_pop (TrackerPriorityQueue *queue,
                             gint                 *priority_out)
-{
-	GList *node;
-	gpointer data;
-
-	node = tracker_priority_queue_pop_node (queue, priority_out);
-	if (node == NULL)
-		return NULL;
-
-	data = node->data;
-	g_list_free_1 (node);
-
-	return data;
-}
-
-GList *
-tracker_priority_queue_pop_node (TrackerPriorityQueue *queue,
-                                 gint                 *priority_out)
 {
 	PrioritySegment *segment;
 	GList *node;
@@ -443,13 +360,5 @@ tracker_priority_queue_pop_node (TrackerPriorityQueue *queue,
 		segment->first_elem = segment->first_elem->next;
 	}
 
-	return g_queue_pop_head_link (&queue->queue);
-}
-
-GList *
-tracker_priority_queue_get_head (TrackerPriorityQueue *queue)
-{
-	g_return_val_if_fail (queue != NULL, NULL);
-
-	return queue->queue.head;
+	return g_queue_pop_head (&queue->queue);
 }

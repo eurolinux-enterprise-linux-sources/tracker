@@ -21,8 +21,9 @@
 Test the query while running BatchSparqlUpdate at the same time. This was raising
 some SQLITE_MISUSED errors before.
 """
-import os
-from gi.repository import GObject
+import os, dbus
+import gobject
+from dbus.mainloop.glib import DBusGMainLoop
 
 from common.utils import configuration as cfg
 import unittest2 as ut
@@ -39,7 +40,7 @@ class TestSqliteBatchMisused (CommonTrackerStoreTest):
     to configure properly the environment
     """
     def setUp (self):
-        self.main_loop = GObject.MainLoop ()
+        self.main_loop = gobject.MainLoop ()
         self.batch_counter = 0
         
     def test_queries_while_batch_insert (self):
@@ -61,31 +62,29 @@ class TestSqliteBatchMisused (CommonTrackerStoreTest):
                 
                     if counter == BATCH_SIZE:
                         query = "INSERT {" + current_batch + "}"
-                        self.tracker.batch_update(
-                            query,
-                            timeout=20000,
-                            result_handler=self.batch_success_cb,
-                            error_handler=self.batch_failed_cb)
+                        self.tracker.get_tracker_iface ().BatchSparqlUpdate (query,
+                                                          timeout=20000,
+                                                          reply_handler=self.batch_success_cb,
+                                                          error_handler=self.batch_failed_cb)
                         self.run_a_query ()
                         counter = 0
                         current_batch = ""
                         self.batch_counter += 1
                         
         
-        GObject.timeout_add_seconds (2, self.run_a_query)
+        gobject.timeout_add_seconds (2, self.run_a_query)
         # Safeguard of 60 seconds. The last reply should quit the loop
-        GObject.timeout_add_seconds (60, self.timeout_cb)
+        gobject.timeout_add_seconds (60, self.timeout_cb)
         self.main_loop.run ()
 
     def run_a_query (self):
         QUERY = "SELECT ?u ?title WHERE { ?u a nie:InformationElement; nie:title ?title. }"
-        self.tracker.query(
-            QUERY, timeout=20000,
-            reply_handler=self.reply_cb,
-            error_handler=self.error_handler)
+        self.tracker.get_tracker_iface ().SparqlQuery (QUERY, timeout=20000,
+                                                       reply_handler=self.reply_cb,
+                                                       error_handler=self.error_handler)
         return True
         
-    def reply_cb (self, obj, results, data):
+    def reply_cb (self, results):
         print "Query replied correctly"
 
     def error_handler (self, error_msg):

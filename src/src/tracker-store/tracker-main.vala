@@ -59,7 +59,6 @@ License which can be viewed at:
 
 		message ("Store options:");
 		message ("  Readonly mode  ........................  %s", readonly_mode ? "yes" : "no");
-		message ("  GraphUpdated Delay ....................  %d", config.graphupdated_delay);
 	}
 
 	static void do_shutdown () {
@@ -77,7 +76,7 @@ License which can be viewed at:
 
 	static bool in_loop = false;
 
-	static bool signal_handler (int signo) {
+	static void signal_handler (int signo) {
 		/* Die if we get re-entrant signals handler calls */
 		if (in_loop) {
 			Process.exit (1);
@@ -101,13 +100,20 @@ License which can be viewed at:
 			}
 			break;
 		}
-
-		return true;
 	}
 
 	static void initialize_signal_handler () {
-		Unix.signal_add (Posix.SIGTERM, () => signal_handler (Posix.SIGTERM));
-		Unix.signal_add (Posix.SIGINT, () => signal_handler (Posix.SIGINT));
+		var empty_mask = Posix.sigset_t ();
+		Posix.sigemptyset (empty_mask);
+
+		var act = Posix.sigaction_t ();
+		act.sa_handler = signal_handler;
+		act.sa_mask = empty_mask;
+		act.sa_flags = 0;
+
+		Posix.sigaction (Posix.SIGTERM, act, null);
+		Posix.sigaction (Posix.SIGINT, act, null);
+		Posix.sigaction (Posix.SIGHUP, act, null);
 	}
 
 	static void initialize_priority () {
@@ -177,6 +183,8 @@ License which can be viewed at:
 			return 0;
 		}
 
+		initialize_signal_handler ();
+
 		/* This makes sure we don't steal all the system's resources */
 		initialize_priority ();
 
@@ -197,7 +205,7 @@ License which can be viewed at:
 
 		sanity_check_option_values (config);
 
-		if (!Tracker.DBus.init (config)) {
+		if (!Tracker.DBus.init ()) {
 			return 1;
 		}
 
@@ -278,6 +286,9 @@ License which can be viewed at:
 		notifier = null;
 
 		if (!shutdown) {
+			/* Setup subscription to get notified of locale changes */
+			Tracker.locale_change_initialize_subscription ();
+
 			Tracker.DBus.register_prepare_class_signal ();
 
 			Tracker.Events.init ();
@@ -292,9 +303,6 @@ License which can be viewed at:
 		 */
 		if (!shutdown) {
 			main_loop = new MainLoop ();
-
-			initialize_signal_handler ();
-
 			main_loop.run ();
 		}
 
@@ -312,6 +320,8 @@ License which can be viewed at:
 		/* Shutdown major subsystems */
 		Tracker.Writeback.shutdown ();
 		Tracker.Events.shutdown ();
+
+		Tracker.locale_change_shutdown_subscription ();
 
 		Tracker.DBus.shutdown ();
 		Tracker.Data.Manager.shutdown ();

@@ -57,10 +57,6 @@ internal class Tracker.Bus.ArrayCursor : Tracker.Sparql.Cursor {
 	}
 
 	public override bool next (Cancellable? cancellable = null) throws GLib.Error {
-		if (cancellable != null && cancellable.is_cancelled ()) {
-			throw new IOError.CANCELLED ("Operation was cancelled");
-		}
-
 		if (current_row >= rows - 1) {
 			return false;
 		}

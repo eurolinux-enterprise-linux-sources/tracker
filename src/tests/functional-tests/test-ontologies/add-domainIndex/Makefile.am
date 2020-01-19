@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 domainindexdir = $(datadir)/tracker-tests/test-ontologies/add-domainIndex
 
 domainindex_DATA =                                     \

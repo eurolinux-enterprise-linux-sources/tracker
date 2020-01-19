@@ -23,6 +23,7 @@ public class Tracker.Resources : Object {
 	public const string PATH = "/org/freedesktop/Tracker1/Resources";
 
 	const int GRAPH_UPDATED_IMMEDIATE_EMIT_AT = 50000;
+	const int SIGNALS_SECONDS_PER_EMIT = 1;
 
 	/* I *know* that this is some arbitrary number that doesn't seem to
 	 * resemble anything. In fact it's what I experimentally measured to
@@ -52,14 +53,12 @@ public class Tracker.Resources : Object {
 	DBusConnection connection;
 	uint signal_timeout;
 	bool regular_commit_pending;
-	Tracker.Config config;
 
 	public signal void writeback ([DBus (signature = "a{iai}")] Variant subjects);
 	public signal void graph_updated (string classname, [DBus (signature = "a(iiii)")] Variant deletes, [DBus (signature = "a(iiii)")] Variant inserts);
 
-	public Resources (DBusConnection connection, Tracker.Config config_p) {
+	public Resources (DBusConnection connection) {
 		this.connection = connection;
-		this.config = config_p;
 	}
 
 	public async void load (BusName sender, string uri) throws Error {
@@ -294,7 +293,7 @@ public class Tracker.Resources : Object {
 		if (regular_commit_pending || commit_type == Tracker.Data.CommitType.BATCH_LAST) {
 			// timer wanted for non-batch commits and the last in a series of batch commits
 			if (signal_timeout == 0) {
-				signal_timeout = Timeout.add (config.graphupdated_delay, on_emit_signals);
+				signal_timeout = Timeout.add (SIGNALS_SECONDS_PER_EMIT * 1000, on_emit_signals);
 			}
 		}
 
@@ -352,7 +351,6 @@ public class Tracker.Resources : Object {
 
 		if (signal_timeout != 0) {
 			Source.remove (signal_timeout);
-			signal_timeout = 0;
 		}
 	}
 

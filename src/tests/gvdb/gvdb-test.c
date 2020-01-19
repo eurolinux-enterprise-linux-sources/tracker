@@ -1,16 +1,13 @@
-#include "config.h"
-
-#include <unistd.h>
-
 #include <glib.h>
-
 #include "gvdb/gvdb-builder.h"
 #include "gvdb/gvdb-reader.h"
 
 static void
 remove_file (const gchar *filename)
 {
-        g_assert (unlink (filename) == 0);
+        GFile *f;
+        f = g_file_new_for_path (filename);
+        g_assert (g_file_delete (f, NULL, NULL));
 }
 
 static void

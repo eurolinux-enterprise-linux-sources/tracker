@@ -33,8 +33,7 @@ gboolean  tracker_encoding_can_guess (void);
 
 /* Returns NULL if it couldn't guess it */
 gchar    *tracker_encoding_guess     (const gchar *buffer,
-                                      gsize        size,
-                                      gdouble     *confidence);
+                                      gsize        size);
 
 G_END_DECLS
 

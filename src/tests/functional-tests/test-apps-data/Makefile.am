@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 appstestdir = $(datadir)/tracker-tests/test-apps-data
 
 appstest_DATA = 		\

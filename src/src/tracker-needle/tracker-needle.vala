@@ -18,7 +18,6 @@
 //
 
 using Gtk;
-using Atk;
 
 [CCode (cname = "TRACKER_UI_DIR")]
 extern static const string UIDIR;
@@ -27,17 +26,15 @@ extern static const string UIDIR;
 extern static const string SRCDIR;
 
 public class Tracker.Needle {
-	private GLib.Settings settings_needle = null;
 	private const string UI_FILE = "tracker-needle.ui";
 	private History history;
-	private Gtk.Window window;
+	private Window window;
 	private ToggleToolButton view_categories;
 	private ToggleToolButton view_filelist;
 	private ToggleToolButton view_icons;
 	private SeparatorToolItem separator_secondary;
 	private ToggleToolButton find_in_contents;
 	private ToggleToolButton find_in_titles;
-	private ToggleToolButton find_in_tags;
 	private ToggleToolButton find_in_all;
 	private ToolItem search_entry;
 	private ComboBox search_list;
@@ -46,7 +43,7 @@ public class Tracker.Needle {
 	private ToolItem spinner_shell;
 	private ToggleToolButton show_tags;
 	private ToolButton show_stats;
-	private Box view;
+	private HBox view;
 	private Tracker.View sw_noresults;
 	private Tracker.View sw_categories;
 	private Tracker.View sw_filelist;
@@ -59,14 +56,11 @@ public class Tracker.Needle {
 	private int size_medium = 0;
 	private int size_big = 0;
 	private uint limit = 500;
-	private int default_view = 1;
 	static bool current_find_in_filelist = true;
 	static bool current_find_in_icons = true;
-	private Widget current_view;
 
 	private ResultStore categories_model;
 	private ResultStore files_model;
-	private ResultStore files_in_tags_model;
 	private ResultStore files_in_title_model;
 	private ResultStore images_model;
 	private ResultStore images_in_title_model;
@@ -175,19 +169,6 @@ public class Tracker.Needle {
 		                                "nfo:fileLastModified(?urn)",
 		                                "nie:url(?urn)");
 
-		files_in_tags_model = new ResultStore(7);
-		files_in_tags_model.limit = limit;
-		files_in_tags_model.result_overflow.connect (result_overflow);
-		files_in_tags_model.add_query (Tracker.Query.Type.ALL,
-		                       Tracker.Query.Match.TAGS_ONLY,
-		                       "?urn",
-		                       "nie:url(?urn)",
-		                       "tracker:coalesce(nie:title(?urn), nfo:fileName(?urn))",
-		                       "nie:url(?urn)",
-		                       "nfo:fileSize(?urn)",
-		                       "nfo:fileLastModified(?urn)",
-		                       "nie:url(?urn)");
-
 		// Images model
 		images_model = new ResultStore (6);
 		images_model.limit = limit;
@@ -220,13 +201,6 @@ public class Tracker.Needle {
 	public Needle () {
 		create_models ();
 		history = new Tracker.History ();
-
-		// Load Gsettings
-		settings_needle = new GLib.Settings ("org.freedesktop.Tracker.Needle");
-
-		settings_needle.changed.connect ((key) => {
-			debug ("tracker-needle: Key %s changed\n", key);
-		});
 	}
 
 	public void show () {
@@ -293,8 +267,8 @@ public class Tracker.Needle {
 		Gtk.icon_size_lookup (Gtk.IconSize.DND, out size_medium, null);
 		Gtk.icon_size_lookup (Gtk.IconSize.DIALOG, out size_big, null);
 
-		window = builder.get_object ("window_needle") as Gtk.Window;
-		window.destroy.connect (window_closed);
+		window = builder.get_object ("window_needle") as Window;
+		window.destroy.connect (Gtk.main_quit);
 		window.key_press_event.connect (window_key_press_event);
 
 		toolbar = builder.get_object ("toolbar_main") as Toolbar;
@@ -307,51 +281,29 @@ public class Tracker.Needle {
 
 		view_filelist = builder.get_object ("toolbutton_view_filelist") as ToggleToolButton;
 		view_filelist.toggled.connect (view_toggled);
-		view_filelist.get_accessible().set_name("View File List");
-		view_filelist.get_child().get_accessible().set_name("View File List RadioButton");
 
 		view_icons = builder.get_object ("toolbutton_view_icons") as ToggleToolButton;
 		view_icons.toggled.connect (view_toggled);
-		view_icons.get_accessible().set_name("View Icons");
-		view_icons.get_child().get_accessible().set_name("View Icons RadioButton");
 
 		view_categories = builder.get_object ("toolbutton_view_categories") as ToggleToolButton;
 		view_categories.toggled.connect (view_toggled);
-		view_categories.get_accessible().set_name("View Categories");
-		view_categories.get_child().get_accessible().set_name("View Categories RadioButton");
 
 		separator_secondary = builder.get_object ("separator_secondary") as SeparatorToolItem;
 
 		find_in_contents = builder.get_object ("toolbutton_find_in_contents") as ToggleToolButton;
 		find_in_contents.toggled.connect (find_in_toggled);
-		find_in_contents.get_accessible().set_name("Find in Contents");
-		find_in_contents.get_child().get_accessible().set_name("Find in Contents");
 
 		find_in_titles = builder.get_object ("toolbutton_find_in_titles") as ToggleToolButton;
 		find_in_titles.toggled.connect (find_in_toggled);
-		find_in_titles.get_accessible().set_name("Find in Titles");
-		find_in_titles.get_child().get_accessible().set_name("Find in Titles");
-
-		find_in_tags = builder.get_object ("toolbutton_find_in_tags") as ToggleToolButton;
-		find_in_tags.toggled.connect (find_in_toggled);
-		find_in_tags.get_accessible().set_name("Find in Tags");
-		find_in_tags.get_child().get_accessible().set_name("Find in Tags");
 
 		find_in_all = builder.get_object ("toolbutton_find_in_all") as ToggleToolButton;
 		find_in_all.toggled.connect (find_in_toggled);
-		find_in_all.get_accessible().set_name("Find in All");
-		find_in_all.get_child().get_accessible().set_name("Find in All");
 
 		search_entry = builder.get_object ("toolitem_search_entry") as ToolItem;
-		search_entry.get_accessible().set_name("Search Entry");
-
 		search_list = builder.get_object ("combobox_search") as ComboBox;
-		search_list.get_accessible().set_name("Search List");
-
 		search = search_list.get_child () as Entry;
 		search.changed.connect (search_changed);
 		search.activate.connect (search_activated);
-		search.key_press_event.connect (search_key_press_event);
 		search_history_insert (history.get ());
 
 		spinner = new Spinner ();
@@ -360,15 +312,11 @@ public class Tracker.Needle {
 
 		show_tags = builder.get_object ("toolbutton_show_tags") as ToggleToolButton;
 		show_tags.clicked.connect (show_tags_clicked);
-		show_tags.get_accessible().set_name("Show Tags");
-		show_tags.get_child().get_accessible().set_name("Show Tags");
 
 		show_stats = builder.get_object ("toolbutton_show_stats") as ToolButton;
 		show_stats.clicked.connect (show_stats_clicked);
-		show_stats.get_accessible().set_name("Show Stats");
-		show_stats.get_child().get_accessible().set_name("Show Stats");
 
-		view = builder.get_object ("hbox_view") as Box;
+		view = builder.get_object ("hbox_view") as HBox;
 
 		// Set up views
 		TreeView treeview;
@@ -406,40 +354,13 @@ public class Tracker.Needle {
 		tags_view.hide_label ();
 		paned.pack2 (tags_view, false, false);
 
-		//Set up the default view
-		view_categories.active = false;
-		view_icons.active = false;
-		view_filelist.active = false;
-
-		//By default we assume Categories view
-		default_view = settings_needle.get_int ("default-view");
-
-		if (default_view == 0) {
-			view_icons.active = true;
-		} else if (default_view == 2) {
-			view_filelist.active = true;
-		} else {
-			view_categories.active = true;
-		}
+		view_categories.set_active (true);
 	}
 
 	private bool window_key_press_event (Gtk.Widget widget, Gdk.EventKey event) {
 		// Add Ctrl+W close window semantics
 		if (Gdk.ModifierType.CONTROL_MASK in event.state && Gdk.keyval_name (event.keyval) == "w") {
 			widget.destroy();
-		}
-
-		return false;
-	}
-
-	private bool search_key_press_event (Gtk.Widget widget, Gdk.EventKey event) {
-		if (Gdk.keyval_name (event.keyval) == "Down" ||
-		    Gdk.keyval_name (event.keyval) == "KP_Down") {
-			var child = ((ScrolledWindow) current_view).get_child ();
-
-			if (child != null) {
-				child.grab_focus();
-			}
 		}
 
 		return false;
@@ -501,7 +422,7 @@ public class Tracker.Needle {
 		if (add_to_model) {
 			TreeIter new_iter;
 
-			Gtk.ListStore store = (Gtk.ListStore) model;
+			ListStore store = (ListStore) model;
 			store.prepend (out new_iter);
 			store.set (new_iter, 0, criteria, -1);
 
@@ -538,11 +459,9 @@ public class Tracker.Needle {
 
 		// Show correct window
 		sw_noresults.hide ();
-		current_view = sw_noresults;
 
 		if (view_icons.active) {
 			sw_icons.show ();
-			current_view = sw_icons;
 
 			if (find_in_all.active) {
 				store = images_model;
@@ -557,7 +476,6 @@ public class Tracker.Needle {
 
 		if (view_categories.active) {
 			sw_categories.show ();
-			current_view = sw_categories;
 			store = categories_model;
 		} else {
 			sw_categories.hide ();
@@ -565,13 +483,8 @@ public class Tracker.Needle {
 
 		if (view_filelist.active) {
 			sw_filelist.show ();
-			current_view = sw_filelist;
 
-			if (find_in_tags.active) {
-				store = files_in_tags_model;
-				store.search_tags = search_tags();
-				debug("Tags to look for: %s", string.joinv("; ", store.search_tags.data));
-			} else if (find_in_contents.active) {
+			if (find_in_contents.active) {
 				store = files_model;
 			} else {
 				store = files_in_title_model;
@@ -584,27 +497,11 @@ public class Tracker.Needle {
 
 		if (store != null) {
 			// We can set tags to search by but we don't anymore
-			// except if user want explecitly search by tags only.
-			if (!find_in_tags.active) {
-				store.search_tags = null;
-			}
+			store.search_tags = null;
 			store.search_term = search.get_text ();
 		}
 
 		return false;
-	}
-
-	private void window_closed() {
-		// Before exiting save the current view
-		// By default, we assume categories view
-		if (view_icons.active) {
-			settings_needle.set_int ("default-view", 0);
-		} else if (view_filelist.active) {
-			settings_needle.set_int ("default-view", 2);
-		} else {
-			settings_needle.set_int ("default-view", 1);
-		}
-		Gtk.main_quit();
 	}
 
 	private void view_toggled () {
@@ -638,7 +535,6 @@ public class Tracker.Needle {
 		separator_secondary.visible = view_filelist.active || view_icons.active;
 		find_in_contents.visible = view_filelist.active;
 		find_in_titles.visible = view_filelist.active || view_icons.active;
-		find_in_tags.visible = view_filelist.active;
 		find_in_all.visible = view_icons.active; // only show this in one view
 
 		search_run ();
@@ -648,7 +544,6 @@ public class Tracker.Needle {
 	private void find_in_toggled () {
 		if (!find_in_contents.active &&
 		    !find_in_titles.active &&
-		    !find_in_tags.active &&
 		    !find_in_all.active) {
 		    return;
 		}
@@ -661,11 +556,6 @@ public class Tracker.Needle {
 			}
 
 			search_run ();
-		} else if (find_in_tags.active){
-			debug ("Find in toggled to 'tags'");
-
-			search_entry.sensitive = true;
-			search_run();
 		} else if (find_in_titles.active) {
 			debug ("Find in toggled to 'titles'");
 
@@ -785,16 +675,6 @@ public class Tracker.Needle {
 
 	private void info_bar_closed (Button source) {
 		info_bar.hide ();
-	}
-
-	private GLib.GenericArray<string> search_tags(){
-		GLib.GenericArray<string> tagArray = new GLib.GenericArray<string>();
-
-		foreach (string tag in search.get_text ().split(",")){
-			tagArray.add(tag) ;
-		}
-
-		return tagArray;
 	}
 }
 

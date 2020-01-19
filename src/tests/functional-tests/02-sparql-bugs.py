@@ -21,10 +21,7 @@
 """
 Peculiar Sparql behavour reported in bugs
 """
-
-from gi.repository import GLib
-
-import sys,os
+import sys,os,dbus
 import unittest
 import time
 import random
@@ -48,7 +45,7 @@ class TrackerStoreSparqlBugsTests (CommonTrackerStoreTest):
                 INSERT {
                     <contact:affiliation> a nco:Affiliation ;
                              nco:hasPhoneNumber
-                                  [ a nco:PhoneNumber ; nco:phoneNumber "98653" ] .
+                                  [ a nco:PhoneNumber ; maemo:localPhoneNumber "98653" ] .
                     <contact:test> a nco:PersonContact ;
                              nco:hasAffiliation <contact:affiliation> .
                 }
@@ -62,20 +59,20 @@ class TrackerStoreSparqlBugsTests (CommonTrackerStoreTest):
                    {
                      ?_contact nco:hasAffiliation ?a .
                      ?a nco:hasPhoneNumber ?p1 .
-                     ?p1 nco:phoneNumber ?n
+                     ?p1 maemo:localPhoneNumber ?n
                    } UNION {
                      ?_contact nco:hasPhoneNumber ?p2 .
-                     ?p2 nco:phoneNumber ?n
+                     ?p2 maemo:localPhoneNumber ?n
                    } .
                   FILTER (
                     EXISTS {
                         {
                           ?_contact nco:hasPhoneNumber ?auto81 .
-                          ?auto81 nco:phoneNumber ?auto80
+                          ?auto81 maemo:localPhoneNumber ?auto80
                         } UNION {
                           ?_contact nco:hasAffiliation ?auto83 .
                           ?auto83 nco:hasPhoneNumber ?auto84 .
-                          ?auto84 nco:phoneNumber ?auto80
+                          ?auto84 maemo:localPhoneNumber ?auto80
                         }
                         FILTER (?auto80 = '98653')
                      }
@@ -89,10 +86,10 @@ class TrackerStoreSparqlBugsTests (CommonTrackerStoreTest):
                     {
                         ?_contact nco:hasAffiliation ?a .
                         ?a nco:hasPhoneNumber ?p1 .
-                        ?p1 nco:phoneNumber ?n
+                        ?p1 maemo:localPhoneNumber ?n
                     } UNION {
                         ?_contact nco:hasPhoneNumber ?p2 .
-                        ?p2 nco:phoneNumber ?n
+                        ?p2 maemo:localPhoneNumber ?n
                     } .
                     FILTER(?n = '98653')
                 }
@@ -104,16 +101,16 @@ class TrackerStoreSparqlBugsTests (CommonTrackerStoreTest):
                     {
                         ?_contact nco:hasAffiliation ?a .
                         ?a nco:hasPhoneNumber ?p1 .
-                        ?p1 nco:phoneNumber ?n
+                        ?p1 maemo:localPhoneNumber ?n
                     } UNION {
                         ?_contact nco:hasPhoneNumber ?p2 .
-                        ?p2 nco:phoneNumber ?n
+                        ?p2 maemo:localPhoneNumber ?n
                     } .
                     FILTER(
                         EXISTS {
                             ?_contact nco:hasAffiliation ?auto83 .
                             ?auto83 nco:hasPhoneNumber ?auto84 .
-                            ?auto84 nco:phoneNumber ?auto80
+                            ?auto84 maemo:localPhoneNumber ?auto80 
                             FILTER(?auto80 = "98653")
                         }
                     )
@@ -200,7 +197,7 @@ class TrackerStoreSparqlBugsTests (CommonTrackerStoreTest):
                 original_data = self.tracker.query (query)
 
                 wrong_insert = "INSERT { <test://nb222645-wrong-class-contact> a nco:IMContact. } "
-                self.assertRaises (GLib.Error,
+                self.assertRaises (dbus.DBusException,
                                    self.tracker.update,
                                    wrong_insert)
 

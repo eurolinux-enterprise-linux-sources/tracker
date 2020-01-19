@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 addpropdir = $(datadir)/tracker-tests/test-ontologies/add-prop
 
 addprop_DATA =                                         \

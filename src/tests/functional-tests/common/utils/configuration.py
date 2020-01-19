@@ -29,8 +29,6 @@ RESOURCES_IFACE = "org.freedesktop.Tracker1.Resources"
 MINERFS_BUSNAME = "org.freedesktop.Tracker1.Miner.Files"
 MINERFS_OBJ_PATH = "/org/freedesktop/Tracker1/Miner/Files"
 MINER_IFACE = "org.freedesktop.Tracker1.Miner"
-MINERFS_INDEX_OBJ_PATH = "/org/freedesktop/Tracker1/Miner/Files/Index"
-MINER_INDEX_IFACE = "org.freedesktop.Tracker1.Miner.Index"
 
 TRACKER_BACKUP_OBJ_PATH = "/org/freedesktop/Tracker1/Backup"                                            
 BACKUP_IFACE = "org.freedesktop.Tracker1.Backup"
@@ -41,8 +39,9 @@ STATS_IFACE = "org.freedesktop.Tracker1.Statistics"
 TRACKER_STATUS_OBJ_PATH = "/org/freedesktop/Tracker1/Status"
 STATUS_IFACE = "org.freedesktop.Tracker1.Status"
 
-TRACKER_EXTRACT_BUSNAME = "org.freedesktop.Tracker1.Miner.Extract"
-TRACKER_EXTRACT_OBJ_PATH = "/org/freedesktop/Tracker1/Miner/Extract"
+TRACKER_EXTRACT_BUSNAME = "org.freedesktop.Tracker1.Extract"
+TRACKER_EXTRACT_OBJ_PATH = "/org/freedesktop/Tracker1/Extract"
+TRACKER_EXTRACT_IFACE = "org.freedesktop.Tracker1.Extract"
 
 WRITEBACK_BUSNAME = "org.freedesktop.Tracker1.Writeback"
 
@@ -62,7 +61,7 @@ def expandvars (variable):
 
 
 
-PREFIX = "/home/carlos/Build/gnome"
+PREFIX = "/usr"
 #
 # This raw variables are set by autotools without translating vars:
 #   E.G. bindir='${exec_prefix}/bin
@@ -80,7 +79,7 @@ DATADIR = os.path.normpath (expandvars (RAW_DATA_DIR))
 BINDIR = os.path.normpath (expandvars (RAW_BINDIR))
                             
 haveMaemo = ("#" == "")
-haveUpstart = ("#" == "")
+haveUpstart = ("" == "")
 disableJournal = ("#" == "")
 
 TEST_TMP_DIR = os.path.join (os.environ["HOME"], "tracker-tests")

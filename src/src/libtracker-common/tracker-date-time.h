@@ -32,8 +32,7 @@ G_BEGIN_DECLS
 
 typedef enum  {
 	TRACKER_DATE_ERROR_OFFSET,
-	TRACKER_DATE_ERROR_INVALID_ISO8601,
-	TRACKER_DATE_ERROR_EMPTY
+	TRACKER_DATE_ERROR_INVALID_ISO8601
 } TrackerDateError;
 
 #define TRACKER_TYPE_DATE_TIME                 (tracker_date_time_get_type ())

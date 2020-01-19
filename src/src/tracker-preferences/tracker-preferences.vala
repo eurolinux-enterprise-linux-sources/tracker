@@ -21,7 +21,6 @@
 using Gtk;
 using GLib;
 using Tracker;
-using Posix;
 
 [CCode (cname = "TRACKER_UI_DIR")]
 extern static const string UIDIR;
@@ -30,11 +29,8 @@ extern static const string UIDIR;
 extern static const string SRCDIR;
 
 public class Tracker.Preferences {
-	private GLib.Settings settings_fts = null;
 	private GLib.Settings settings_miner_fs = null;
 	private GLib.Settings settings_extract = null;
-
-	private bool suggest_restart = false;
 
 	private const string UI_FILE = "tracker-preferences.ui";
 	private const string HOME_STRING = "$HOME";
@@ -45,6 +41,7 @@ public class Tracker.Preferences {
 	private Window window;
 	private CheckButton checkbutton_enable_index_on_battery_first_time;
 	private CheckButton checkbutton_enable_index_on_battery;
+	private SpinButton spinbutton_delay;
 	private CheckButton checkbutton_enable_monitoring;
 	private CheckButton checkbutton_index_removable_media;
 	private CheckButton checkbutton_index_optical_discs;
@@ -53,10 +50,10 @@ public class Tracker.Preferences {
 	private RadioButton radiobutton_sched_idle_first_index;
 	private RadioButton radiobutton_sched_idle_never;
 	private Scale hscale_drop_device_threshold;
-	private Gtk.ListStore liststore_index;
-	private Gtk.ListStore liststore_ignored_directories;
-	private Gtk.ListStore liststore_ignored_files;
-	private Gtk.ListStore liststore_ignored_directories_with_content;
+	private ListStore liststore_index;
+	private ListStore liststore_ignored_directories;
+	private ListStore liststore_ignored_files;
+	private ListStore liststore_ignored_directories_with_content;
 	private TreeView treeview_index;
 	private TreeView treeview_ignored_directories;
 	private TreeView treeview_ignored_directories_with_content;
@@ -70,9 +67,8 @@ public class Tracker.Preferences {
 	private ToggleButton togglebutton_pictures;
 	private ToggleButton togglebutton_videos;
 	private ToggleButton togglebutton_download;
-	private CheckButton checkbutton_index_file_content;
-	private CheckButton checkbutton_index_numbers;
-	private Box hbox_duplicate_warning;
+	private HBox hbox_duplicate_warning;
+	private Button button_reindex;
 	private Notebook notebook;
 
 	public Preferences () {
@@ -80,20 +76,10 @@ public class Tracker.Preferences {
 
 		HOME_STRING_EVALUATED = dir_from_config (HOME_STRING);
 
-		settings_fts = new GLib.Settings ("org.freedesktop.Tracker.FTS");
-		/* settings_fts.delay(); */
-
 		settings_miner_fs = new GLib.Settings ("org.freedesktop.Tracker.Miner.Files");
-		/* settings_miner_fs.delay(); */
-
 		settings_extract = new GLib.Settings ("org.freedesktop.Tracker.Extract");
-		/* settings_extract.delay(); */
 
 		// Change notification for any key in the schema
-		settings_fts.changed.connect ((key) => {
-		      print ("tracker-fts: Key '%s' changed\n", key);
-		});
-
 		settings_miner_fs.changed.connect ((key) => {
 		      print ("tracker-miner-fs: Key '%s' changed\n", key);
 		});
@@ -133,6 +119,7 @@ public class Tracker.Preferences {
 		checkbutton_enable_monitoring = builder.get_object ("checkbutton_enable_monitoring") as CheckButton;
 		checkbutton_enable_index_on_battery = builder.get_object ("checkbutton_enable_index_on_battery") as CheckButton;
 		checkbutton_enable_index_on_battery_first_time = builder.get_object ("checkbutton_enable_index_on_battery_first_time") as CheckButton;
+		spinbutton_delay = builder.get_object ("spinbutton_delay") as SpinButton;
 		checkbutton_index_removable_media = builder.get_object ("checkbutton_index_removable_media") as CheckButton;
 		checkbutton_index_optical_discs = builder.get_object ("checkbutton_index_optical_discs") as CheckButton;
 		checkbutton_index_optical_discs.set_sensitive (checkbutton_index_removable_media.active);
@@ -148,9 +135,9 @@ public class Tracker.Preferences {
 		togglebutton_pictures = builder.get_object ("togglebutton_pictures") as ToggleButton;
 		togglebutton_videos = builder.get_object ("togglebutton_videos") as ToggleButton;
 		togglebutton_download = builder.get_object ("togglebutton_download") as ToggleButton;
-		checkbutton_index_file_content = builder.get_object ("checkbutton_index_file_content") as CheckButton;
-		checkbutton_index_numbers = builder.get_object ("checkbutton_index_numbers") as CheckButton;
-		hbox_duplicate_warning = builder.get_object ("hbox_duplicate_warning") as Box;
+		hbox_duplicate_warning = builder.get_object ("hbox_duplicate_warning") as HBox;
+
+		button_reindex = builder.get_object ("button_reindex") as Button;
 
 		treeview_index = builder.get_object ("treeview_index") as TreeView;
 		treeviewcolumn_index1 = builder.get_object ("treeviewcolumn_index1") as TreeViewColumn;
@@ -164,16 +151,18 @@ public class Tracker.Preferences {
 		treeview_setup (treeview_ignored_directories_with_content, _("Directory"), false, true);
 		treeview_setup (treeview_ignored_files, _("File"), false, true);
 
-		liststore_index = builder.get_object ("liststore_index") as Gtk.ListStore;
+		liststore_index = builder.get_object ("liststore_index") as ListStore;
 		liststore_index.set_sort_column_id (0, Gtk.SortType.ASCENDING);
-		liststore_ignored_directories = builder.get_object ("liststore_ignored_directories") as Gtk.ListStore;
-		liststore_ignored_files = builder.get_object ("liststore_ignored_files") as Gtk.ListStore;
-		liststore_ignored_directories_with_content = builder.get_object ("liststore_ignored_directories_with_content") as Gtk.ListStore;
+		liststore_ignored_directories = builder.get_object ("liststore_ignored_directories") as ListStore;
+		liststore_ignored_files = builder.get_object ("liststore_ignored_files") as ListStore;
+		liststore_ignored_directories_with_content = builder.get_object ("liststore_ignored_directories_with_content") as ListStore;
 
 		// Set initial values
 		checkbutton_enable_index_on_battery.active = settings_miner_fs.get_boolean ("index-on-battery");
 		checkbutton_enable_index_on_battery_first_time.set_sensitive (!checkbutton_enable_index_on_battery.active);
 		checkbutton_enable_index_on_battery_first_time.active = settings_miner_fs.get_boolean ("index-on-battery-first-time");
+		spinbutton_delay.set_increments (1, 1);
+		spinbutton_delay.value = (double) settings_miner_fs.get_int ("initial-sleep");
 		checkbutton_enable_monitoring.active = settings_miner_fs.get_boolean ("enable-monitors");
 		checkbutton_index_removable_media.active = settings_miner_fs.get_boolean ("index-removable-devices");
 		checkbutton_index_optical_discs.set_sensitive (checkbutton_index_removable_media.active);
@@ -222,9 +211,6 @@ public class Tracker.Preferences {
 		togglebutton_videos.active = model_contains (liststore_index, "&VIDEOS");
 		togglebutton_download.active = model_contains (liststore_index, "&DOWNLOAD");
 
-		checkbutton_index_file_content.active = settings_fts.get_int ("max-words-to-index") > 0;
-		checkbutton_index_numbers.active = settings_fts.get_boolean ("ignore-numbers") != true;
-
 		// Connect signals
 		// builder.connect_signals (null);
 		builder.connect_signals_full (connect_signals);
@@ -247,7 +233,7 @@ public class Tracker.Preferences {
 		void* sym;
 
 		if (!module.symbol (handler_name, out sym)) {
-			warning ("Symbol not found! %s\n", handler_name);
+			stdout.printf ("Symbol not found! %s\n", handler_name);
 		} else {
 			Signal.connect (object, signal_name, (GLib.Callback) sym, this);
 		}
@@ -290,26 +276,12 @@ public class Tracker.Preferences {
 			settings_extract.set_enum ("sched-idle", sched_idle);
 
 			debug ("Saving settings...");
-			settings_fts.apply ();
-			debug ("  tracker-fts: Done");
 			settings_miner_fs.apply ();
 			debug ("  tracker-miner-fs: Done");
 			settings_extract.apply ();
 			debug ("  tracker-extract: Done");
 
-			if (suggest_restart) {
-				Dialog dialog = new MessageDialog (window,
-				                                   DialogFlags.DESTROY_WITH_PARENT,
-				                                   MessageType.INFO,
-				                                   ButtonsType.CLOSE,
-				                                   _("Some of the requested changes will take effect on the next session restart."),
-				                                   null);
-				/* Reset this suggestion */
-				suggest_restart = false;
-				dialog.run ();
-				dialog.destroy ();
-			}
-
+			// TODO: restart the Application and Files miner (no idea how to cleanly do this atm)
 			return;
 
 		default:
@@ -317,6 +289,11 @@ public class Tracker.Preferences {
 		}
 
 		Gtk.main_quit ();
+	}
+
+	[CCode (instance_pos = -1)]
+	public void spinbutton_delay_value_changed_cb (SpinButton source) {
+		settings_miner_fs.set_int ("initial-sleep", source.get_value_as_int ());
 	}
 
 	[CCode (instance_pos = -1)]
@@ -349,26 +326,19 @@ public class Tracker.Preferences {
 	[CCode (instance_pos = -1)]
 	public string hscale_disk_space_limit_format_value_cb (Scale source, double value) {
 		if (((int) value) == -1) {
-			/* To translators: This is a feature that is
-			 * disabled for disk space checking.
-			 */
 			return _("Disabled");
 		}
 
-		return "%d%%".printf ((int) value);
+		return _("%d%%").printf ((int) value);
 	}
 
 	[CCode (instance_pos = -1)]
 	public string hscale_drop_device_threshold_format_value_cb (Scale source, double value) {
 		if (((int) value) == 0) {
-			/* To translators: This is a feature that is
-			 * disabled for removing a device from a
-			 * database cache.
-			 */
 			return _("Disabled");
 		}
 
-		return "%d".printf ((int) value);
+		return _("%d").printf ((int) value);
 	}
 
 	[CCode (instance_pos = -1)]
@@ -416,7 +386,7 @@ public class Tracker.Preferences {
 		store_del_dir (treeview_ignored_files);
 	}
 
-	private void togglebutton_directory_update_model (ToggleButton source, Gtk.ListStore store, string to_check) {
+	private void togglebutton_directory_update_model (ToggleButton source, ListStore store, string to_check) {
 		if (source.active && !model_contains (store, to_check)) {
 			TreeIter iter;
 			liststore_index.append (out iter);
@@ -481,29 +451,27 @@ public class Tracker.Preferences {
 		togglebutton_directory_update_model (source, liststore_index, Environment.get_user_special_dir (UserDirectory.DOWNLOAD));
 	}
 
-	private void reset_parser () {
-		string path = Path.build_filename (Environment.get_user_cache_dir (), "tracker", "parser-sha1.txt", null);
-		FileUtils.unlink (path);
-	}
-
 	[CCode (instance_pos = -1)]
-	public void checkbutton_index_file_content_toggled_cb (CheckButton source) {
-		// FIXME: Should make number configurable, 10000 is the default.
-		if (source.active) {
-			settings_fts.reset ("max-words-to-index");
-		} else {
-			settings_fts.set_int ("max-words-to-index", 0);
+	public void button_reindex_clicked_cb (Button source) {
+		stdout.printf ("Reindexing...\n");
+
+		string output, errors;
+		int status;
+
+		try {
+			Process.spawn_sync (null, /* working dir */
+			                    {"tracker-control", "--hard-reset", "--start" },
+			                    null, /* env */
+			                    SpawnFlags.SEARCH_PATH,
+			                    null,
+			                    out output,
+			                    out errors,
+			                    out status);
+		} catch (GLib.Error e) {
+			stderr.printf ("Could not reindex: %s", e.message);
 		}
-
-		reset_parser ();
-		suggest_restart = true;
-	}
-
-	[CCode (instance_pos = -1)]
-	public void checkbutton_index_numbers_toggled_cb (CheckButton source) {
-		settings_fts.set_boolean ("ignore-numbers", !source.active);
-		reset_parser ();
-		suggest_restart = true;
+		stdout.printf ("%s\n", output);
+		stdout.printf ("Finishing...\n");
 	}
 
 	private void toggles_update (UserDirectory[] matches, bool active) {
@@ -532,7 +500,7 @@ public class Tracker.Preferences {
 		}
 	}
 
-	private void store_add_value_dialog (Gtk.ListStore store) {
+	private void store_add_value_dialog (ListStore store) {
 		Dialog dialog;
 		Entry entry;
 		Container content_area;
@@ -540,8 +508,8 @@ public class Tracker.Preferences {
 		dialog = new Dialog.with_buttons (_("Enter value"),
 		                                  window,
 		                                  DialogFlags.DESTROY_WITH_PARENT,
-		                                  _("_Cancel"), ResponseType.CANCEL,
-		                                  _("_OK"), ResponseType.ACCEPT);
+		                                  Stock.CANCEL, ResponseType.CANCEL,
+		                                  Stock.OK, ResponseType.ACCEPT);
 
 		dialog.set_default_response(ResponseType.ACCEPT);
 		content_area = (Container) dialog.get_content_area ();
@@ -565,13 +533,13 @@ public class Tracker.Preferences {
 		dialog.destroy ();
 	}
 
-	private void store_add_dir (Gtk.ListStore store) {
+	private void store_add_dir (ListStore store) {
 		FileChooserDialog dialog = new FileChooserDialog (_("Select directory"),
 		                                                  window,
 		                                                  FileChooserAction.SELECT_FOLDER,
-		                                                  _("_Cancel"),
+		                                                  Stock.CANCEL,
 		                                                  ResponseType.CANCEL,
-		                                                  _("_OK"),
+		                                                  Stock.OK,
 		                                                  ResponseType.ACCEPT);
 
 		while (true) {
@@ -620,13 +588,13 @@ public class Tracker.Preferences {
 
 	private void store_del_dir (TreeView view) {
 		List<TreePath> list;
-		Gtk.ListStore store;
+		ListStore store;
 		TreeModel model;
 
 		TreeSelection selection = view.get_selection ();
 		list = selection.get_selected_rows (out model);
 
-		store = (Gtk.ListStore) model;
+		store = (ListStore) model;
 
 		foreach (TreePath path in list) {
 			TreeIter iter;
@@ -725,7 +693,7 @@ public class Tracker.Preferences {
 		return output;
 	}
 
-	private string[] model_to_strv (Gtk.ListStore model, bool recurse_required, bool recurse_value) {
+	private string[] model_to_strv (ListStore model, bool recurse_required, bool recurse_value) {
 		string[] list = {};
 		TreeIter iter;
 		bool valid;
@@ -777,7 +745,7 @@ public class Tracker.Preferences {
 		return false;
 	}
 
-	private void model_populate (Gtk.ListStore model, string[] list, bool have_recurse, bool recurse) {
+	private void model_populate (ListStore model, string[] list, bool have_recurse, bool recurse) {
 		int position = 0;
 
 		foreach (string s in list) {
@@ -846,14 +814,15 @@ public class Tracker.Preferences {
 		view.append_column (column);
 
 		if (show_recurse_column) {
-			Gtk.ListStore store = view.get_model () as Gtk.ListStore;
+			ListStore store = view.get_model () as ListStore;
 			CellRendererToggle cell = new CellRendererToggle ();
 
 			column = new TreeViewColumn.with_attributes (_("Recurse"),
 			                                             cell,
-			                                             "active", true,
+			                                             "active", 1,
 			                                             null);
 			column.set_expand (false);
+			column.set_fixed_width (50);
 			view.append_column (column);
 
 			cell.toggled.connect ((toggle, path) => {

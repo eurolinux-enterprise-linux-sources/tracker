@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 SUBDIRS = chrome defaults
 
 extensiondir = $(datadir)/xul-ext/trackerbird

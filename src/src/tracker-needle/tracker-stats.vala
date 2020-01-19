@@ -70,13 +70,7 @@ public class Tracker.Stats : Dialog {
 		// Label for dialog
 		var label = new Label (_("The statistics represented here do not reflect their availability, rather the total data stored:"));
 		label.set_line_wrap (true);
-		label.set_max_width_chars (50);
 		label.set_alignment (0.0f, 0.5f);
-
-		// NOTE: We can't use this NEW API because it doesn't work, GTK+ doesn't have a fix yet.
-		// label.set_halign (Gtk.Align.START);
-		// label.set_valign (Gtk.Align.CENTER);
-		// label.set_justify (Gtk.Justification.LEFT);
 		vbox.pack_start (label, true, true, 0);
 
 		// Size group to line up labels
@@ -144,26 +138,18 @@ public class Tracker.Stats : Dialog {
 					continue;
 				}
 
-				var box = new Box (Gtk.Orientation.HORIZONTAL, 12);
+				var hbox = new HBox (false, 12);
 				var label_key = new Label (key_used);
 				var label_val = new Label (val);
 
-				// NOTE: We can't use this NEW API because it doesn't work, GTK+ doesn't have a fix yet.
-				// label_key.set_justify (Gtk.Justification.LEFT);
-				// label_key.set_halign (Gtk.Align.START);
-				// label_key.set_valign (Gtk.Align.CENTER);
-				// label_val.set_justify (Gtk.Justification.LEFT);
-				// label_val.set_halign (Gtk.Align.START);
-				// label_val.set_valign (Gtk.Align.CENTER);
 				label_key.set_alignment (0.0f, 0.5f);
 				label_val.set_alignment (0.0f, 0.5f);
-
-				box.pack_start (label_key, true, true, 0);
-				box.pack_start (label_val, false, true, 0);
+				hbox.pack_start (label_key, true, true, 0);
+				hbox.pack_start (label_val, false, true, 0);
 
 				sizegroup.add_widget (label_key);
 
-				vbox.pack_start (box, true, true, 0);
+				vbox.pack_start (hbox, true, true, 0);
 			}
 		} catch (DBusError e) {
 			warning ("Could not get Tracker statistics: " + e.message);
@@ -173,7 +159,7 @@ public class Tracker.Stats : Dialog {
 		vbox.set_spacing (10);
 
 		// Add buttons to button area at the bottom
-		add_button ("_Close", ResponseType.CLOSE);
+		add_button (Stock.CLOSE, ResponseType.CLOSE);
 
 		// Connect signals
 		this.response.connect (on_response);

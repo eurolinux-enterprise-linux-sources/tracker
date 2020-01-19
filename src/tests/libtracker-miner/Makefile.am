@@ -2,6 +2,8 @@ include $(top_srcdir)/Makefile.decl
 
 # Include list of shared sources:
 #  Defines:
+#    $(libtracker_miner_marshal_sources)
+#    $(libtracker_miner_marshal_headers)
 #    $(libtracker_miner_monitor_sources)
 #    $(libtracker_miner_monitor_headers)
 #
@@ -10,15 +12,16 @@ include $(top_srcdir)/Makefile.decl
 #
 include $(top_srcdir)/src/libtracker-miner/Makefile-shared-sources.decl
 
-noinst_LTLIBRARIES += libtracker-miner-tests.la
+noinst_LTLIBRARIES = libtracker-miner-tests.la
 
-noinst_PROGRAMS += $(test_programs)
+noinst_PROGRAMS = $(TEST_PROGS)
 
-test_programs = \
+TEST_PROGS +=                                          \
 	tracker-crawler-test                           \
-	tracker-file-enumerator-test		       \
 	tracker-file-notifier-test		       \
 	tracker-file-system-test		       \
+	tracker-miner-manager-test                     \
+	tracker-password-provider-test                 \
 	tracker-thumbnailer-test                       \
 	tracker-monitor-test			       \
 	tracker-priority-queue-test		       \
@@ -26,7 +29,7 @@ test_programs = \
 	tracker-indexing-tree-test
 
 AM_CPPFLAGS = \
-	$(BUILD_VALACFLAGS) \
+	$(BUILD_CFLAGS) \
 	-DTEST \
 	-DLIBEXEC_PATH=\""$(libexecdir)"\" \
 	-DTEST_DATA_DIR=\""$(abs_top_srcdir)/tests/libtracker-miner/data"\" \
@@ -64,9 +67,23 @@ libtracker_miner_tests_la_LIBADD = 		       \
 	$(BUILD_LIBS)
 
 tracker_crawler_test_SOURCES = \
-	$(libtracker_miner_crawler_sources) \
-	$(libtracker_miner_crawler_headers) \
 	tracker-crawler-test.c
+
+tracker_miner_manager_test_SOURCES = \
+	tracker-miner-manager-test.c \
+	miners-mock.c \
+	empty-gobject.c
+
+tracker_miner_manager_test_LDADD = \
+	libtracker-miner-tests.la \
+	$(LDADD)
+
+tracker_password_provider_test_SOURCES = \
+	tracker-password-provider-test.c
+
+tracker_password_provider_test_LDADD = \
+	libtracker-miner-tests.la \
+	$(LDADD)
 
 tracker_thumbnailer_test_SOURCES = \
 	tracker-thumbnailer-test.c \
@@ -78,6 +95,7 @@ tracker_monitor_test_SOURCES =                         \
 if !ENABLE_GCOV
 # If gcov is enabled, libtracker-miner exports all symbols and this is not needed.
 tracker_monitor_test_SOURCES +=			       \
+	$(libtracker_miner_marshal_sources)            \
 	$(libtracker_miner_monitor_sources)
 endif
 
@@ -93,23 +111,23 @@ tracker_indexing_tree_test_SOURCES = \
 tracker_file_system_test_SOURCES = \
 	tracker-file-system-test.c
 
-tracker_file_notifier_test_SOURCES =                   \
-	$(libtracker_miner_monitor_sources)            \
+tracker_file_notifier_test_SOURCES = \
 	tracker-file-notifier-test.c
 
 noinst_HEADERS =                                       \
+	$(libtracker_miner_marshal_headers)            \
 	$(libtracker_miner_monitor_headers)            \
 	tracker-miner-mock.h                           \
 	thumbnailer-mock.h                             \
 	miners-mock.h                                  \
 	empty-gobject.h
 
-BUILT_SOURCES += \
+BUILT_SOURCES = \
 	$(libtracker_miner_file_system_sources) \
 	$(libtracker_miner_file_system_headers) \
 	libtracker_miner_tests_la_vala.stamp
 
-EXTRA_DIST += \
+EXTRA_DIST = \
 	data/empty-dir/.hidden \
 	data/file1 \
 	data/dir/empty-dir/.hidden \

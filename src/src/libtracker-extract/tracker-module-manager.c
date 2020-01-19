@@ -30,22 +30,17 @@
 typedef struct {
 	const gchar *module_path; /* intern string */
 	GList *patterns;
-	GStrv fallback_rdf_types;
+	gchar *fallback_rdf_type;
 } RuleInfo;
 
 typedef struct {
 	GModule *module;
+	TrackerModuleThreadAwareness thread_awareness;
 	TrackerExtractMetadataFunc extract_func;
 	TrackerExtractInitFunc init_func;
 	TrackerExtractShutdownFunc shutdown_func;
 	guint initialized : 1;
 } ModuleInfo;
-
-static gboolean dummy_extract_func (TrackerExtractInfo *info);
-
-static ModuleInfo dummy_module = {
-	NULL, dummy_extract_func, NULL, NULL, TRUE
-};
 
 static GHashTable *modules = NULL;
 static GHashTable *mimetype_map = NULL;
@@ -60,62 +55,27 @@ struct _TrackerMimetypeInfo {
 };
 
 static gboolean
-dummy_extract_func (TrackerExtractInfo *info)
-{
-	return TRUE;
-}
-
-static gboolean
 load_extractor_rule (GKeyFile  *key_file,
                      GError   **error)
 {
-	GError *local_error = NULL;
 	gchar *module_path, **mimetypes;
 	gsize n_mimetypes, i;
 	RuleInfo rule = { 0 };
 
-	module_path = g_key_file_get_string (key_file, "ExtractorRule", "ModulePath", &local_error);
+	module_path = g_key_file_get_string (key_file, "ExtractorRule", "ModulePath", error);
 
-	if (local_error) {
-		if (!g_error_matches (local_error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_KEY_NOT_FOUND)) {
-			g_propagate_error (error, local_error);
-			return FALSE;
-		} else {
-			/* Ignore */
-			g_clear_error (&local_error);
-		}
-	}
-
-	if (module_path &&
-	    !G_IS_DIR_SEPARATOR (module_path[0])) {
-		gchar *tmp;
-		const gchar *extractors_dir;
-
-		extractors_dir = g_getenv ("TRACKER_EXTRACTORS_DIR");
-		if (G_LIKELY (extractors_dir == NULL)) {
-			extractors_dir = TRACKER_EXTRACTORS_DIR;
-		} else {
-			g_message ("Extractor rules directory is '%s' (set in env)", extractors_dir);
-		}
-
-		tmp = g_build_filename (extractors_dir, module_path, NULL);
-		g_free (module_path);
-		module_path = tmp;
-	}
-
-	mimetypes = g_key_file_get_string_list (key_file, "ExtractorRule", "MimeTypes", &n_mimetypes, &local_error);
-
-	if (!mimetypes) {
-		g_free (module_path);
-
-		if (local_error) {
-			g_propagate_error (error, local_error);
-		}
-
+	if (!module_path) {
 		return FALSE;
 	}
 
-	rule.fallback_rdf_types = g_key_file_get_string_list (key_file, "ExtractorRule", "FallbackRdfTypes", NULL, NULL);
+	mimetypes = g_key_file_get_string_list (key_file, "ExtractorRule", "MimeTypes", &n_mimetypes, error);
+
+	if (!mimetypes) {
+		g_free (module_path);
+		return FALSE;
+	}
+
+	rule.fallback_rdf_type = g_key_file_get_string (key_file, "ExtractorRule", "FallbackRdfType", NULL);
 
 	/* Construct the rule */
 	rule.module_path = g_intern_string (module_path);
@@ -195,9 +155,10 @@ tracker_extract_module_manager_init (void)
 		    !load_extractor_rule (key_file, &error)) {
 			g_warning ("  Could not load extractor rule file '%s': %s", name, error->message);
 			g_clear_error (&error);
-		} else {
-			g_debug ("  Loaded rule '%s'", name);
+			continue;
 		}
+
+		g_debug ("  Loaded rule '%s'", name);
 
 		g_key_file_free (key_file);
 		g_free (path);
@@ -268,49 +229,21 @@ lookup_rules (const gchar *mimetype)
 GStrv
 tracker_extract_module_manager_get_fallback_rdf_types (const gchar *mimetype)
 {
-	GList *l, *list;
-	GHashTable *rdf_types;
-	gchar **types, *type;
-	GHashTableIter iter;
-	gint i;
-
-	if (!initialized &&
-	    !tracker_extract_module_manager_init ()) {
-		return NULL;
-	}
-
-	list = lookup_rules (mimetype);
-	rdf_types = g_hash_table_new (g_str_hash, g_str_equal);
+	GList *l, *list = lookup_rules (mimetype);
+	GArray *res = g_array_new (TRUE, TRUE, sizeof (gchar *));
+	gchar **types;
 
 	for (l = list; l; l = l->next) {
 		RuleInfo *r_info = l->data;
 
-		if (r_info->fallback_rdf_types == NULL)
-			continue;
-
-		for (i = 0; r_info->fallback_rdf_types[i]; i++) {
-                        g_debug ("Adding RDF type: %s, for module: %s",
-                                 r_info->fallback_rdf_types[i],
-                                 r_info->module_path);
-			g_hash_table_insert (rdf_types,
-					     r_info->fallback_rdf_types[i],
-					     r_info->fallback_rdf_types[i]);
+		if (r_info->fallback_rdf_type != NULL) {
+			gchar *val = g_strdup (r_info->fallback_rdf_type);
+			g_array_append_val (res, val);
 		}
-
-                /* We only want the first RDF types matching */
-                break;
 	}
 
-	g_hash_table_iter_init (&iter, rdf_types);
-	types = g_new0 (gchar*, g_hash_table_size (rdf_types) + 1);
-	i = 0;
-
-	while (g_hash_table_iter_next (&iter, (gpointer*) &type, NULL)) {
-		types[i] = g_strdup (type);
-		i++;
-	}
-
-	g_hash_table_unref (rdf_types);
+	types = (GStrv) res->data;
+	g_array_free (res, FALSE);
 
 	return types;
 }
@@ -320,10 +253,6 @@ load_module (RuleInfo *info,
              gboolean  initialize)
 {
 	ModuleInfo *module_info = NULL;
-
-	if (!info->module_path) {
-		return &dummy_module;
-	}
 
 	if (modules) {
 		module_info = g_hash_table_lookup (modules, info->module_path);
@@ -373,7 +302,7 @@ load_module (RuleInfo *info,
 		if (module_info->init_func) {
 			GError *error = NULL;
 
-			if (!(module_info->init_func) (&error)) {
+			if (!(module_info->init_func) (&module_info->thread_awareness, &error)) {
 				g_critical ("Could not initialize module %s: %s",
 					    g_module_name (module_info->module),
 					    (error) ? error->message : "No error given");
@@ -384,6 +313,8 @@ load_module (RuleInfo *info,
 
 				return NULL;
 			}
+		} else {
+			module_info->thread_awareness = TRACKER_MODULE_MAIN_THREAD;
 		}
 
 		module_info->initialized = TRUE;
@@ -526,10 +457,12 @@ tracker_extract_module_manager_get_mimetype_handlers (const gchar *mimetype)
  * tracker_mimetype_info_get_module:
  * @info: a #TrackerMimetypeInfo
  * @extract_func: (out): (allow-none): return value for the extraction function
+ * @thread_awareness: (out): (allow-none): thread awareness of the extractor module
  *
  * Returns the #GModule that @info is currently pointing to, if @extract_func is
  * not %NULL, it will be filled in with the pointer to the metadata extraction
- * function.
+ * function. If @thread_awareness is not %NULL, it will be filled in with the
+ * module thread awareness description.
  *
  * Returns: The %GModule currently pointed to by @info.
  *
@@ -537,7 +470,8 @@ tracker_extract_module_manager_get_mimetype_handlers (const gchar *mimetype)
  **/
 GModule *
 tracker_mimetype_info_get_module (TrackerMimetypeInfo          *info,
-                                  TrackerExtractMetadataFunc   *extract_func)
+                                  TrackerExtractMetadataFunc   *extract_func,
+                                  TrackerModuleThreadAwareness *thread_awareness)
 {
 	g_return_val_if_fail (info != NULL, NULL);
 
@@ -547,6 +481,10 @@ tracker_mimetype_info_get_module (TrackerMimetypeInfo          *info,
 
 	if (extract_func) {
 		*extract_func = info->cur_module_info->extract_func;
+	}
+
+	if (thread_awareness) {
+		*thread_awareness = info->cur_module_info->thread_awareness;
 	}
 
 	return info->cur_module_info->module;

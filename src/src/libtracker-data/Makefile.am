@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 AM_VALAFLAGS =                                         \
 	--includedir=libtracker-data                   \
 	--header tracker-sparql-query.h                \
@@ -10,7 +12,7 @@ AM_VALAFLAGS =                                         \
 	libtracker-data.vapi
 
 AM_CPPFLAGS =                                          \
-	$(BUILD_VALACFLAGS)                            \
+	$(BUILD_CFLAGS)                                \
 	-I$(top_srcdir)/src                            \
 	-I$(top_builddir)/src                          \
 	-DSHAREDIR=\""$(datadir)"\"                    \
@@ -20,7 +22,6 @@ libtracker_datadir = $(libdir)/tracker-$(TRACKER_API_VERSION)
 libtracker_data_LTLIBRARIES = libtracker-data.la
 
 libtracker_data_la_SOURCES =                           \
-	tracker-vala-namespace.vala                    \
 	tracker-sparql-expression.vala                 \
 	tracker-sparql-pattern.vala                    \
 	tracker-sparql-query.vala                      \
@@ -28,7 +29,6 @@ libtracker_data_la_SOURCES =                           \
 	tracker-turtle-reader.vala                     \
 	tracker-class.c                                \
 	tracker-collation.c                            \
-	tracker-crc32.c \
 	tracker-data-backup.c                          \
 	tracker-data-manager.c                         \
 	tracker-data-query.c                           \
@@ -56,9 +56,11 @@ libtracker_data_la_LIBADD +=                           \
 	$(top_builddir)/src/libtracker-fts/libtracker-fts.la
 endif
 
+libtracker_data_la_LDFLAGS =                           \
+	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
+
 noinst_HEADERS =                                       \
 	tracker-class.h                                \
-	tracker-crc32.h \
 	tracker-data.h                                 \
 	tracker-collation.h                            \
 	tracker-data-backup.h                          \
@@ -77,26 +79,8 @@ noinst_HEADERS =                                       \
 	tracker-property.h                             \
 	tracker-sparql-query.h
 
-# Configuration / GSettings
-gsettings_ENUM_NAMESPACE = org.freedesktop.Tracker
-gsettings_ENUM_FILES = $(top_srcdir)/src/libtracker-common/tracker-enums.h
-
-gsettings_SCHEMAS = org.freedesktop.Tracker.DB.gschema.xml
-
-@INTLTOOL_XML_NOMERGE_RULE@
-
-@GSETTINGS_RULES@
-
-# Dist / Clean rules for all data
-BUILT_SOURCES = \
+BUILT_SOURCES =                                        \
 	libtracker_data_la_vala.stamp
 
-CLEANFILES = \
-	libtracker_data_la_vala.stamp \
-	$(gsettings_SCHEMAS) \
-	$(man_MANS)
-
-EXTRA_DIST = \
-	libtracker-data.vapi \
-	$(gsettings_SCHEMAS:.xml=.xml.in) \
-	$(man_MANS)
+EXTRA_DIST =                                           \
+	libtracker-data.vapi

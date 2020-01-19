@@ -130,7 +130,7 @@ public class Tracker.View : ScrolledWindow {
 		}
 
 		if (display == Display.NO_RESULTS) {
-			add (view);
+			add_with_viewport (view);
 		} else {
 			add (view);
 			setup_model ();
@@ -366,7 +366,7 @@ public class Tracker.View : ScrolledWindow {
 					markup += "\n<small><span color='grey'>%s</span></small>".printf (Markup.escape_text (subtext));
 				}
 			} else {
-				markup = "<span color='grey'>%s</span>\n".printf (_("Loading…"));
+				markup = "<span color='grey'>%s</span>\n".printf (_("Loading..."));
 			}
 		}
 
@@ -383,7 +383,7 @@ public class Tracker.View : ScrolledWindow {
 		tree_model.get (iter, 4, out size, -1);
 
 		if (size != null) {
-			size = GLib.format_size (int.parse (size));
+			size = GLib.format_size_for_display (int.parse (size));
 		}
 
 		cell.set ("text", size);
@@ -432,10 +432,10 @@ public class Tracker.View : ScrolledWindow {
 			detail = tracker_time_format_from_seconds (detail);
 			break;
 		case Tracker.Query.Type.DOCUMENTS:
-			detail = ngettext ("%d Page", "%d Pages", int.parse (detail)).printf (int.parse (detail));
+			detail = detail + " " + _("Pages");
 			break;
 		case Tracker.Query.Type.IMAGES:
-			detail = GLib.format_size (int.parse (detail));
+			detail = GLib.format_size_for_display (int.parse (detail));
 			break;
 		}
 
@@ -456,7 +456,7 @@ public class Tracker.View : ScrolledWindow {
 		var separator = new SeparatorMenuItem ();
 		context_menu.append (separator);
 
-		item = new Gtk.MenuItem.with_mnemonic (_("_Tags…"));
+		item = new Gtk.MenuItem.with_mnemonic (_("_Tags..."));
 		item.activate.connect (context_menu_tags_clicked);
 		context_menu.append (item);
 
@@ -539,7 +539,7 @@ public class Tracker.View : ScrolledWindow {
 		Dialog dialog = new Dialog.with_buttons (_("Tags"),
 		                                         (Window) this.get_toplevel (),
 		                                         DialogFlags.MODAL | DialogFlags.DESTROY_WITH_PARENT,
-		                                         "_Close", ResponseType.CLOSE,
+		                                         Stock.CLOSE, ResponseType.CLOSE,
 		                                         null);
 		dialog.set_default_size (400, 300);
 		dialog.border_width = 12;
@@ -549,7 +549,7 @@ public class Tracker.View : ScrolledWindow {
 
 		List<string> files = null;
 		files.prepend (uri);
-		Box vbox = new TrackerTagsView ((owned) files);
+		VBox vbox = new TrackerTagsView ((owned) files);
 
 		var content = dialog.get_content_area () as Box;
 		content.pack_start (vbox, true, true, 6);

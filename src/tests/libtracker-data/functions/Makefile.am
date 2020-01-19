@@ -1,14 +1,12 @@
 include $(top_srcdir)/Makefile.decl
 
-EXTRA_DIST += \
+EXTRA_DIST =                                           \
 	data-1.ontology                                \
 	data-1.ttl                                     \
 	data-2.ontology                                \
 	data-2.ttl                                     \
 	data-3.ontology                                \
 	data-3.ttl                                     \
-	data-4.ontology                                \
-	data-4.ttl                                     \
 	functions-property-1.out                       \
 	functions-property-1.rq                        \
 	functions-tracker-1.out                        \
@@ -34,14 +32,4 @@ EXTRA_DIST += \
 	functions-xpath-8.rq                           \
 	functions-xpath-8.out                          \
 	functions-xpath-9.rq                           \
-	functions-xpath-9.out                          \
-	functions-xpath-10.rq                          \
-	functions-xpath-10.out                         \
-	functions-xpath-11.rq                          \
-	functions-xpath-11.out                         \
-	functions-xpath-12.rq                          \
-	functions-xpath-12.out                         \
-	functions-xpath-13.rq                          \
-	functions-xpath-13.out                         \
-	functions-xpath-14.rq                          \
-	functions-xpath-14.out
+	functions-xpath-9.out

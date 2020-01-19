@@ -238,7 +238,7 @@ show_error_dialog (GError *error)
 	GtkWidget *dialog;
 	const gchar *str;
 
-	str = error->message ? error->message : _("No error given");
+	str = error->message ? error->message : _("No error was given");
 
 	dialog = gtk_message_dialog_new (NULL,
 	                                 0,
@@ -540,6 +540,11 @@ tags_view_add_tags_cb (GObject      *source_object,
 
 		if (cursor) {
 			g_object_unref (cursor);
+		}
+
+		if (error) {
+			show_error_dialog (error);
+			g_error_free (error);
 		}
 	}
 }

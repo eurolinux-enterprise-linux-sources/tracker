@@ -96,19 +96,11 @@ public class Tracker.SparqlScanner : Object {
 						break;
 					}
 					break;
-				case 'B':
-				case 'b':
-					if (matches (begin, "ABS")) return SparqlTokenType.ABS;
-					break;
 				case 'V':
 				case 'v':
 					if (matches (begin, "AVG")) return SparqlTokenType.AVG;
 					break;
 				}
-				break;
-			case 'D':
-			case 'd':
-				if (matches (begin, "DAY")) return SparqlTokenType.DAY;
 				break;
 			case 'M':
 			case 'm':
@@ -116,10 +108,6 @@ public class Tracker.SparqlScanner : Object {
 				case 'A':
 				case 'a':
 					if (matches (begin, "MAX")) return SparqlTokenType.MAX;
-					break;
-				case 'D':
-				case 'd':
-					if (matches (begin, "MD5")) return SparqlTokenType.MD5;
 					break;
 				case 'I':
 				case 'i':
@@ -129,16 +117,7 @@ public class Tracker.SparqlScanner : Object {
 				break;
 			case 'N':
 			case 'n':
-				switch (begin[2]) {
-				case 'T':
-				case 't':
-					if (matches (begin, "NOT")) return SparqlTokenType.NOT;
-					break;
-				case 'W':
-				case 'w':
-					if (matches (begin, "NOW")) return SparqlTokenType.NOW;
-					break;
-				}
+				if (matches (begin, "NOT")) return SparqlTokenType.NOT;
 				break;
 			case 'S':
 			case 's':
@@ -159,20 +138,7 @@ public class Tracker.SparqlScanner : Object {
 			switch (begin[0]) {
 			case 'B':
 			case 'b':
-				switch (begin[1]) {
-				case 'A':
-				case 'a':
-					if (matches (begin, "BASE")) return SparqlTokenType.BASE;
-					break;
-				case 'I':
-				case 'i':
-					if (matches (begin, "BIND")) return SparqlTokenType.BIND;
-					break;
-				}
-				break;
-			case 'C':
-			case 'c':
-				if (matches (begin, "CEIL")) return SparqlTokenType.CEIL;
+				if (matches (begin, "BASE")) return SparqlTokenType.BASE;
 				break;
 			case 'D':
 			case 'd':
@@ -207,14 +173,6 @@ public class Tracker.SparqlScanner : Object {
 			case 'n':
 				if (matches (begin, "NULL")) return SparqlTokenType.NULL;
 				break;
-			case 'R':
-			case 'r':
-				if (matches (begin, "RAND")) return SparqlTokenType.RAND;
-				break;
-			case 'S':
-			case 's':
-				if (matches (begin, "SHA1")) return SparqlTokenType.SHA1;
-				break;
 			case 'T':
 			case 't':
 				if (matches (begin, "TRUE")) return SparqlTokenType.TRUE;
@@ -222,10 +180,6 @@ public class Tracker.SparqlScanner : Object {
 			case 'W':
 			case 'w':
 				if (matches (begin, "WITH")) return SparqlTokenType.WITH;
-				break;
-			case 'Y':
-			case 'y':
-				if (matches (begin, "YEAR")) return SparqlTokenType.YEAR;
 				break;
 			}
 			break;
@@ -252,26 +206,9 @@ public class Tracker.SparqlScanner : Object {
 					break;
 				}
 				break;
-			case 'H':
-			case 'h':
-				if (matches (begin, "HOURS")) return SparqlTokenType.HOURS;
-				break;
 			case 'L':
 			case 'l':
-				switch (begin[1]) {
-				case 'C':
-				case 'c':
-					if (matches (begin, "LCASE")) return SparqlTokenType.LCASE;
-					break;
-				case 'I':
-				case 'i':
-					if (matches (begin, "LIMIT")) return SparqlTokenType.LIMIT;
-					break;
-				}
-				break;
-			case 'M':
-			case 'm':
-				if (matches (begin, "MONTH")) return SparqlTokenType.MONTH;
+				if (matches (begin, "LIMIT")) return SparqlTokenType.LIMIT;
 				break;
 			case 'N':
 			case 'n':
@@ -283,29 +220,11 @@ public class Tracker.SparqlScanner : Object {
 				break;
 			case 'R':
 			case 'r':
-				switch (begin[1]) {
-				case 'E':
-				case 'e':
-					if (matches (begin, "REGEX")) return SparqlTokenType.REGEX;
-					break;
-				case 'O':
-				case 'o':
-					if (matches (begin, "ROUND")) return SparqlTokenType.ROUND;
-					break;
-				}
+				if (matches (begin, "REGEX")) return SparqlTokenType.REGEX;
 				break;
 			case 'U':
 			case 'u':
-				switch (begin[1]) {
-				case 'N':
-				case 'n':
-					if (matches (begin, "UNION")) return SparqlTokenType.UNION;
-					break;
-				case 'C':
-				case 'c':
-					if (matches (begin, "UCASE")) return SparqlTokenType.UCASE;
-					break;
-				}
+				if (matches (begin, "UNION")) return SparqlTokenType.UNION;
 				break;
 			case 'W':
 			case 'w':
@@ -313,16 +232,7 @@ public class Tracker.SparqlScanner : Object {
 				break;
 			case 'F':
 			case 'f':
-				switch (begin[1]) {
-				case 'A':
-				case 'a':
-					if (matches (begin, "FALSE")) return SparqlTokenType.FALSE;
-					break;
-				case 'L':
-				case 'l':
-					if (matches (begin, "FLOOR")) return SparqlTokenType.FLOOR;
-					break;
-				}
+				if (matches (begin, "FALSE")) return SparqlTokenType.FALSE;
 				break;
 			case 'I':
 			case 'i':
@@ -346,10 +256,6 @@ public class Tracker.SparqlScanner : Object {
 			break;
 		case 6:
 			switch (begin[0]) {
-			case 'C':
-			case 'c':
-				if (matches (begin, "CONCAT")) return SparqlTokenType.CONCAT;
-				break;
 			case 'D':
 			case 'd':
 				if (matches (begin, "DELETE")) return SparqlTokenType.DELETE;
@@ -389,35 +295,12 @@ public class Tracker.SparqlScanner : Object {
 				case 'i':
 					if (matches (begin, "SILENT")) return SparqlTokenType.SILENT;
 					break;
-				case 'T':
-				case 't':
-					if (matches (begin, "STRLEN")) return SparqlTokenType.STRLEN;
-					break;
-				case 'U':
-				case 'u':
-					if (matches (begin, "SUBSTR")) return SparqlTokenType.SUBSTR;
-					break;
-				case 'H':
-				case 'h':
-					switch (begin[3]) {
-					case '2':
-						if (matches (begin, "SHA256")) return SparqlTokenType.SHA256;
-						break;
-					case '5':
-						if (matches (begin, "SHA512")) return SparqlTokenType.SHA512;
-						break;
-					}
-					break;
 				}
 				break;
 			}
 			break;
 		case 7:
 			switch (begin[0]) {
-			case 'M':
-			case 'm':
-				if (matches (begin, "MINUTES")) return SparqlTokenType.MINUTES;
-				break;
 			case 'R':
 			case 'r':
 				switch (begin[2]) {
@@ -431,19 +314,6 @@ public class Tracker.SparqlScanner : Object {
 					break;
 				}
 				break;
-			case 'S':
-			case 's':
-				switch (begin[1]) {
-				case 'E':
-				case 'e':
-					if (matches (begin, "SECONDS")) return SparqlTokenType.SECONDS;
-					break;
-				case 'T':
-				case 't':
-					if (matches (begin, "STRENDS")) return SparqlTokenType.STRENDS;
-					break;
-				}
-				break;
 			case 'I':
 			case 'i':
 				if (matches (begin, "ISBLANK")) return SparqlTokenType.ISBLANK;
@@ -454,16 +324,7 @@ public class Tracker.SparqlScanner : Object {
 			switch (begin[0]) {
 			case 'C':
 			case 'c':
-				switch (begin[2]) {
-				case 'A':
-				case 'a':
-					if (matches (begin, "COALESCE")) return SparqlTokenType.COALESCE;
-					break;
-				case 'N':
-				case 'n':
-					if (matches (begin, "CONTAINS")) return SparqlTokenType.CONTAINS;
-					break;
-				}
+				if (matches (begin, "COALESCE")) return SparqlTokenType.COALESCE;
 				break;
 			case 'D':
 			case 'd':
@@ -488,16 +349,7 @@ public class Tracker.SparqlScanner : Object {
 				break;
 			case 'S':
 			case 's':
-				switch (begin[1]) {
-				case 'A':
-				case 'a':
-					if (matches (begin, "SAMETERM")) return SparqlTokenType.SAMETERM;
-					break;
-				case 'T':
-				case 't':
-					if (matches (begin, "STRAFTER")) return SparqlTokenType.STRAFTER;
-					break;
-				}
+				if (matches (begin, "SAMETERM")) return SparqlTokenType.SAMETERM;
 				break;
 			}
 			break;
@@ -511,19 +363,6 @@ public class Tracker.SparqlScanner : Object {
 			case 'i':
 				if (matches (begin, "ISLITERAL")) return SparqlTokenType.ISLITERAL;
 				break;
-			case 'S':
-			case 's':
-				switch (begin[3]) {
-				case 'B':
-				case 'b':
-					if (matches (begin, "STRBEFORE")) return SparqlTokenType.STRBEFORE;
-					break;
-				case 'S':
-				case 's':
-					if (matches (begin, "STRSTARTS")) return SparqlTokenType.STRSTARTS;
-					break;
-				}
-				break;
 			}
 			break;
 		case 11:
@@ -531,9 +370,6 @@ public class Tracker.SparqlScanner : Object {
 			break;
 		case 12:
 			if (matches (begin, "GROUP_CONCAT")) return SparqlTokenType.GROUP_CONCAT;
-			break;
-		case 14:
-			if (matches (begin, "ENCODE_FOR_URI")) return SparqlTokenType.ENCODE_FOR_URI;
 			break;
 		}
 		return SparqlTokenType.PN_PREFIX;
@@ -1021,7 +857,6 @@ public struct Tracker.SourceLocation {
 public enum Tracker.SparqlTokenType {
 	NONE,
 	A,
-	ABS,
 	AS,
 	ASC,
 	ASK,
@@ -1030,23 +865,18 @@ public enum Tracker.SparqlTokenType {
 	AVG,
 	BASE,
 	BLANK_NODE,
-	BIND,
 	BOUND,
 	BY,
-	CEIL,
 	CLOSE_BRACE,
 	CLOSE_BRACKET,
 	CLOSE_PARENS,
 	COALESCE,
 	COLON,
-	CONCAT,
-	CONTAINS,
 	COMMA,
 	CONSTRUCT,
 	COUNT,
 	DATA,
 	DATATYPE,
-	DAY,
 	DECIMAL,
 	DELETE,
 	DESC,
@@ -1057,18 +887,15 @@ public enum Tracker.SparqlTokenType {
 	DOUBLE,
 	DOUBLE_CIRCUMFLEX,
 	DROP,
-	ENCODE_FOR_URI,
 	EOF,
 	EXISTS,
 	FALSE,
 	FILTER,
-	FLOOR,
 	FROM,
 	GRAPH,
 	GROUP,
 	GROUP_CONCAT,
 	HAVING,
-	HOURS,
 	IF,
 	INSERT,
 	INTEGER,
@@ -1080,17 +907,12 @@ public enum Tracker.SparqlTokenType {
 	ISURI,
 	LANG,
 	LANGMATCHES,
-	LCASE,
 	LIMIT,
 	MAX,
-	MD5,
 	MIN,
 	MINUS,
-	MINUTES,
-	MONTH,
 	NAMED,
 	NOT,
-	NOW,
 	NULL, /* Non-standard in SPARQL spec */
 	OFFSET,
 	OP_AND,
@@ -1112,44 +934,29 @@ public enum Tracker.SparqlTokenType {
 	PLUS,
 	PN_PREFIX,
 	PREFIX,
-	RAND,
 	REDUCED,
 	REGEX,
 	REPLACE,
-	ROUND,
 	SAMETERM,
-	SECONDS,
 	SELECT,
 	SEMICOLON,
-	SHA1,
-	SHA256,
-	SHA512,
 	SILENT,
 	STAR,
 	STR,
-	STRAFTER,
-	STRBEFORE,
-	STRENDS,
 	STRING_LITERAL1,
 	STRING_LITERAL2,
 	STRING_LITERAL_LONG1,
 	STRING_LITERAL_LONG2,
-	STRLEN,
-	STRSTARTS,
-	SUBSTR,
 	SUM,
 	TRUE,
-	UCASE,
 	UNION,
 	VAR,
 	WHERE,
-	WITH,
-	YEAR;
+	WITH;
 
 	public unowned string to_string () {
 		switch (this) {
 		case A: return "`a'";
-		case ABS: return "`ABS'";
 		case AS: return "`AS'";
 		case ASC: return "`ASC'";
 		case ASK: return "`ASK'";
@@ -1158,22 +965,17 @@ public enum Tracker.SparqlTokenType {
 		case AVG: return "`AVG'";
 		case BASE: return "`BASE'";
 		case BLANK_NODE: return "blank node";
-		case BIND: return "`BIND'";
 		case BOUND: return "`BOUND'";
 		case BY: return "`BY'";
-		case CEIL: return "`CEIL'";
 		case CLOSE_BRACE: return "`}'";
 		case CLOSE_BRACKET: return "`]'";
 		case CLOSE_PARENS: return "`)'";
 		case COALESCE: return "`COALESCE'";
 		case COLON: return "`:'";
-		case CONCAT: return "`CONCAT'";
-		case CONTAINS: return "`CONTAINS'";
 		case COMMA: return "`,'";
 		case CONSTRUCT: return "`CONSTRUCT'";
 		case COUNT: return "`COUNT'";
 		case DATATYPE: return "`DATATYPE'";
-		case DAY: return "`DAY'";
 		case DECIMAL: return "`DECIMAL'";
 		case DELETE: return "`DELETE'";
 		case DESC: return "`DESC'";
@@ -1182,18 +984,15 @@ public enum Tracker.SparqlTokenType {
 		case DOUBLE: return "`DOUBLE'";
 		case DOUBLE_CIRCUMFLEX: return "`^^'";
 		case DROP: return "`DROP'";
-		case ENCODE_FOR_URI: return "`ENCODE_FOR_URI'";
 		case EOF: return "end of file";
 		case EXISTS: return "`EXISTS'";
 		case FALSE: return "`false'";
 		case FILTER: return "`FILTER'";
-		case FLOOR: return "`FLOOR'";
 		case FROM: return "`FROM'";
 		case GRAPH: return "`GRAPH'";
 		case GROUP: return "`GROUP'";
 		case GROUP_CONCAT: return "`GROUP_CONCAT'";
 		case HAVING: return "`HAVING'";
-		case HOURS: return "`HOURS'";
 		case IF: return "`IF'";
 		case INSERT: return "`INSERT'";
 		case INTEGER: return "`INTEGER'";
@@ -1205,17 +1004,12 @@ public enum Tracker.SparqlTokenType {
 		case ISURI: return "`ISURI'";
 		case LANG: return "`LANG'";
 		case LANGMATCHES: return "`LANGMATCHES'";
-		case LCASE: return "`LCASE'";
 		case LIMIT: return "`LIMIT'";
 		case MAX: return "`MAX'";
-		case MD5: return "`MD5'";
 		case MIN: return "`MIN'";
 		case MINUS: return "`-'";
-		case MINUTES: return "`MINUTES'";
-		case MONTH: return "`MONTH'";
 		case NAMED: return "`NAMED'";
 		case NOT: return "`NOT'";
-		case NOW: return "`NOW'";
 		case OFFSET: return "`OFFSET'";
 		case OP_AND: return "`&&'";
 		case OP_EQ: return "`='";
@@ -1236,39 +1030,25 @@ public enum Tracker.SparqlTokenType {
 		case PLUS: return "`+'";
 		case PN_PREFIX: return "prefixed name";
 		case PREFIX: return "`PREFIX'";
-		case RAND: return "`RAND'";
 		case REDUCED: return "`REDUCED'";
 		case REGEX: return "`REGEX'";
 		case REPLACE: return "`REPLACE'";
-		case ROUND: return "`ROUND'";
 		case SAMETERM: return "`SAMETERM'";
-		case SECONDS: return "`SECONDS'";
 		case SELECT: return "`SELECT'";
 		case SEMICOLON: return "`;'";
-		case SHA1: return "`SHA1'";
-		case SHA256: return "`SHA256'";
-		case SHA512: return "`SHA512'";
 		case SILENT: return "`SILENT'";
 		case STAR: return "`*'";
 		case STR: return "`STR'";
-		case STRAFTER: return "`STRAFTER'";
-		case STRBEFORE: return "`STRBEFORE'";
-		case STRENDS: return "`STRENDS'";
 		case STRING_LITERAL1: return "string literal";
 		case STRING_LITERAL2: return "string literal";
 		case STRING_LITERAL_LONG1: return "string literal";
 		case STRING_LITERAL_LONG2: return "string literal";
-		case STRLEN: return "`STRLEN'";
-		case STRSTARTS: return "`STRSTARTS'";
-		case SUBSTR: return "`SUBSTR'";
 		case SUM: return "`SUM'";
 		case TRUE: return "`true'";
-		case UCASE: return "`UCASE'";
 		case UNION: return "`UNION'";
 		case VAR: return "variable";
 		case WHERE: return "`WHERE'";
 		case WITH: return "`WITH'";
-		case YEAR: return "`YEAR'";
 		default: return "unknown token";
 		}
 	}

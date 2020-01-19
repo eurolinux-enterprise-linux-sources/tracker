@@ -26,7 +26,9 @@
 #include <libtracker-common/tracker-dbus.h>
 #include <libtracker-common/tracker-type-utils.h>
 
+#include "tracker-marshal.h"
 #include "tracker-miner-object.h"
+#include "tracker-miner-dbus.h"
 
 /* Here we use ceil() to eliminate decimal points beyond what we're
  * interested in, which is 2 decimal places for the progress. The
@@ -64,12 +66,12 @@
 
 #define TRACKER_MINER_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TRACKER_TYPE_MINER, TrackerMinerPrivate))
 
+static GQuark miner_error_quark = 0;
+
 /* Introspection data for the service we are exporting */
-static const gchar miner_introspection_xml[] =
+static const gchar introspection_xml[] =
   "<node>"
   "  <interface name='org.freedesktop.Tracker1.Miner'>"
-  "    <method name='Start'>"
-  "    </method>"
   "    <method name='GetStatus'>"
   "      <arg type='s' name='status' direction='out' />"
   "    </method>"
@@ -108,8 +110,6 @@ static const gchar miner_introspection_xml[] =
   "      <arg type='d' name='progress' />"
   "      <arg type='i' name='remaining_time' />"
   "    </signal>"
-  "    <!-- Additional introspection data given by other miners -->"
-  "    %s"
   "  </interface>"
   "</node>";
 
@@ -120,8 +120,6 @@ struct _TrackerMinerPrivate {
 	gchar *name;
 	gchar *status;
 	gdouble progress;
-	gchar *introspection_xml;
-	GDBusInterfaceVTable *introspection_handler;
 	gint remaining_time;
 	gint availability_cookie;
 	GDBusConnection *d_connection;
@@ -146,9 +144,7 @@ enum {
 	PROP_NAME,
 	PROP_STATUS,
 	PROP_PROGRESS,
-	PROP_REMAINING_TIME,
-	PROP_INTROSPECTION_XML,
-	PROP_INTROSPECTION_HANDLER
+	PROP_REMAINING_TIME
 };
 
 enum {
@@ -212,18 +208,6 @@ static void       on_tracker_store_disappeared (GDBusConnection        *connecti
                                                 const gchar            *name,
                                                 gpointer                user_data);
 
-/**
- * tracker_miner_error_quark:
- *
- * Gives the caller the #GQuark used to identify #TrackerMiner errors
- * in #GError structures. The #GQuark is used as the domain for the error.
- *
- * Returns: the #GQuark used for the domain of a #GError.
- *
- * Since: 0.8
- **/
-G_DEFINE_QUARK (TrackerMinerError, tracker_miner_error)
-
 G_DEFINE_ABSTRACT_TYPE_WITH_CODE (TrackerMiner, tracker_miner, G_TYPE_OBJECT,
                                   G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE,
                                                          miner_initable_iface_init));
@@ -253,7 +237,7 @@ tracker_miner_class_init (TrackerMinerClass *klass)
 		              G_SIGNAL_RUN_LAST,
 		              G_STRUCT_OFFSET (TrackerMinerClass, started),
 		              NULL, NULL,
-		              NULL,
+		              g_cclosure_marshal_VOID__VOID,
 		              G_TYPE_NONE, 0);
 	/**
 	 * TrackerMiner::stopped:
@@ -271,7 +255,7 @@ tracker_miner_class_init (TrackerMinerClass *klass)
 		              G_SIGNAL_RUN_LAST,
 		              G_STRUCT_OFFSET (TrackerMinerClass, stopped),
 		              NULL, NULL,
-		              NULL,
+		              g_cclosure_marshal_VOID__VOID,
 		              G_TYPE_NONE, 0);
 	/**
 	 * TrackerMiner::paused:
@@ -290,7 +274,7 @@ tracker_miner_class_init (TrackerMinerClass *klass)
 		              G_SIGNAL_RUN_LAST,
 		              G_STRUCT_OFFSET (TrackerMinerClass, paused),
 		              NULL, NULL,
-		              NULL,
+		              g_cclosure_marshal_VOID__VOID,
 		              G_TYPE_NONE, 0);
 	/**
 	 * TrackerMiner::resumed:
@@ -308,7 +292,7 @@ tracker_miner_class_init (TrackerMinerClass *klass)
 		              G_SIGNAL_RUN_LAST,
 		              G_STRUCT_OFFSET (TrackerMinerClass, resumed),
 		              NULL, NULL,
-		              NULL,
+		              g_cclosure_marshal_VOID__VOID,
 		              G_TYPE_NONE, 0);
 	/**
 	 * TrackerMiner::progress:
@@ -333,7 +317,7 @@ tracker_miner_class_init (TrackerMinerClass *klass)
 		              G_SIGNAL_RUN_LAST,
 		              G_STRUCT_OFFSET (TrackerMinerClass, progress),
 		              NULL, NULL,
-		              NULL,
+		              tracker_marshal_VOID__STRING_DOUBLE_INT,
 		              G_TYPE_NONE, 3,
 		              G_TYPE_STRING,
 		              G_TYPE_DOUBLE,
@@ -356,7 +340,7 @@ tracker_miner_class_init (TrackerMinerClass *klass)
 		              G_SIGNAL_RUN_LAST,
 		              G_STRUCT_OFFSET (TrackerMinerClass, ignore_next_update),
 		              NULL, NULL,
-		              NULL,
+		              g_cclosure_marshal_VOID__BOXED,
 		              G_TYPE_NONE, 1,
 		              G_TYPE_STRV);
 
@@ -393,21 +377,10 @@ tracker_miner_class_init (TrackerMinerClass *klass)
 	                                                   G_MAXINT,
 	                                                   -1,
 	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
-	g_object_class_install_property (object_class,
-	                                 PROP_INTROSPECTION_XML,
-	                                 g_param_spec_string ("introspection-xml",
-	                                                      "Introspection XML",
-	                                                      "Introspection XML to *append* to the standard miner interface provided",
-	                                                      NULL,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
-	g_object_class_install_property (object_class,
-	                                 PROP_INTROSPECTION_HANDLER,
-	                                 g_param_spec_pointer ("introspection-handler",
-	                                                       "Introspection Handler",
-	                                                       "Introspection Method Handler function, expected to be a pointer to GDBusInterfaceVTable",
-	                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
 
 	g_type_class_add_private (object_class, sizeof (TrackerMinerPrivate));
+
+	miner_error_quark = g_quark_from_static_string ("TrackerMiner");
 }
 
 static void
@@ -425,7 +398,6 @@ miner_initable_init (GInitable     *initable,
 	GError *inner_error = NULL;
 	GVariant *reply;
 	guint32 rval;
-	gchar *extra_xml, *full_xml;
 	GDBusInterfaceVTable interface_vtable = {
 		handle_method_call,
 		handle_get_property,
@@ -440,22 +412,14 @@ miner_initable_init (GInitable     *initable,
 	}
 
 	/* Try to get DBus connection... */
-	miner->priv->d_connection = g_bus_get_sync (TRACKER_IPC_BUS, NULL, &inner_error);
+	miner->priv->d_connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &inner_error);
 	if (!miner->priv->d_connection) {
 		g_propagate_error (error, inner_error);
 		return FALSE;
 	}
 
 	/* Setup introspection data */
-	g_object_get (initable, "introspection-xml", &extra_xml, NULL);
-
-	full_xml = g_strdup_printf (miner_introspection_xml, extra_xml ? extra_xml : "");
-	g_free (extra_xml);
-
-	g_message ("Trying to use introspection XML:\n%s\n", full_xml);
-	miner->priv->introspection_data = g_dbus_node_info_new_for_xml (full_xml, &inner_error);
-	g_free (full_xml);
-
+	miner->priv->introspection_data = g_dbus_node_info_new_for_xml (introspection_xml, &inner_error);
 	if (!miner->priv->introspection_data) {
 		g_propagate_error (error, inner_error);
 		return FALSE;
@@ -464,8 +428,8 @@ miner_initable_init (GInitable     *initable,
 	/* Check miner has a proper name */
 	if (!miner->priv->name) {
 		g_set_error (error,
-		             tracker_miner_error_quark (),
-		             TRACKER_MINER_ERROR_NAME_MISSING,
+		             TRACKER_MINER_ERROR,
+		             0,
 		             "Miner '%s' should have been given a name, bailing out",
 		             G_OBJECT_TYPE_NAME (miner));
 		return FALSE;
@@ -488,10 +452,10 @@ miner_initable_init (GInitable     *initable,
 	miner->priv->registration_id =
 		g_dbus_connection_register_object (miner->priv->d_connection,
 		                                   miner->priv->full_path,
-		                                   miner->priv->introspection_data->interfaces[0],
-		                                   &interface_vtable,
-		                                   miner,
-		                                   NULL,
+	                                       miner->priv->introspection_data->interfaces[0],
+	                                       &interface_vtable,
+	                                       miner,
+	                                       NULL,
 		                                   &inner_error);
 	if (inner_error) {
 		g_propagate_error (error, inner_error);
@@ -525,21 +489,21 @@ miner_initable_init (GInitable     *initable,
 
 	if (rval != 1 /* DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER */) {
 		g_set_error (error,
-		             tracker_miner_error_quark (),
-		             TRACKER_MINER_ERROR_NAME_UNAVAILABLE,
+		             TRACKER_MINER_ERROR,
+		             0,
 		             "D-Bus service name:'%s' is already taken, "
 		             "perhaps the application is already running?",
 		             miner->priv->full_name);
 		return FALSE;
 	}
 
-	miner->priv->watch_name_id = g_bus_watch_name (TRACKER_IPC_BUS,
-	                                               TRACKER_SERVICE,
-	                                               G_BUS_NAME_WATCHER_FLAGS_NONE,
-	                                               on_tracker_store_appeared,
-	                                               on_tracker_store_disappeared,
-	                                               miner,
-	                                               NULL);
+	miner->priv->watch_name_id = g_bus_watch_name (G_BUS_TYPE_SESSION,
+	                                                  TRACKER_SERVICE,
+	                                                  G_BUS_NAME_WATCHER_FLAGS_NONE,
+	                                                  on_tracker_store_appeared,
+	                                                  on_tracker_store_disappeared,
+	                                                  miner,
+	                                                  NULL);
 
 	return TRUE;
 }
@@ -711,16 +675,6 @@ miner_set_property (GObject      *object,
 		}
 		break;
 	}
-	case PROP_INTROSPECTION_XML: {
-		/* Only set on constructor */
-		miner->priv->introspection_xml = g_value_dup_string (value);
-		break;
-	}
-	case PROP_INTROSPECTION_HANDLER: {
-		/* Only set on constructor */
-		miner->priv->introspection_handler = g_value_get_pointer (value);
-		break;
-	}
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 		break;
@@ -747,12 +701,6 @@ miner_get_property (GObject    *object,
 		break;
 	case PROP_REMAINING_TIME:
 		g_value_set_int (value, miner->priv->remaining_time);
-		break;
-	case PROP_INTROSPECTION_XML:
-		g_value_set_string (value, miner->priv->introspection_xml);
-		break;
-	case PROP_INTROSPECTION_HANDLER:
-		g_value_set_pointer (value, miner->priv->introspection_handler);
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -797,6 +745,21 @@ pause_data_destroy (gpointer data)
 	g_free (pd->application);
 
 	g_slice_free (PauseData, pd);
+}
+
+/**
+ * tracker_miner_error_quark:
+ *
+ * Returns the #GQuark used to identify miner errors in GError structures.
+ *
+ * Returns: the error #GQuark
+ *
+ * Since: 0.8
+ **/
+GQuark
+tracker_miner_error_quark (void)
+{
+	return g_quark_from_static_string (TRACKER_MINER_ERROR_DOMAIN);
 }
 
 /**
@@ -991,9 +954,7 @@ miner_pause_internal (TrackerMiner  *miner,
 		if (g_strcmp0 (application, pd->application) == 0 &&
 		    g_strcmp0 (reason, pd->reason) == 0) {
 			/* Can't use duplicate pauses */
-			g_set_error_literal (error,
-			                     tracker_miner_error_quark (),
-			                     TRACKER_MINER_ERROR_PAUSED_ALREADY,
+			g_set_error_literal (error, TRACKER_MINER_ERROR, 0,
 			                     _("Pause application and reason match an already existing pause request"));
 			return -1;
 		}
@@ -1001,7 +962,7 @@ miner_pause_internal (TrackerMiner  *miner,
 
 	if (calling_name) {
 		g_message ("Watching process with name:'%s'", calling_name);
-		watch_name_id = g_bus_watch_name (TRACKER_IPC_BUS,
+		watch_name_id = g_bus_watch_name (G_BUS_TYPE_SESSION,
 		                                  calling_name,
 		                                  G_BUS_NAME_WATCHER_FLAGS_NONE,
 		                                  NULL,
@@ -1090,9 +1051,7 @@ tracker_miner_resume (TrackerMiner  *miner,
 	g_return_val_if_fail (TRACKER_IS_MINER (miner), FALSE);
 
 	if (!g_hash_table_remove (miner->priv->pauses, GINT_TO_POINTER (cookie))) {
-		g_set_error_literal (error,
-		                     tracker_miner_error_quark (),
-		                     TRACKER_MINER_ERROR_INVALID_COOKIE,
+		g_set_error_literal (error, TRACKER_MINER_ERROR, 0,
 		                     _("Cookie not recognized to resume paused miner"));
 		return FALSE;
 	}
@@ -1220,23 +1179,6 @@ miner_finalize (GObject *object)
 	}
 
 	G_OBJECT_CLASS (tracker_miner_parent_class)->finalize (object);
-}
-
-static void
-handle_method_call_start (TrackerMiner          *miner,
-                          GDBusMethodInvocation *invocation,
-                          GVariant              *parameters)
-{
-	TrackerDBusRequest *request;
-
-	request = tracker_g_dbus_request_begin (invocation,
-	                                        "%s",
-	                                        __PRETTY_FUNCTION__);
-
-	tracker_miner_start (miner);
-
-	tracker_dbus_request_end (request, NULL);
-	g_dbus_method_invocation_return_value (invocation, NULL);
 }
 
 static void
@@ -1467,8 +1409,6 @@ handle_method_call (GDBusConnection       *connection,
 
 	if (g_strcmp0 (method_name, "IgnoreNextUpdate") == 0) {
 		handle_method_call_ignore_next_update (miner, invocation, parameters);
-	} else if (g_strcmp0 (method_name, "Start") == 0) {
-		handle_method_call_start (miner, invocation, parameters);
 	} else if (g_strcmp0 (method_name, "Resume") == 0) {
 		handle_method_call_resume (miner, invocation, parameters);
 	} else if (g_strcmp0 (method_name, "Pause") == 0) {
@@ -1483,23 +1423,7 @@ handle_method_call (GDBusConnection       *connection,
 		handle_method_call_get_progress (miner, invocation, parameters);
 	} else if (g_strcmp0 (method_name, "GetStatus") == 0) {
 		handle_method_call_get_status (miner, invocation, parameters);
-	} else if (miner->priv->introspection_handler != NULL) {
-		/* Call introspection-handler functions next */
-		GDBusInterfaceMethodCallFunc func = miner->priv->introspection_handler->method_call;
-
-		if (func != NULL) {
-			(func) (connection,
-			        sender,
-			        object_path,
-			        interface_name,
-			        method_name,
-			        parameters,
-			        invocation,
-			        user_data);
-			return;
-		}
 	} else {
-		/* No one to handle this function? */
 		g_assert_not_reached ();
 	}
 }

@@ -21,8 +21,9 @@
 Test the query while importing at the same time. This was raising
 some SQLITE_MISUSED errors before.
 """
-import os
-from gi.repository import GObject
+import os, dbus
+import gobject
+from dbus.mainloop.glib import DBusGMainLoop
 
 from common.utils import configuration as cfg
 import unittest2 as ut
@@ -34,7 +35,7 @@ class TestSqliteMisused (CommonTrackerStoreTest):
     Send queries while importing files (in .ttl directory)
     """
     def setUp (self):
-        self.main_loop = GObject.MainLoop ()
+        self.main_loop = gobject.MainLoop ()
         self.files_counter = 0
         
     def test_queries_while_import (self):
@@ -43,31 +44,30 @@ class TestSqliteMisused (CommonTrackerStoreTest):
             for ttl_file in filter (lambda f: f.endswith (".ttl"), files):
                 full_path = os.path.abspath(os.path.join (root, ttl_file))
                 self.files_counter += 1
-                self.tracker.query(
-                    "file://" + full_path, timeout=30000,
-                    result_handler=self.loaded_success_cb,
-                    error_handler=self.loaded_failed_cb)
-
-        GObject.timeout_add_seconds (2, self.run_a_query)
+                self.tracker.get_tracker_iface ().Load ("file://" + full_path,
+                                     timeout=30000,
+                                     reply_handler=self.loaded_success_cb,
+                                     error_handler=self.loaded_failed_cb)
+        
+        gobject.timeout_add_seconds (2, self.run_a_query)
         # Safeguard of 60 seconds. The last reply should quit the loop
-        GObject.timeout_add_seconds (60, self.timeout_cb)
+        gobject.timeout_add_seconds (60, self.timeout_cb)
         self.main_loop.run ()
 
     def run_a_query (self):
         QUERY = "SELECT ?u ?title WHERE { ?u a nie:InformationElement; nie:title ?title. }"
-        self.tracker.query(
-            QUERY, timeout=20000,
-            result_handler=self.reply_cb,
-            error_handler=self.error_handler)
+        self.tracker.get_tracker_iface ().SparqlQuery (QUERY, timeout=20000,
+                                                       reply_handler=self.reply_cb,
+                                                       error_handler=self.error_handler)
         return True
-
-    def reply_cb (self, obj, results, data):
+        
+    def reply_cb (self, results):
         print "Query replied correctly"
 
     def error_handler (self, error_msg):
         print "ERROR in DBus call", error_msg
 
-    def loaded_success_cb (self, obj, results, data):
+    def loaded_success_cb (self):
         self.files_counter -= 1
         if (self.files_counter == 0):
             print "Last file loaded"

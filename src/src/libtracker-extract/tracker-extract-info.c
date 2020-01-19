@@ -19,8 +19,6 @@
  * Author: Carlos Garnacho <carlos@lanedo.com>
  */
 
-#include "config.h"
-
 #include "tracker-extract-info.h"
 
 /**
@@ -39,14 +37,14 @@
 
 struct _TrackerExtractInfo
 {
-	TrackerResource *resource;
+	TrackerSparqlBuilder *preupdate;
+	TrackerSparqlBuilder *postupdate;
+	TrackerSparqlBuilder *metadata;
+	gchar *where_clause;
 
 	GFile *file;
 	gchar *mimetype;
-
-#ifdef HAVE_LIBMEDIAART
-	MediaArtProcess *media_art_process;
-#endif
+	gchar *graph;
 
 	gint ref_count;
 };
@@ -68,7 +66,8 @@ G_DEFINE_BOXED_TYPE (TrackerExtractInfo, tracker_extract_info,
  **/
 TrackerExtractInfo *
 tracker_extract_info_new (GFile       *file,
-                          const gchar *mimetype)
+                          const gchar *mimetype,
+                          const gchar *graph)
 {
 	TrackerExtractInfo *info;
 
@@ -77,12 +76,13 @@ tracker_extract_info_new (GFile       *file,
 	info = g_slice_new0 (TrackerExtractInfo);
 	info->file = g_object_ref (file);
 	info->mimetype = g_strdup (mimetype);
+	info->graph = g_strdup (graph);
 
-	info->resource = NULL;
+	info->preupdate = tracker_sparql_builder_new_update ();
+	info->postupdate = tracker_sparql_builder_new_update ();
+	info->metadata = tracker_sparql_builder_new_embedded_insert ();
 
-#ifdef HAVE_LIBMEDIAART
-        info->media_art_process = NULL;
-#endif
+        info->where_clause = NULL;
 
 	info->ref_count = 1;
 
@@ -126,14 +126,12 @@ tracker_extract_info_unref (TrackerExtractInfo *info)
 	if (g_atomic_int_dec_and_test (&info->ref_count)) {
 		g_object_unref (info->file);
 		g_free (info->mimetype);
+		g_free (info->graph);
 
-		if (info->resource)
-			g_object_unref (info->resource);
-
-#ifdef HAVE_LIBMEDIAART
-		if (info->media_art_process)
-			g_object_unref (info->media_art_process);
-#endif
+		g_object_unref (info->preupdate);
+		g_object_unref (info->postupdate);
+		g_object_unref (info->metadata);
+		g_free (info->where_clause);
 
 		g_slice_free (TrackerExtractInfo, info);
 	}
@@ -178,104 +176,121 @@ tracker_extract_info_get_mimetype (TrackerExtractInfo *info)
 	return info->mimetype;
 }
 
-
 /**
- * tracker_extract_info_get_resource:
+ * tracker_extract_info_get_graph:
  * @info: a #TrackerExtractInfo
  *
- * Returns the #TrackerResource representing metadata about the file
- * associated with this #TrackerExtractInfo, or %NULL if
- * tracker_extract_info_set_metadata() was not yet called.
+ * Returns the SPARQL graph that will be used when
+ * inserting metadata.
  *
- * Returns: (transfer none): a #TrackerResource instance
+ * Returns: (transfer none): The SPARQL graph the extract
+ *          operation belongs to.
  *
- * Since: 1.10
- */
-TrackerResource *
-tracker_extract_info_get_resource (TrackerExtractInfo *info)
-{
-	return info->resource;
-}
-
-/**
- * tracker_extract_info_set_resource:
- * @info: a #TrackerExtractInfo
- * @resource: a #TrackerResource
- *
- * Adds the #TrackerResource with results from the extraction to this
- * #TrackerExtractInfo.
- *
- * Information about the file itself should be represented by properties of
- * @resource itself. It's expected this resource will have nfo:FileDataObject
- * as one of its types. This @resource can have related resources attached to
- * it.
- *
- * In most cases, a file contains a single logical resource. Most MP3 files
- * contain one song, for example. In this case you set all properties on the
- * one @resource.
- *
- * In more complex cases, a single physical resource (i.e. a file) contains multiple
- * logical resources: for example, an MBOX file holding multiple emails, or
- * an audio file containing an entire CD. In this case you should treat each
- * logical resource as its own #TrackerResource. Only properties of the file
- * itself should be set on @resource. You then relate each logical
- * #TrackerResource to the main @resource using the nie:isStoredAs property.
- *
- * FIXME: you need a way to delete the logical resources when re-extracting a
- * file -- still need to decide on API for that.
- *
- * Since: 1.10
+ * Since: 0.12
  **/
-void
-tracker_extract_info_set_resource (TrackerExtractInfo *info,
-                                   TrackerResource    *resource)
-{
-	g_object_ref (resource);
-	info->resource = resource;
-}
-
-#ifdef HAVE_LIBMEDIAART
-
-/**
- * tracker_extract_info_get_media_art_process:
- * @info: a #TrackerExtractInfo
- *
- * Returns the #MediaArtProcess object that can be used to retrieve
- * and store media art caches found in extracted content.
- *
- * Returns: (transfer none): The #MediaArtProcess. This object should
- * not be unreferenced.
- *
- * Since: 1.2
- **/
-MediaArtProcess *
-tracker_extract_info_get_media_art_process (TrackerExtractInfo *info)
+const gchar *
+tracker_extract_info_get_graph (TrackerExtractInfo *info)
 {
 	g_return_val_if_fail (info != NULL, NULL);
-	return info->media_art_process;
+
+	return info->graph;
 }
 
 /**
- * tracker_extract_info_set_media_art_process:
+ * tracker_extract_info_get_preupdate_builder:
  * @info: a #TrackerExtractInfo
- * @media_art_process: a #MediaArtProcess.
  *
- * Use @media_art_process for caching and looking up media art.
+ * Returns a #TrackerSparqlBuilder containing any
+ * separate updates that could apply to the file,
+ * such as author/band information in audio files,
+ * and so on.
  *
- * Since: 1.2
+ * Returns: (transfer none): miscellaneous metadata
+ *
+ * Since: 0.12
  **/
-void
-tracker_extract_info_set_media_art_process (TrackerExtractInfo *info,
-                                            MediaArtProcess    *media_art_process)
+TrackerSparqlBuilder *
+tracker_extract_info_get_preupdate_builder (TrackerExtractInfo *info)
 {
-	g_return_if_fail (info != NULL);
-	g_return_if_fail (MEDIA_ART_IS_PROCESS (media_art_process));
+	g_return_val_if_fail (info != NULL, NULL);
 
-	if (info->media_art_process) {
-		g_object_unref (info->media_art_process);
-	}
-
-	info->media_art_process = g_object_ref (media_art_process);
+	return info->preupdate;
 }
 
-#endif /* HAVE_LIBMEDIAART */
+/**
+ * tracker_extract_info_get_postupdate_builder:
+ * @info: a #TrackerExtractInfo
+ *
+ * Returns a #TrackerSparqlBuilder containing separate
+ * updates for resources that are contained within the file
+ * and need to refer to it.
+ *
+ * Returns: (transfer none): #TrackerSparqlBuilder for
+ * resources that need inserting after the file resource.
+ *
+ * Since: 0.12.4
+ **/
+TrackerSparqlBuilder *
+tracker_extract_info_get_postupdate_builder (TrackerExtractInfo *info)
+{
+	g_return_val_if_fail (info != NULL, NULL);
+
+	return info->postupdate;
+}
+
+/**
+ * tracker_extract_info_get_metadata_builder:
+ * @info: a #TrackerExtractInfo
+ *
+ * Returns a #TrackerSparqlBuilder containing the
+ * file metadata.
+ *
+ * Returns: (transfer none): the file metadata
+ *
+ * Since: 0.12
+ **/
+TrackerSparqlBuilder *
+tracker_extract_info_get_metadata_builder (TrackerExtractInfo *info)
+{
+	g_return_val_if_fail (info != NULL, NULL);
+
+	return info->metadata;
+}
+
+/**
+ * tracker_extract_info_get_where_clause:
+ * @info: a #TrackerExtractInfo
+ *
+ * Returns the where clause that will apply to the
+ * other metadata contained in @info.
+ *
+ * Returns: (transfer none): The where clause
+ *
+ * Since: 0.12
+ **/
+const gchar *
+tracker_extract_info_get_where_clause (TrackerExtractInfo *info)
+{
+	g_return_val_if_fail (info != NULL, NULL);
+
+	return info->where_clause;
+}
+
+/**
+ * tracker_extract_info_set_where_clause:
+ * @info: a #TrackerExtractInfo
+ * @where: Where clause for the file update.
+ *
+ * Sets the where clause for the returned metadata.
+ *
+ * Since: 0.12
+ **/
+void
+tracker_extract_info_set_where_clause (TrackerExtractInfo *info,
+                                       const gchar        *where)
+{
+	g_return_if_fail (info != NULL);
+
+	g_free (info->where_clause);
+	info->where_clause = g_strdup (where);
+}

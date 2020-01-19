@@ -1,8 +1,8 @@
 include $(top_srcdir)/Makefile.decl
 
-noinst_PROGRAMS += $(test_programs)
+noinst_PROGRAMS = $(TEST_PROGS)
 
-test_programs = \
+TEST_PROGS +=                                          \
 	tracker-test
 
 AM_CPPFLAGS =                                          \

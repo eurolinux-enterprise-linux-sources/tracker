@@ -19,7 +19,7 @@ org.bustany.TrackerBird.TrackerStore = {
 
 	storeMessage: function(header, contents) {
 		var folder = header.folder
-		var uri = encodeURI(folder.getUriForMsg(header));
+		var uri = folder.getUriForMsg(header);
 		var fromEmailAddress;
 		var toEmailAddresses = [];
 
@@ -60,23 +60,23 @@ org.bustany.TrackerBird.TrackerStore = {
 			return false;
 		}
 
-		dump("Trackerbird inserted message " + uri + "\n");
+		dump("Inserted message " + uri + "\n");
 		return true;
 	},
 
 	deleteMessage: function(header) {
 		var folder = header.folder
-		var uri = encodeURI(folder.getUriForMsg(header));
+		var uri = folder.getUriForMsg(header);
 
 		var query = "DELETE {<" + uri +"> a rdfs:Resource}";
 
 		if (!this.runTrackerUpdate(query,
 		                           100 /* batch */,
-		                           "Trackerbird cannot delete message from Tracker")) {
+		                           "Cannot delete message from Tracker")) {
 			return false;
 		}
 
-		dump("Trackerbird deleted message " + uri + "\n");
+		dump("Deleted message " + uri + "\n");
 		return true;
 	},
 

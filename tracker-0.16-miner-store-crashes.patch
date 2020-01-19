@@ -1,0 +1,76 @@
+From 82f4821ed0b022ed91aa0867b0f5b77048e2c3be Mon Sep 17 00:00:00 2001
+From: Debarshi Ray <debarshir@gnome.org>
+Date: Mon, 13 Oct 2014 13:49:29 +0200
+Subject: [PATCH 1/2] libtracker-data: Guard against failure to open the
+ database
+
+An error from sqlite3_open_v2 will lead to a failure to create a
+TrackerDBInterface. This means that DBManager.get_db_interface will
+fail.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=738450
+---
+ src/libtracker-data/tracker-sparql-query.vala | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/libtracker-data/tracker-sparql-query.vala b/src/libtracker-data/tracker-sparql-query.vala
+index b84103d..2430263 100644
+--- a/src/libtracker-data/tracker-sparql-query.vala
++++ b/src/libtracker-data/tracker-sparql-query.vala
+@@ -500,6 +500,10 @@ public class Tracker.Sparql.Query : Object {
+ 
+ 	DBStatement prepare_for_exec (string sql) throws DBInterfaceError, Sparql.Error, DateError {
+ 		var iface = DBManager.get_db_interface ();
++		if (iface == null) {
++			throw new DBInterfaceError.OPEN_ERROR ("Error opening database");
++		}
++
+ 		var stmt = iface.create_statement (no_cache ? DBStatementCacheType.NONE : DBStatementCacheType.SELECT, "%s", sql);
+ 
+ 		// set literals specified in query
+-- 
+2.1.0
+
+
+From 08b31a6d1de2418e409a300ca86578bbd03ad8ee Mon Sep 17 00:00:00 2001
+From: Debarshi Ray <debarshir@gnome.org>
+Date: Mon, 13 Oct 2014 14:27:07 +0200
+Subject: [PATCH 2/2] libtracker-data: Guard against invalid statements in
+ public API
+
+https://bugzilla.gnome.org/show_bug.cgi?id=738450
+---
+ src/libtracker-data/tracker-db-interface-sqlite.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/libtracker-data/tracker-db-interface-sqlite.c b/src/libtracker-data/tracker-db-interface-sqlite.c
+index a9e899e..682dd86 100644
+--- a/src/libtracker-data/tracker-db-interface-sqlite.c
++++ b/src/libtracker-data/tracker-db-interface-sqlite.c
+@@ -2202,6 +2202,7 @@ void
+ tracker_db_statement_execute (TrackerDBStatement  *stmt,
+                               GError             **error)
+ {
++	g_return_if_fail (TRACKER_IS_DB_STATEMENT (stmt));
+ 	g_return_if_fail (!stmt->stmt_is_sunk);
+ 
+ 	execute_stmt (stmt->db_interface, stmt->stmt, NULL, error);
+@@ -2211,6 +2212,7 @@ TrackerDBCursor *
+ tracker_db_statement_start_cursor (TrackerDBStatement  *stmt,
+                                    GError             **error)
+ {
++	g_return_val_if_fail (TRACKER_IS_DB_STATEMENT (stmt), NULL);
+ 	g_return_val_if_fail (!stmt->stmt_is_sunk, NULL);
+ 
+ 	return tracker_db_cursor_sqlite_new (stmt->stmt, stmt, NULL, 0, NULL, 0, FALSE);
+@@ -2225,6 +2227,7 @@ tracker_db_statement_start_sparql_cursor (TrackerDBStatement   *stmt,
+                                           gboolean              threadsafe,
+                                           GError              **error)
+ {
++	g_return_val_if_fail (TRACKER_IS_DB_STATEMENT (stmt), NULL);
+ 	g_return_val_if_fail (!stmt->stmt_is_sunk, NULL);
+ 
+ 	return tracker_db_cursor_sqlite_new (stmt->stmt, stmt, types, n_types, variable_names, n_variable_names, threadsafe);
+-- 
+2.1.0
+

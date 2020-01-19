@@ -1,11 +1,9 @@
 include $(top_srcdir)/Makefile.decl
 
-noinst_PROGRAMS += $(test_programs)
+noinst_PROGRAMS = $(TEST_PROGS)
 
-test_programs = \
-	tracker-resource-test                          \
-	tracker-sparql-test                            \
-	tracker-gb-737023-test
+TEST_PROGS +=                                          \
+	tracker-test
 
 AM_CPPFLAGS =                                          \
 	$(BUILD_CFLAGS)                                \
@@ -19,8 +17,4 @@ LDADD =                                                \
 	$(BUILD_LIBS)                                  \
 	$(LIBTRACKER_SPARQL_LIBS)
 
-tracker_resource_test_SOURCES = tracker-resource-test.c
-
-tracker_sparql_test_SOURCES = tracker-sparql-test.c
-
-tracker_gb_737023_test_SOURCES = tracker-gb-737023.c
+tracker_test_SOURCES = tracker-test.c

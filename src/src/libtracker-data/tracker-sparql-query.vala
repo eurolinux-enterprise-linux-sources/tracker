@@ -24,12 +24,6 @@ namespace Tracker.Sparql {
 		OPTIONAL
 	}
 
-	enum UpdateType {
-		DELETE,
-		INSERT,
-		UPDATE
-	}
-
 	// Represents a SQL table
 	class DataTable : Object {
 		public string sql_db_tablename; // as in db schema
@@ -43,7 +37,7 @@ namespace Tracker.Sparql {
 		public string sql_db_column_name;
 		public string sql_expression {
 			get {
-				if (this._sql_expression == null && table != null) {
+				if (this._sql_expression == null) {
 					this._sql_expression = "\"%s\".\"%s\"".printf (table.sql_query_tablename, sql_db_column_name);
 				}
 				return this._sql_expression;
@@ -120,7 +114,6 @@ namespace Tracker.Sparql {
 		public HashTable<Variable,PredicateVariable> predicate_variable_map;
 
 		public bool scalar_subquery;
-		public bool in_bind;
 
 		public Context (Query query, Context? parent_context = null) {
 			this.query = query;
@@ -236,6 +229,9 @@ public class Tracker.Sparql.Query : Object {
 	internal List<LiteralBinding> bindings;
 
 	internal Context context;
+
+	bool delete_statements;
+	bool update_statements;
 
 	int bnodeid = 0;
 	// base UUID used for blank nodes
@@ -473,10 +469,10 @@ public class Tracker.Sparql.Query : Object {
 			case SparqlTokenType.DELETE:
 				if (blank) {
 					ublank_nodes.open ((VariantType) "aa{ss}");
-					execute_insert_delete (ublank_nodes);
+					execute_insert_or_delete (ublank_nodes);
 					ublank_nodes.close ();
 				} else {
-					execute_insert_delete (null);
+					execute_insert_or_delete (null);
 				}
 				break;
 			case SparqlTokenType.DROP:
@@ -504,10 +500,6 @@ public class Tracker.Sparql.Query : Object {
 
 	DBStatement prepare_for_exec (string sql) throws DBInterfaceError, Sparql.Error, DateError {
 		var iface = DBManager.get_db_interface ();
-		if (iface == null) {
-			throw new DBInterfaceError.OPEN_ERROR ("Error opening database");
-		}
-
 		var stmt = iface.create_statement (no_cache ? DBStatementCacheType.NONE : DBStatementCacheType.SELECT, "%s", sql);
 
 		// set literals specified in query
@@ -609,10 +601,10 @@ public class Tracker.Sparql.Query : Object {
 		}
 	}
 
-	void execute_insert_delete (VariantBuilder? update_blank_nodes) throws GLib.Error {
+	void execute_insert_or_delete (VariantBuilder? update_blank_nodes) throws GLib.Error {
 		bool blank = true;
 
-		// DELETE and/or INSERT
+		// INSERT or DELETE
 
 		if (accept (SparqlTokenType.WITH)) {
 			parse_from_or_into_param ();
@@ -620,17 +612,30 @@ public class Tracker.Sparql.Query : Object {
 			current_graph = null;
 		}
 
-		SourceLocation? delete_location = null;
-		SourceLocation? insert_location = null;
-		bool insert_is_update = false;
-		bool delete_where = false;
-		bool data = false;
+		bool delete_statements;
+		bool update_statements;
 
-		// Sparql 1.1 defines deletes/inserts as a single
-		// operation with the syntax:
-		//   [DELETE {...}] [INSERT {...}] WHERE {...}
+		if (accept (SparqlTokenType.INSERT)) {
+			delete_statements = false;
+			update_statements = false;
 
-		if (accept (SparqlTokenType.DELETE)) {
+			if (accept (SparqlTokenType.OR)) {
+				expect (SparqlTokenType.REPLACE);
+				update_statements = true;
+			}
+
+			if (!update_statements) {
+				// SILENT => ignore (non-syntax) errors
+				silent = accept (SparqlTokenType.SILENT);
+			}
+
+			if (current_graph == null && accept (SparqlTokenType.INTO)) {
+				parse_from_or_into_param ();
+			}
+		} else {
+			expect (SparqlTokenType.DELETE);
+			delete_statements = true;
+			update_statements = false;
 			blank = false;
 
 			// SILENT => ignore (non-syntax) errors
@@ -639,61 +644,27 @@ public class Tracker.Sparql.Query : Object {
 			if (current_graph == null && accept (SparqlTokenType.FROM)) {
 				parse_from_or_into_param ();
 			}
-
-			if (current_graph == null && accept (SparqlTokenType.DATA)) {
-				// INSERT/DELETE DATA are simpler variants
-				// that don't support variables
-				data = true;
-			} else if (accept (SparqlTokenType.WHERE)) {
-				// DELETE WHERE is a short form where the pattern
-				// is also used as the template for deletion
-				delete_where = true;
-			}
-
-			delete_location = get_location ();
-
-			if (!data && !delete_where) {
-				skip_braces ();
-			}
 		}
 
-		if (!data && !delete_where && accept (SparqlTokenType.INSERT)) {
-			if (accept (SparqlTokenType.OR)) {
-				expect (SparqlTokenType.REPLACE);
-				insert_is_update = true;
-			}
-
-			if (!insert_is_update) {
-				// SILENT => ignore (non-syntax) errors
-				silent = accept (SparqlTokenType.SILENT);
-			}
-
-			if (current_graph == null && accept (SparqlTokenType.INTO)) {
-				parse_from_or_into_param ();
-			}
-
-			if (current_graph == null && accept (SparqlTokenType.DATA)) {
-				// INSERT/DELETE DATA are simpler variants
-				// that don't support variables
-				data = true;
-			}
-
-			if (current () != SparqlTokenType.OPEN_BRACE) {
-				throw get_error ("Expected '{' beginning a quad data/pattern block");
-			}
-
-			insert_location = get_location ();
-
-			if (!data) {
-				skip_braces ();
-			}
-		}
+		// INSERT/DELETE DATA are simpler variants that don't support variables
+		bool data = (current_graph == null && accept (SparqlTokenType.DATA));
 
 		var pattern_sql = new StringBuilder ();
 
 		var sql = new StringBuilder ();
 
+		var template_location = get_location ();
+
 		if (!data) {
+			// DELETE WHERE is a short form where the pattern is also used as the template for deletion
+			bool delete_where = accept (SparqlTokenType.WHERE);
+
+			if (delete_where) {
+				template_location = get_location ();
+			} else {
+				skip_braces ();
+			}
+
 			if (delete_where || accept (SparqlTokenType.WHERE)) {
 				pattern.current_graph = current_graph;
 				context = pattern.translate_group_graph_pattern (pattern_sql);
@@ -704,11 +675,7 @@ public class Tracker.Sparql.Query : Object {
 				pattern_sql.append ("SELECT 1");
 			}
 		} else {
-			// WHERE pattern not supported for INSERT/DELETE DATA,
-			// nor unbound values in the quad data.
-			if (quad_data_unbound_var_count () > 0) {
-				throw get_error ("INSERT/DELETE DATA do not allow unbound values");
-			}
+			// WHERE pattern not supported for INSERT/DELETE DATA
 
 			context = new Context (this);
 
@@ -746,6 +713,9 @@ public class Tracker.Sparql.Query : Object {
 
 		var cursor = exec_sql_cursor (sql.str, null, null, false);
 
+		this.delete_statements = delete_statements;
+		this.update_statements = update_statements;
+
 		int n_solutions = 0;
 		while (cursor.next ()) {
 			// get values of all variables to be bound
@@ -757,42 +727,25 @@ public class Tracker.Sparql.Query : Object {
 
 		cursor = null;
 
-		// Iterate over all solutions twice
-		// First handle deletes
-		if (delete_location != null) {
-			for (int i = 0; i < n_solutions; i++) {
-				solution.solution_index = i;
-				set_location (delete_location);
-				parse_construct_triples_block (solution, UpdateType.DELETE);
-				Data.update_buffer_might_flush ();
+		// iterate over all solutions
+		for (int i = 0; i < n_solutions; i++) {
+			// blank nodes in construct templates are per solution
+
+			uuid_generate (base_uuid);
+			blank_nodes = new HashTable<string,string>.full (str_hash, str_equal, g_free, g_free);
+
+			set_location (template_location);
+
+			solution.solution_index = i;
+
+			// iterate over each triple in the template
+			parse_construct_triples_block (solution);
+
+			if (blank && update_blank_nodes != null) {
+				update_blank_nodes.add_value (blank_nodes);
 			}
 
-			// Force flush on delete/insert operations,
-			// so the elements are already removed at
-			// the time of insertion.
-			if (insert_location != null)
-				Data.update_buffer_flush ();
-		}
-
-		// Then handle inserts/updates
-		if (insert_location != null) {
-			for (int i = 0; i < n_solutions; i++) {
-				uuid_generate (base_uuid);
-				blank_nodes = new HashTable<string,string>.full (str_hash, str_equal, g_free, g_free);
-				solution.solution_index = i;
-
-				set_location (insert_location);
-				parse_construct_triples_block (solution,
-							       insert_is_update ?
-							       UpdateType.UPDATE :
-							       UpdateType.INSERT);
-
-				if (blank && update_blank_nodes != null) {
-					update_blank_nodes.add_value (blank_nodes);
-				}
-
-				Data.update_buffer_might_flush ();
-			}
+			Data.update_buffer_might_flush ();
 		}
 
 		solution = null;
@@ -817,31 +770,6 @@ public class Tracker.Sparql.Query : Object {
 		return ns + local_name;
 	}
 
-	int quad_data_unbound_var_count () throws Sparql.Error {
-		SourceLocation current_pos = get_location ();
-		int n_braces = 1;
-		int n_unbound = 0;
-
-		expect (SparqlTokenType.OPEN_BRACE);
-		while (n_braces > 0) {
-			if (accept (SparqlTokenType.OPEN_BRACE)) {
-				n_braces++;
-			} else if (accept (SparqlTokenType.CLOSE_BRACE)) {
-				n_braces--;
-			} else if (current () == SparqlTokenType.EOF) {
-				throw get_error ("unexpected end of query, expected }");
-			} else {
-				if (current () == SparqlTokenType.VAR)
-					n_unbound++;
-				// ignore everything else
-				next ();
-			}
-		}
-
-		set_location (current_pos);
-		return n_unbound;
-	}
-
 	void skip_braces () throws Sparql.Error {
 		expect (SparqlTokenType.OPEN_BRACE);
 		int n_braces = 1;
@@ -859,7 +787,7 @@ public class Tracker.Sparql.Query : Object {
 		}
 	}
 
-	void parse_construct_triples_block (Solution var_value_map, UpdateType type) throws Sparql.Error, DateError {
+	void parse_construct_triples_block (Solution var_value_map) throws Sparql.Error, DateError {
 		expect (SparqlTokenType.OPEN_BRACE);
 
 		while (current () != SparqlTokenType.CLOSE_BRACE) {
@@ -867,7 +795,7 @@ public class Tracker.Sparql.Query : Object {
 
 			if (accept (SparqlTokenType.GRAPH)) {
 				var old_graph = current_graph;
-				current_graph = parse_construct_var_or_term (var_value_map, type, out is_null);
+				current_graph = parse_construct_var_or_term (var_value_map, out is_null);
 
 				if (is_null) {
 					throw get_error ("'null' not supported for graph");
@@ -876,13 +804,13 @@ public class Tracker.Sparql.Query : Object {
 				expect (SparqlTokenType.OPEN_BRACE);
 
 				while (current () != SparqlTokenType.CLOSE_BRACE) {
-					current_subject = parse_construct_var_or_term (var_value_map, type, out is_null);
+					current_subject = parse_construct_var_or_term (var_value_map, out is_null);
 
 					if (is_null) {
 						throw get_error ("'null' not supported for subject");
 					}
 
-					parse_construct_property_list_not_empty (var_value_map, type);
+					parse_construct_property_list_not_empty (var_value_map);
 					if (!accept (SparqlTokenType.DOT)) {
 						// no triples following
 						break;
@@ -895,13 +823,13 @@ public class Tracker.Sparql.Query : Object {
 
 				accept (SparqlTokenType.DOT);
 			} else {
-				current_subject = parse_construct_var_or_term (var_value_map, type, out is_null);
+				current_subject = parse_construct_var_or_term (var_value_map, out is_null);
 
 				if (is_null) {
 					throw get_error ("'null' not supported for subject");
 				}
 
-				parse_construct_property_list_not_empty (var_value_map, type);
+				parse_construct_property_list_not_empty (var_value_map);
 				if (!accept (SparqlTokenType.DOT) && current () != SparqlTokenType.GRAPH) {
 					// neither GRAPH nor triples following
 					break;
@@ -914,7 +842,7 @@ public class Tracker.Sparql.Query : Object {
 
 	bool anon_blank_node_open = false;
 
-	string? parse_construct_var_or_term (Solution var_value_map, UpdateType type, out bool is_null) throws Sparql.Error, DateError {
+	string? parse_construct_var_or_term (Solution var_value_map, out bool is_null) throws Sparql.Error, DateError {
 		string result = "";
 		is_null = false;
 		if (current () == SparqlTokenType.VAR) {
@@ -989,7 +917,7 @@ public class Tracker.Sparql.Query : Object {
 			bool old_subject_is_var = current_subject_is_var;
 
 			current_subject = result;
-			parse_construct_property_list_not_empty (var_value_map, type);
+			parse_construct_property_list_not_empty (var_value_map);
 			expect (SparqlTokenType.CLOSE_BRACKET);
 			anon_blank_node_open = false;
 
@@ -1001,7 +929,7 @@ public class Tracker.Sparql.Query : Object {
 		return result;
 	}
 
-	void parse_construct_property_list_not_empty (Solution var_value_map, UpdateType type) throws Sparql.Error, DateError {
+	void parse_construct_property_list_not_empty (Solution var_value_map) throws Sparql.Error, DateError {
 		while (true) {
 			var old_predicate = current_predicate;
 
@@ -1027,7 +955,7 @@ public class Tracker.Sparql.Query : Object {
 			} else {
 				throw get_error ("expected non-empty property list");
 			}
-			parse_construct_object_list (var_value_map, type);
+			parse_construct_object_list (var_value_map);
 
 			current_predicate = old_predicate;
 
@@ -1038,9 +966,9 @@ public class Tracker.Sparql.Query : Object {
 		}
 	}
 
-	void parse_construct_object_list (Solution var_value_map, UpdateType type) throws Sparql.Error, DateError {
+	void parse_construct_object_list (Solution var_value_map) throws Sparql.Error, DateError {
 		while (true) {
-			parse_construct_object (var_value_map, type);
+			parse_construct_object (var_value_map);
 			if (accept (SparqlTokenType.COMMA)) {
 				continue;
 			}
@@ -1048,25 +976,25 @@ public class Tracker.Sparql.Query : Object {
 		}
 	}
 
-	void parse_construct_object (Solution var_value_map, UpdateType type) throws Sparql.Error, DateError {
+	void parse_construct_object (Solution var_value_map) throws Sparql.Error, DateError {
 		bool is_null = false;
-		string object = parse_construct_var_or_term (var_value_map, type, out is_null);
+		string object = parse_construct_var_or_term (var_value_map, out is_null);
 		if (current_subject == null || current_predicate == null || object == null) {
 			// the SPARQL specification says that triples containing unbound variables
 			// should be excluded from the output RDF graph of CONSTRUCT
 			return;
 		}
 		try {
-			if (type == UpdateType.UPDATE) {
+			if (update_statements) {
 				// update triple in database
 				Data.update_statement (current_graph, current_subject, current_predicate, is_null ? null : object);
-			} else if (type == UpdateType.DELETE) {
+			} else if (delete_statements) {
 				// delete triple from database
 				if (is_null) {
 					throw get_error ("'null' not supported in this mode");
 				}
 				Data.delete_statement (current_graph, current_subject, current_predicate, object);
-			} else if (type == UpdateType.INSERT) {
+			} else {
 				// insert triple into database
 				if (is_null) {
 					throw get_error ("'null' not supported in this mode");

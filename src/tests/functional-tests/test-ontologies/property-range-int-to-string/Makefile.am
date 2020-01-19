@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 intontodir = $(datadir)/tracker-tests/test-ontologies/property-range-int-to-string
 
 intonto_DATA =                                         \

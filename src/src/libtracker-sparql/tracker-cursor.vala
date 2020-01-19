@@ -266,12 +266,7 @@ public abstract class Tracker.Sparql.Cursor : Object {
 		ValueType type = get_value_type (column);
 		return_val_if_fail (type == ValueType.BOOLEAN, 0);
 		unowned string as_str = get_string (column);
-
-		if (as_str != null && as_str.ascii_casecmp ("true") == 0) {
-			return true;
-		}
-
-		return false;
+		return (strcmp (as_str, "true") == 0);
 	}
 
 	/**

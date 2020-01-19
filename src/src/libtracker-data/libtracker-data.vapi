@@ -87,7 +87,6 @@ namespace Tracker {
 		public void lock ();
 		public bool trylock ();
 		public void unlock ();
-		public bool locale_changed ();
 	}
 
 	[CCode (cheader_filename = "libtracker-data/tracker-db-interface.h")]

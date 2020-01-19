@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 basicfutdir = $(datadir)/tracker-tests/test-ontologies/basic-future
 
 basicfut_DATA =                                        \

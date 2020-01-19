@@ -94,26 +94,6 @@ tracker_sched_idle_get_type (void)
   return g_define_type_id__volatile;
 }
 
-GType
-tracker_serialization_format_get_type (void)
-{
-  static volatile gsize g_define_type_id__volatile = 0;
- 
-  if (g_once_init_enter (&g_define_type_id__volatile)) {
-    static const GEnumValue values[] = {
-      { TRACKER_SERIALIZATION_FORMAT_SPARQL, "TRACKER_SERIALIZATION_FORMAT_SPARQL", "sparql" },
-      { TRACKER_SERIALIZATION_FORMAT_TURTLE, "TRACKER_SERIALIZATION_FORMAT_TURTLE", "turtle" },
-      { 0, NULL, NULL }
-    };
-    GType g_define_type_id = 
-       g_enum_register_static (g_intern_static_string ("TrackerSerializationFormat"), values);
-      
-    g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
-  }
-    
-  return g_define_type_id__volatile;
-}
-
 /* enumerations from "tracker-date-time.h" */
 #include "tracker-date-time.h"
 GType
@@ -125,7 +105,6 @@ tracker_date_error_get_type (void)
     static const GEnumValue values[] = {
       { TRACKER_DATE_ERROR_OFFSET, "TRACKER_DATE_ERROR_OFFSET", "offset" },
       { TRACKER_DATE_ERROR_INVALID_ISO8601, "TRACKER_DATE_ERROR_INVALID_ISO8601", "invalid-iso8601" },
-      { TRACKER_DATE_ERROR_EMPTY, "TRACKER_DATE_ERROR_EMPTY", "empty" },
       { 0, NULL, NULL }
     };
     GType g_define_type_id = 

@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 SUBDIRS = \
 	ipc \
 	common \
@@ -10,9 +12,6 @@ SUBDIRS = \
 
 configdir = $(datadir)/tracker-tests
 
-config_DATA = \
-	trackertest
-
 config_SCRIPTS = \
 	__init__.py \
 	$(slow_tests) \
@@ -23,6 +22,9 @@ config_SCRIPTS += \
 	tests.xml \
 	tracker-tests.aegis
 endif
+
+dconfdir = $(sysconfdir)/dconf/profile
+dconf_DATA = trackertest
 
 standard_tests = \
 	01-insertion.py \
@@ -48,12 +50,14 @@ if HAVE_TRACKER_FTS
 standard_tests += 310-fts-indexing.py
 endif
 standard_tests += \
-	400-extractor-metadata.py \
-	410-extractor-decorator.py \
+	400-extractor.py \
 	500-writeback.py \
 	501-writeback-details.py \
 	600-applications-camera.py \
-	601-applications-sync.py
+	601-applications-sync.py \
+	mass-storage-mode.py \
+	performance-tc-modified.py \
+	virtual-files-tc.py
 
 slow_tests = \
 	10-sqlite-misused.py \
@@ -94,7 +98,7 @@ functional-test-slow: ${slow_tests}
 
 EXTRA_DIST = \
 	$(config_SCRIPTS) \
-	$(config_DATA) \
+	$(dconf_DATA) \
 	create-tests-xml.py
 
 if HAVE_MAEMO

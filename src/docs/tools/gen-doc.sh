@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # Generates the SGML documentation from a TTL description
 # Copyright (C) 2009, Nokia <ivan.frade@nokia.com>
@@ -19,29 +19,37 @@
 # 02110-1301, USA.
 #
 
-if [ $# -lt 5 ]; then
-	echo "Insufficient arguments provided"
-	echo "Usage: $0 <ttl2sgml> <ttlres2sgml> <ontology-data-dir> <ontology-info-dir> <build-dir>"
-	exit 1;
-fi
-
 TTL2SGML=$1
-TTLRES2SGML=$2
-ONTOLOGIES_DATA_DIR=$3
-ONTOLOGIES_INFO_DIR=$4
-BUILD_DIR=$5
+ONTOLOGIES_DATA_DIR=$2
+ONTOLOGIES_INFO_DIR=$3
+BUILD_DIR=$4
 
-echo "Building class documentation..."
-$TTLRES2SGML -d $ONTOLOGIES_DATA_DIR -o $BUILD_DIR
+echo "Preparing file full text index properties (fts-properties.xml)"
+
+echo "<?xml version='1.0' encoding='UTF-8'?>
+<chapter id='fts-properties'>
+<title>Full-text indexed properties in the ontology</title>
+<table frame='all'>
+  <colspec colname='Property'/>
+  <colspec colname='Weigth'/>
+
+  <thead>
+   <tr>
+     <td>Property</td>
+     <td>Weigth</td>
+   </tr>
+  </thead>
+
+<tbody>" > $BUILD_DIR/fts-properties.xml
 
 for f in `find $ONTOLOGIES_DATA_DIR -name "*.description"` ; do
-    # ../../src/ontologies/XX-aaa.description -> PREFIX=aaa
+    # ../../data/ontologies/XX-aaa.description -> PREFIX=aaa
     TMPNAME=${f%.description}
     PREFIX=${TMPNAME#*-}
-    echo "- Generating $PREFIX documentation"
+    echo "Generating $PREFIX documentation"
 
-    $TTL2SGML -d $f -o $BUILD_DIR/$PREFIX-ontology.xml \
+    $TTL2SGML -d $f -o $BUILD_DIR/$PREFIX-ontology.xml -f $BUILD_DIR/fts-properties.xml \
 	-e $ONTOLOGIES_INFO_DIR/$PREFIX/explanation.xml
 done
 
-echo "Done"
+echo "</tbody></table></chapter>" >> $BUILD_DIR/fts-properties.xml

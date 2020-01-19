@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 dateontodir = $(datadir)/tracker-tests/test-ontologies/property-range-string-to-date
 
 dateonto_DATA =                                        \

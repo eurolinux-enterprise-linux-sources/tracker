@@ -6,7 +6,6 @@ SUBDIRS =                                              \
 	anon                                           \
 	ask                                            \
 	basic                                          \
-	bind                                           \
 	bnode-coreference                              \
 	bound                                          \
 	datetime                                       \
@@ -15,24 +14,21 @@ SUBDIRS =                                              \
 	graph                                          \
 	nie                                            \
 	nmo                                            \
-	mixed-cardinality                              \
 	optional                                       \
 	regex                                          \
 	sort                                           \
 	subqueries                                     \
 	error                                          \
 	backup                                         \
-	update                                         \
 	turtle
 
-noinst_PROGRAMS += $(test_programs)
+noinst_PROGRAMS = $(TEST_PROGS)
 
-test_programs = \
+TEST_PROGS +=                                          \
 	tracker-sparql                                 \
 	tracker-sparql-blank                           \
 	tracker-ontology                               \
 	tracker-backup                                 \
-	tracker-crc32-test			       \
 	tracker-ontology-change                        \
 	tracker-db-journal
 
@@ -58,10 +54,9 @@ tracker_sparql_blank_SOURCES = tracker-sparql-blank-test.c
 tracker_ontology_SOURCES = tracker-ontology-test.c
 tracker_ontology_change_SOURCES = tracker-ontology-change-test.c
 tracker_backup_SOURCES = tracker-backup-test.c
-tracker_crc32_test_SOURCES = tracker-crc32-test.c
 tracker_db_journal_SOURCES = tracker-db-journal.c
 
-EXTRA_DIST += \
+EXTRA_DIST =                                           \
 	dawg-testcases                                 \
 	change/source/99-example.ontology.v1           \
 	change/source/99-example.ontology.v2           \
@@ -95,6 +90,3 @@ EXTRA_DIST += \
 	ontologies/20-dc.ontology                      \
 	ontologies/31-nao.ontology                     \
 	ontologies/90-tracker.ontology
-
-clean-local:
-	rm -rf $(abs_builddir)/test-cache

@@ -20,14 +20,13 @@
 #ifndef __TRACKER_FTS_CONFIG_H__
 #define __TRACKER_FTS_CONFIG_H__
 
-#include "config.h"
-
 #include <glib-object.h>
-#include <gio/gio.h>
+
+#include <libtracker-common/tracker-config-file.h>
 
 G_BEGIN_DECLS
 
-#define TRACKER_TYPE_FTS_CONFIG         (tracker_fts_config_get_type ())
+#define TRACKER_TYPE_FTS_CONFIG                 (tracker_fts_config_get_type ())
 #define TRACKER_FTS_CONFIG(o)           (G_TYPE_CHECK_INSTANCE_CAST ((o), TRACKER_TYPE_FTS_CONFIG, TrackerFTSConfig))
 #define TRACKER_FTS_CONFIG_CLASS(k)     (G_TYPE_CHECK_CLASS_CAST ((k), TRACKER_TYPE_FTS_CONFIG, TrackerFTSConfigClass))
 #define TRACKER_IS_FTS_CONFIG(o)        (G_TYPE_CHECK_INSTANCE_TYPE ((o), TRACKER_TYPE_FTS_CONFIG))

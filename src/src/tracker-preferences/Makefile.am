@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 @INTLTOOL_DESKTOP_RULE@
 
 bin_PROGRAMS = tracker-preferences
@@ -5,19 +7,16 @@ bin_PROGRAMS = tracker-preferences
 desktopdir = $(datadir)/applications
 desktop_DATA =  tracker-preferences.desktop
 
-appdatadir = $(datadir)/appdata
-appdata_DATA =  tracker-preferences.appdata.xml
-
 pkgdata_DATA = tracker-preferences.ui
 
 AM_VALAFLAGS =                                         \
-	--pkg gtk+-3.0 --pkg gmodule-2.0 --pkg posix   \
+	--pkg gtk+-3.0 --pkg gmodule-2.0               \
 	$(BUILD_VALAFLAGS)                             \
 	config.vapi                                    \
 	tracker-config.vapi
 
 AM_CPPFLAGS =                                          \
-	$(BUILD_VALACFLAGS)                            \
+	$(BUILD_CFLAGS)                                \
 	-I$(top_srcdir)/src                            \
 	-I$(top_builddir)/src                          \
 	-DTRACKER_UI_DIR=\"$(datadir)/tracker/\"       \
@@ -36,15 +35,8 @@ tracker_preferences_SOURCES =                          \
 	$(top_srcdir)/src/miners/fs/tracker-config.c
 
 EXTRA_DIST =                                           \
-	$(desktop_DATA:.desktop=.desktop.in.in)        \
 	$(pkgdata_DATA)                                \
-	$(appdata_DATA)                                \
 	config.vapi                                    \
 	tracker-config.vapi
 
-CLEANFILES =                                           \
-	$(desktop_DATA)                                \
-	$(desktop_DATA:.desktop=.desktop.in)
-
-%.desktop.in: %.desktop.in.in
-	@sed -e "s|@VERSION[@]|${VERSION}|" $< > $@
+CLEANFILES = $(desktop_DATA)

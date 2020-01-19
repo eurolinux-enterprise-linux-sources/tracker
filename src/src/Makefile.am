@@ -1,10 +1,16 @@
+include $(top_srcdir)/Makefile.decl
+
+if HAVE_TRACKER_FTS
+libstemmer_dir = libstemmer
+endif
+
 if HAVE_TRACKER_FTS
 libtrackerfts_dir = libtracker-fts
 endif
 
 SUBDIRS =                                              \
-	ontologies				       \
 	gvdb                                           \
+	$(libstemmer_dir)                              \
 	libtracker-common                              \
 	libtracker-sparql                              \
 	$(libtrackerfts_dir)                           \
@@ -14,19 +20,14 @@ SUBDIRS =                                              \
 	libtracker-sparql-backend                      \
 	libtracker-extract                             \
 	libtracker-miner                               \
-	libtracker-control                             \
-	tracker                                        \
 	miners                                         \
 	plugins                                        \
-	tracker-store
-
-if HAVE_TRACKER_EXTRACT
-SUBDIRS += tracker-extract
-endif
-
-if HAVE_TRACKER_WRITEBACK
-SUBDIRS += tracker-writeback
-endif
+	tracker-store                                  \
+	tracker-control                                \
+	tracker-utils                                  \
+	tracker-extract                                \
+	tracker-writeback                              \
+	vapi
 
 if HAVE_TRACKER_PREFERENCES
 SUBDIRS += tracker-preferences

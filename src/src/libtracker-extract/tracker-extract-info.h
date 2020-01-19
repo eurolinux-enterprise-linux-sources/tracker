@@ -29,10 +29,6 @@
 #include <libtracker-sparql/tracker-sparql.h>
 #include <gio/gio.h>
 
-#ifdef HAVE_LIBMEDIAART
-#include <libmediaart/mediaart.h>
-#endif
-
 G_BEGIN_DECLS
 
 typedef struct _TrackerExtractInfo TrackerExtractInfo;
@@ -40,23 +36,19 @@ typedef struct _TrackerExtractInfo TrackerExtractInfo;
 GType                 tracker_extract_info_get_type               (void) G_GNUC_CONST;
 
 TrackerExtractInfo *  tracker_extract_info_new                    (GFile              *file,
-                                                                   const gchar        *mimetype);
+                                                                   const gchar        *mimetype,
+                                                                   const gchar        *graph);
 TrackerExtractInfo *  tracker_extract_info_ref                    (TrackerExtractInfo *info);
 void                  tracker_extract_info_unref                  (TrackerExtractInfo *info);
 GFile *               tracker_extract_info_get_file               (TrackerExtractInfo *info);
 const gchar *         tracker_extract_info_get_mimetype           (TrackerExtractInfo *info);
-
-TrackerResource *     tracker_extract_info_get_resource           (TrackerExtractInfo *info);
-void                  tracker_extract_info_set_resource           (TrackerExtractInfo *info,
-                                                                   TrackerResource    *resource);
-
-#ifdef HAVE_LIBMEDIAART
-
-MediaArtProcess *     tracker_extract_info_get_media_art_process  (TrackerExtractInfo *info);
-void                  tracker_extract_info_set_media_art_process  (TrackerExtractInfo *info,
-                                                                   MediaArtProcess    *media_art_process);
-
-#endif /* HAVE_LIBMEDIAART */
+const gchar *         tracker_extract_info_get_graph              (TrackerExtractInfo *info);
+TrackerSparqlBuilder *tracker_extract_info_get_preupdate_builder  (TrackerExtractInfo *info);
+TrackerSparqlBuilder *tracker_extract_info_get_postupdate_builder (TrackerExtractInfo *info);
+TrackerSparqlBuilder *tracker_extract_info_get_metadata_builder   (TrackerExtractInfo *info);
+const gchar *         tracker_extract_info_get_where_clause       (TrackerExtractInfo *info);
+void                  tracker_extract_info_set_where_clause       (TrackerExtractInfo *info,
+                                                                   const gchar        *where);
 
 G_END_DECLS
 

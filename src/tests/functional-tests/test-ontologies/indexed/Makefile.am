@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 indexeddir = $(datadir)/tracker-tests/test-ontologies/indexed
 
 indexed_DATA =                                         \

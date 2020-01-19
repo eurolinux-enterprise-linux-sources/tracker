@@ -28,9 +28,6 @@ G_BEGIN_DECLS
 #error "only <libtracker-common/tracker-common.h> must be included directly."
 #endif
 
-/* Allow bus type override by env var TRACKER_BUS_TYPE */
-#define TRACKER_IPC_BUS           tracker_ipc_bus()
-
 #define TRACKER_DBUS_ERROR_DOMAIN "TrackerDBus"
 #define TRACKER_DBUS_ERROR        tracker_dbus_error_quark()
 
@@ -65,9 +62,6 @@ typedef enum {
 	TRACKER_DBUS_ERROR_UNSUPPORTED,
 	TRACKER_DBUS_ERROR_BROKEN_PIPE
 } TrackerDBusError;
-
-
-GBusType            tracker_ipc_bus                    (void);
 
 GQuark              tracker_dbus_error_quark           (void);
 

@@ -1,6 +1,6 @@
 include $(top_srcdir)/Makefile.decl
 
-SUBDIRS = src docs po utils examples
+SUBDIRS = data src docs po utils examples
 
 if HAVE_UNIT_TESTS
 SUBDIRS += tests
@@ -51,54 +51,42 @@ coverage-report: coverage
 		libstemmer/stem_UTF_8_* \
 		tracker-control/tracker-miner-files-index-client.h \
 		"*.vapi"                               \
+		"tracker-marshal.*"
 	rm -rf $(top_builddir)/coverage
-	$(MKDIR_P) $(top_builddir)/coverage
+	$(mkdir_p) $(top_builddir)/coverage
 	genhtml --title "@PACKAGE_STRING@" --output-directory $(top_builddir)/coverage $(top_builddir)/lcov.info
 #endif
 
-distclean-local:
-	if test "x$(srcdir)" = "x."; then :; else \
-		rm -f ChangeLog; \
-	fi
+dist-hook: gen-ChangeLog
 
-.PHONY: ChangeLog
 gen_start_date = 2009-04-10
-ChangeLog:
-	$(AM_V_GEN) if test -d "$(srcdir)/.git"; then \
-	  $(top_srcdir)/gitlog-to-changelog --since=$(gen_start_date) > $@.tmp \
-	  && mv -f $@.tmp $@ \
-	  || ($(RM) $@.tmp; \
-	      echo Failed to generate ChangeLog, your ChangeLog may be outdated >&2; \
-	      (test -f $@ || echo git-log is required to generate this file >> $@)); \
-	else \
-	  test -f $@ || \
-	  (echo A git checkout and git-log is required to generate ChangeLog >&2 && \
-	  echo A git checkout and git-log is required to generate this file >> $@); \
+.PHONY: gen-ChangeLog
+gen-ChangeLog:
+	if test -d .git; then                          \
+	  $(top_srcdir)/gitlog-to-changelog            \
+	    --since=$(gen_start_date) > $(distdir)/cl-t; \
+	  rm -f $(distdir)/ChangeLog;                  \
+	  mv $(distdir)/cl-t $(distdir)/ChangeLog;     \
 	fi
 
 functional-test:
 	cd tests/functional-tests/ && $(MAKE) $(AM_MAKEFLAGS) $@
 
-EXTRA_DIST +=                                          \
+EXTRA_DIST =                                           \
 	ChangeLog.pre-0-6-93                           \
-	COPYING.GPL                                    \
-	COPYING.LGPL                                   \
 	gitlog-to-changelog                            \
 	intltool-extract.in                            \
 	intltool-merge.in                              \
 	intltool-update.in			       \
-	tracker.doap \
-	tap-driver.sh \
-	tap-test
+	tracker.doap
 
-DISTCLEANFILES +=                                      \
+DISTCLEANFILES =                                       \
 	intltool-extract                               \
 	intltool-merge                                 \
 	intltool-update
 
 DISTCHECK_CONFIGURE_FLAGS =                            \
 	--with-session-bus-services-dir="\$(datadir)"/dbus-1/services \
-	--with-bash-completion-dir="\$(datadir)"/bash-completion/ \
 	--disable-nautilus-extension                   \
 	--enable-unit-tests                            \
 	--enable-functional-tests                      \
@@ -118,6 +106,6 @@ DISTCHECK_CONFIGURE_FLAGS =                            \
 	--enable-libgsf                                \
 	--enable-playlist                              \
 	--enable-tracker-preferences                   \
-	--enable-enca
+	--with-enca
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}

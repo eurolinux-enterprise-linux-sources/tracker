@@ -20,6 +20,10 @@
 
 #include "config.h"
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <fcntl.h>
 #include <string.h>
 #include <sys/types.h>
@@ -29,7 +33,9 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
-#include <libtracker-common/tracker-common.h>
+#include <libtracker-common/tracker-os-dependant.h>
+#include <libtracker-common/tracker-file-utils.h>
+
 #include <libtracker-extract/tracker-extract.h>
 
 static gchar *
@@ -100,10 +106,11 @@ date_to_iso8601 (const gchar *date)
 	return NULL;
 }
 
-static TrackerResource *
-extract_ps_from_filestream (FILE *f)
+static void
+extract_ps_from_filestream (FILE *f,
+                            TrackerSparqlBuilder *preupdate,
+                            TrackerSparqlBuilder *metadata)
 {
-	TrackerResource *metadata;
 	gchar *line;
 	gsize length;
 	gssize read_char;
@@ -113,8 +120,8 @@ extract_ps_from_filestream (FILE *f)
 	line = NULL;
 	length = 0;
 
-	metadata = tracker_resource_new (NULL);
-	tracker_resource_add_uri (metadata, "rdf:type", "nfo:PaginatedTextDocument");
+	tracker_sparql_builder_predicate (metadata, "a");
+	tracker_sparql_builder_object (metadata, "nfo:PaginatedTextDocument");
 
 	/* 20 MiB should be enough! (original safe limit) */
 	accum = 0;
@@ -140,19 +147,26 @@ extract_ps_from_filestream (FILE *f)
 		line[read_char - 1] = '\0';  /* overwrite '\n' char */
 
 		if (!header_finished && strncmp (line, "%%Copyright:", 12) == 0) {
-			tracker_resource_set_string (metadata, "nie:copyright", line + 13);
+			tracker_sparql_builder_predicate (metadata, "nie:copyright");
+			tracker_sparql_builder_object_unvalidated (metadata, line + 13);
 		} else if (!header_finished && strncmp (line, "%%Title:", 8) == 0) {
-			tracker_resource_set_string (metadata, "nie:title", line + 9);
+			tracker_sparql_builder_predicate (metadata, "nie:title");
+			tracker_sparql_builder_object_unvalidated (metadata, line + 9);
 		} else if (!header_finished && strncmp (line, "%%Creator:", 10) == 0) {
-			TrackerResource *creator = tracker_extract_new_contact (line + 11);
-			tracker_resource_set_relation (metadata, "nco:creator", creator);
-			g_object_unref (creator);
+			tracker_sparql_builder_predicate (metadata, "nco:creator");
+			tracker_sparql_builder_object_blank_open (metadata);
+			tracker_sparql_builder_predicate (metadata, "a");
+			tracker_sparql_builder_object (metadata, "nco:Contact");
+			tracker_sparql_builder_predicate (metadata, "nco:fullname");
+			tracker_sparql_builder_object_unvalidated (metadata, line + 11);
+			tracker_sparql_builder_object_blank_close (metadata);
 		} else if (!header_finished && strncmp (line, "%%CreationDate:", 15) == 0) {
 			gchar *date;
 
 			date = date_to_iso8601 (line + 16);
 			if (date) {
-				tracker_resource_set_string (metadata, "nie:contentCreated", date);
+				tracker_sparql_builder_predicate (metadata, "nie:contentCreated");
+				tracker_sparql_builder_object_unvalidated (metadata, date);
 				g_free (date);
 			}
 		} else if (strncmp (line, "%%Pages:", 8) == 0) {
@@ -162,7 +176,8 @@ extract_ps_from_filestream (FILE *f)
 				gint64 page_count;
 
 				page_count = g_ascii_strtoll (line + 9, NULL, 10);
-				tracker_resource_set_int (metadata, "nfo:pageCount", page_count);
+				tracker_sparql_builder_predicate (metadata, "nfo:pageCount");
+				tracker_sparql_builder_object_int64 (metadata, page_count);
 			}
 		} else if (strncmp (line, "%%EndComments", 14) == 0) {
 			header_finished = TRUE;
@@ -177,16 +192,15 @@ extract_ps_from_filestream (FILE *f)
 	if (line) {
 		g_free (line);
 	}
-
-	return metadata;
 }
 
 
 
-static TrackerResource *
-extract_ps (const gchar          *uri)
+static void
+extract_ps (const gchar          *uri,
+            TrackerSparqlBuilder *preupdate,
+            TrackerSparqlBuilder *metadata)
 {
-	TrackerResource *metadata;
 	FILE *f;
 	gchar *filename;
 
@@ -195,63 +209,23 @@ extract_ps (const gchar          *uri)
 	g_free (filename);
 
 	if (!f) {
-		return NULL;
+		return;
 	}
 
 	/* Extract from filestream! */
 	g_debug ("Extracting PS '%s'...", uri);
-	metadata = extract_ps_from_filestream (f);
+	extract_ps_from_filestream (f, preupdate, metadata);
 
 	tracker_file_close (f, FALSE);
-
-	return metadata;
 }
 
 #ifdef USING_UNZIPPSFILES
 
-#include <errno.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-
 static void
-spawn_child_func (gpointer user_data)
+extract_ps_gz (const gchar          *uri,
+               TrackerSparqlBuilder *preupdate,
+               TrackerSparqlBuilder *metadata)
 {
-	struct rlimit cpu_limit;
-	gint timeout = GPOINTER_TO_INT (user_data);
-
-	if (timeout > 0) {
-		/* set cpu limit */
-		getrlimit (RLIMIT_CPU, &cpu_limit);
-		cpu_limit.rlim_cur = timeout;
-		cpu_limit.rlim_max = timeout + 1;
-
-		if (setrlimit (RLIMIT_CPU, &cpu_limit) != 0) {
-			g_critical ("Failed to set resource limit for CPU");
-		}
-
-		/* Have this as a precaution in cases where cpu limit has not
-		 * been reached due to spawned app sleeping.
-		 */
-		alarm (timeout + 2);
-	}
-
-	/* Set child's niceness to 19 */
-	errno = 0;
-
-	/* nice() uses attribute "warn_unused_result" and so complains
-	 * if we do not check its returned value. But it seems that
-	 * since glibc 2.2.4, nice() can return -1 on a successful call
-	 * so we have to check value of errno too. Stupid...
-	 */
-	if (nice (19) == -1 && errno) {
-		g_warning ("Failed to set nice value");
-	}
-}
-
-static TrackerResource *
-extract_ps_gz (const gchar          *uri)
-{
-	TrackerResource *metadata = NULL;
 	FILE *fz;
 	gint fdz;
 	const gchar *argv[4];
@@ -272,7 +246,7 @@ extract_ps_gz (const gchar          *uri)
 	                               (gchar **) argv,
 	                               NULL,
 	                               G_SPAWN_SEARCH_PATH | G_SPAWN_STDERR_TO_DEV_NULL,
-	                               spawn_child_func,
+	                               tracker_spawn_child_func,
 	                               GINT_TO_POINTER (10),
 	                               NULL,
 	                               NULL,
@@ -292,7 +266,7 @@ extract_ps_gz (const gchar          *uri)
 	else
 	{
 		g_debug ("Extracting compressed PS '%s'...", uri);
-		metadata = extract_ps_from_filestream (fz);
+		extract_ps_from_filestream (fz, preupdate, metadata);
 #ifdef HAVE_POSIX_FADVISE
 		posix_fadvise (fdz, 0, 0, POSIX_FADV_DONTNEED);
 #endif /* HAVE_POSIX_FADVISE */
@@ -300,8 +274,6 @@ extract_ps_gz (const gchar          *uri)
 	}
 
 	g_free (filename);
-
-	return metadata;
 }
 
 #endif /* USING_UNZIPPSFILES */
@@ -309,30 +281,28 @@ extract_ps_gz (const gchar          *uri)
 G_MODULE_EXPORT gboolean
 tracker_extract_get_metadata (TrackerExtractInfo *info)
 {
-	TrackerResource *metadata;
+	TrackerSparqlBuilder *preupdate, *metadata;
+	const gchar *mimetype;
 	GFile *file;
 	gchar *uri;
-	const char *mimetype;
+
+	preupdate = tracker_extract_info_get_preupdate_builder (info);
+	metadata = tracker_extract_info_get_metadata_builder (info);
+	mimetype = tracker_extract_info_get_mimetype (info);
 
 	file = tracker_extract_info_get_file (info);
-	mimetype = tracker_extract_info_get_mimetype (info);
 	uri = g_file_get_uri (file);
 
 #ifdef USING_UNZIPPSFILES
 	if (strcmp (mimetype, "application/x-gzpostscript") == 0) {
-		metadata = extract_ps_gz (uri);
+		extract_ps_gz (uri, preupdate, metadata);
 	} else
 #endif /* USING_UNZIPPSFILES */
 	{
-		metadata = extract_ps (uri);
+		extract_ps (uri, preupdate, metadata);
 	}
 
 	g_free (uri);
-
-	if (metadata) {
-		tracker_extract_info_set_resource (info, metadata);
-		g_object_unref (metadata);
-	}
 
 	return TRUE;
 }

@@ -65,6 +65,18 @@ class MinerCrawlTest (CommonTrackerMinerTest):
         self.assertEquals (len (result), 1)
         return result[0][0]
 
+    def tearDown (self):
+        # Give it a 2 seconds chance
+        result = self.__get_text_documents ()
+        if (len (result) != 3):
+            time.sleep (2)
+        else:
+            return
+
+        result = self.__get_text_documents ()
+        if (len (result) != 3):
+            print "WARNING: Previous test has modified the test files and didn't restore the origina state."
+
     """
     Boot the miner with the correct configuration and check everything is fine
     """
@@ -97,8 +109,7 @@ class MinerCrawlTest (CommonTrackerMinerTest):
         source = os.path.join (MINER_TMP_DIR, "test-no-monitored", "file0.txt")
         dest = os.path.join (MINER_TMP_DIR, "test-monitored", "file0.txt")
         shutil.copyfile (source, dest)
-
-        dest_id, dest_urn = self.system.store.await_resource_inserted ('nfo:TextDocument', uri(dest))
+        self.system.tracker_miner_fs_wait_for_idle ()
 
         # verify if miner indexed this file.
         result = self.__get_text_documents ()
@@ -112,7 +123,7 @@ class MinerCrawlTest (CommonTrackerMinerTest):
         # Clean the new file so the test directory is as before
         log ("Remove and wait")
         os.remove (dest)
-        self.system.store.await_resource_deleted (dest_id)
+        self.system.tracker_miner_fs_wait_for_idle ()
 
     def test_03_copy_from_monitored_to_unmonitored (self):
         """
@@ -144,8 +155,7 @@ class MinerCrawlTest (CommonTrackerMinerTest):
         source = os.path.join (MINER_TMP_DIR, "test-monitored", "file1.txt")
         dest = os.path.join (MINER_TMP_DIR, "test-monitored", "dir1", "dir2", "file-test04.txt")
         shutil.copyfile (source, dest)
-
-        dest_id, dest_urn = self.system.store.await_resource_inserted ('nfo:TextDocument', uri(dest))
+        self.system.tracker_miner_fs_wait_for_idle ()
 
         result = self.__get_text_documents ()
         self.assertEquals (len (result), 4)
@@ -157,7 +167,7 @@ class MinerCrawlTest (CommonTrackerMinerTest):
 
         # Clean the file
         os.remove (dest)
-        self.system.store.await_resource_deleted (dest_id)
+        self.system.tracker_miner_fs_wait_for_idle ()
         self.assertEquals (3, self.tracker.count_instances ("nfo:TextDocument"))
 
 
@@ -168,7 +178,7 @@ class MinerCrawlTest (CommonTrackerMinerTest):
         source = os.path.join (MINER_TMP_DIR, "test-no-monitored", "file0.txt")
         dest = os.path.join (MINER_TMP_DIR, "test-monitored", "dir1", "file-test05.txt")
         shutil.move (source, dest)
-        dest_id, dest_urn = self.system.store.await_resource_inserted ('nfo:TextDocument', uri(dest))
+        self.system.tracker_miner_fs_wait_for_idle ()
 
         result = self.__get_text_documents ()
         self.assertEquals (len (result), 4)
@@ -180,7 +190,7 @@ class MinerCrawlTest (CommonTrackerMinerTest):
 
         # Clean the file
         os.remove (dest)
-        self.system.store.await_resource_deleted (dest_id)
+        self.system.tracker_miner_fs_wait_for_idle ()
         self.assertEquals (3, self.tracker.count_instances ("nfo:TextDocument"))
 
 ## """ move operation and tracker-miner response test cases """
@@ -191,11 +201,10 @@ class MinerCrawlTest (CommonTrackerMinerTest):
         """
         Move a file from monitored to unmonitored directory
         """
-        source = path("test-monitored/dir1/file2.txt")
-        dest = path("test-no-monitored/file2.txt")
-        source_id = self.system.store.get_resource_id (uri(source))
+        source = os.path.join (MINER_TMP_DIR, "test-monitored", "dir1", "file2.txt")
+        dest = os.path.join (MINER_TMP_DIR, "test-no-monitored", "file2.txt")
         shutil.move (source, dest)
-        self.system.store.await_resource_deleted (source_id)
+        self.system.tracker_miner_fs_wait_for_idle ()
 
         result = self.__get_text_documents ()
         self.assertEquals (len (result), 2)
@@ -205,7 +214,7 @@ class MinerCrawlTest (CommonTrackerMinerTest):
 
         # Restore the file
         shutil.move (dest, source)
-        self.system.store.await_resource_inserted ('nfo:TextDocument', uri(source))
+        self.system.tracker_miner_fs_wait_for_idle ()
         self.assertEquals (3, self.tracker.count_instances ("nfo:TextDocument"))
 
 
@@ -213,22 +222,19 @@ class MinerCrawlTest (CommonTrackerMinerTest):
         """
         Move a file between monitored directories
         """
+        source = os.path.join (MINER_TMP_DIR, "test-monitored", "dir1", "file2.txt")
+        dest = os.path.join (MINER_TMP_DIR, "test-monitored", "file2.txt")
 
-        source = path("test-monitored/dir1/file2.txt")
-        dest = path("test-monitored/file2.txt")
-
-        resource_id = self.tracker.get_resource_id(url=uri(source))
-
-        source_dir_urn = self.__get_file_urn (os.path.dirname(source))
+        source_dir_urn = self.__get_file_urn (os.path.join (MINER_TMP_DIR, "test-monitored", "dir1"))
         parent_before = self.__get_parent_urn (source)
         self.assertEquals (source_dir_urn, parent_before)
 
         shutil.move (source, dest)
-        self.tracker.await_property_changed(resource_id, 'nie:url')
+        self.system.tracker_miner_fs_wait_for_idle ()
 
         # Checking fix for NB#214413: After a move operation, nfo:belongsToContainer
         # should be changed to the new one
-        dest_dir_urn = self.__get_file_urn (os.path.dirname(dest))
+        dest_dir_urn = self.__get_file_urn (os.path.join (MINER_TMP_DIR, "test-monitored"))
         parent_after = self.__get_parent_urn (dest)
         self.assertNotEquals (parent_before, parent_after)
         self.assertEquals (dest_dir_urn, parent_after)
@@ -242,7 +248,7 @@ class MinerCrawlTest (CommonTrackerMinerTest):
 
         # Restore the file
         shutil.move (dest, source)
-        self.tracker.await_property_changed(resource_id, 'nie:url')
+        self.system.tracker_miner_fs_wait_for_idle ()
 
         result = self.__get_text_documents ()
         self.assertEquals (len (result), 3)
@@ -254,10 +260,9 @@ class MinerCrawlTest (CommonTrackerMinerTest):
         """
         Delete one of the files
         """
-        victim = path("test-monitored/dir1/file2.txt")
-        victim_id = self.system.store.get_resource_id (uri(victim))
+        victim = os.path.join (MINER_TMP_DIR, "test-monitored", "dir1", "file2.txt")
         os.remove (victim)
-        self.system.store.await_resource_deleted (victim_id)
+        self.system.tracker_miner_fs_wait_for_idle ()
 
         result = self.__get_text_documents ()
         self.assertEquals (len (result), 2)
@@ -269,19 +274,15 @@ class MinerCrawlTest (CommonTrackerMinerTest):
         f = open (victim, "w")
         f.write ("Don't panic, everything is fine")
         f.close ()
-        self.system.store.await_resource_inserted ('nfo:TextDocument', uri(victim))
+        self.system.tracker_miner_fs_wait_for_idle ()
 
     def test_09_deletion_directory (self):
         """
         Delete a directory
         """
-        victim = path("test-monitored/dir1")
-        victim_id = self.system.store.get_resource_id (uri(victim))
+        victim = os.path.join (MINER_TMP_DIR, "test-monitored", "dir1")
         shutil.rmtree (victim)
-
-        file_inside_victim_url = uri (os.path.join (victim, "file2.txt"))
-        file_inside_victim_id = self.system.store.get_resource_id (file_inside_victim_url)
-        self.system.store.await_resource_deleted (file_inside_victim_id)
+        self.system.tracker_miner_fs_wait_for_idle ()
 
         result = self.__get_text_documents ()
         self.assertEquals (len (result), 1)
@@ -289,15 +290,21 @@ class MinerCrawlTest (CommonTrackerMinerTest):
         self.assertIn ( uri ("test-monitored/file1.txt"), unpacked_result)
 
         # Restore the dirs
-        os.makedirs (path("test-monitored/dir1"))
-        os.makedirs (path("test-monitored/dir1/dir2"))
+        #  Wait after each operation to be sure of the results
+        os.makedirs (os.path.join (MINER_TMP_DIR, "test-monitored", "dir1"))
+        self.system.tracker_miner_fs_wait_for_idle ()
+        os.makedirs (os.path.join (MINER_TMP_DIR, "test-monitored", "dir1", "dir2"))
+        self.system.tracker_miner_fs_wait_for_idle ()
         for f in ["test-monitored/dir1/file2.txt",
                   "test-monitored/dir1/dir2/file3.txt"]:
-            filename = path(f)
+            filename = os.path.join (MINER_TMP_DIR, f)
             writer = open (filename, "w")
             writer.write ("Don't panic, everything is fine")
             writer.close ()
-            self.system.store.await_resource_inserted ('nfo:TextDocument', uri(f))
+            self.system.tracker_miner_fs_wait_for_idle ()
+
+        # Wait a bit more... some time one idle is not enough
+        self.system.tracker_miner_fs_wait_for_idle (3)
 
         # Check everything is fine
         result = self.__get_text_documents ()

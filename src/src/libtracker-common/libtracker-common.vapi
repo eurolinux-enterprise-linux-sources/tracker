@@ -17,8 +17,6 @@
  * Boston, MA  02110-1301, USA.
  */
 
-[CCode (cprefix = "Tracker", gir_namespace = "Tracker",
-        gir_version = "1.0", lower_case_cprefix = "tracker_")]
 namespace Tracker {
 	[CCode (cheader_filename = "libtracker-common/tracker-date-time.h")]
 	public double string_to_date (string date_string, out int offset) throws DateError;
@@ -65,17 +63,6 @@ namespace Tracker {
 	namespace Log {
 		public bool init (int verbosity, out string used_filename);
 		public void shutdown ();
-	}
-
-	[CCode (cheader_filename = "libtracker-common/tracker-locale.h")]
-	namespace Locale {
-		public void init ();
-	}
-
-	[Compact]
-	[CCode (cheader_filename = "libtracker-common/tracker-common.h")]
-	namespace IPC {
-		public GLib.BusType bus ();
 	}
 
 	[Compact]

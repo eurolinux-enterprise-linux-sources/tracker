@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 SUBDIRS =
 
 if HAVE_TRACKER_MINER_EVOLUTION

@@ -1,0 +1,585 @@
+From 42e81eef3d2263f0b37088cb25354b2ff043b4b6 Mon Sep 17 00:00:00 2001
+From: Debarshi Ray <debarshir@gnome.org>
+Date: Thu, 10 Oct 2013 13:37:16 +0200
+Subject: [PATCH] libtracker-extract, tracker-extract: Remove $modulesdir from
+ *.rules
+
+https://bugzilla.gnome.org/show_bug.cgi?id=709703
+---
+ Makefile.decl                                      |  3 ++
+ examples/libtracker-extract/Makefile.am            |  5 +-
+ src/libtracker-extract/Makefile.am                 |  3 +-
+ src/libtracker-extract/tracker-module-manager.c    |  8 ++++
+ src/tracker-extract/10-abw.rule.in                 |  2 +-
+ src/tracker-extract/10-dvi.rule.in                 |  2 +-
+ src/tracker-extract/10-epub.rule.in                |  2 +-
+ src/tracker-extract/10-flac.rule.in                |  2 +-
+ src/tracker-extract/10-gif.rule.in                 |  2 +-
+ src/tracker-extract/10-html.rule.in                |  2 +-
+ src/tracker-extract/10-ico.rule.in                 |  2 +-
+ src/tracker-extract/10-jpeg.rule.in                |  2 +-
+ src/tracker-extract/10-mp3.rule.in                 |  2 +-
+ src/tracker-extract/10-msoffice.rule.in            |  2 +-
+ src/tracker-extract/10-oasis.rule.in               |  2 +-
+ src/tracker-extract/10-pdf.rule.in                 |  2 +-
+ src/tracker-extract/10-png.rule.in                 |  2 +-
+ src/tracker-extract/10-ps.rule.in                  |  2 +-
+ src/tracker-extract/10-svg.rule.in                 |  2 +-
+ src/tracker-extract/10-tiff.rule.in                |  2 +-
+ src/tracker-extract/10-vorbis.rule.in              |  2 +-
+ src/tracker-extract/10-xmp.rule.in                 |  2 +-
+ src/tracker-extract/10-xps.rule.in                 |  2 +-
+ src/tracker-extract/11-iso.rule.in                 |  2 +-
+ src/tracker-extract/11-msoffice-xml.rule.in        |  2 +-
+ src/tracker-extract/15-gstreamer-guess.rule.in     |  2 +-
+ src/tracker-extract/15-playlist.rule.in            |  2 +-
+ src/tracker-extract/90-gstreamer-generic.rule.in   |  2 +-
+ src/tracker-extract/90-text-generic.rule.in        |  2 +-
+ .../91-gstreamer-generic-dlna.rule.in              |  2 +-
+ src/tracker-extract/92-xine-generic.rule.in        |  2 +-
+ src/tracker-extract/93-mplayer-generic.rule.in     |  2 +-
+ src/tracker-extract/93-totem-generic.rule.in       |  2 +-
+ src/tracker-extract/Makefile.am                    | 55 +++++++++++-----------
+ 34 files changed, 71 insertions(+), 61 deletions(-)
+
+diff --git a/Makefile.decl b/Makefile.decl
+index 2c5a4a2..5e7de8d 100644
+--- a/Makefile.decl
++++ b/Makefile.decl
+@@ -8,6 +8,9 @@
+ # full-report: like test-report: with -m perf and -m slow
+ #
+ 
++extractmodulesdir = $(libdir)/tracker-$(TRACKER_API_VERSION)/extract-modules
++extractrulesdir = $(datadir)/tracker/extract-rules
++
+ GTESTER = gtester 			# for non-GLIB packages
+ GTESTER_REPORT = gtester-report
+ 
+diff --git a/examples/libtracker-extract/Makefile.am b/examples/libtracker-extract/Makefile.am
+index 67b0b3a..a20a756 100644
+--- a/examples/libtracker-extract/Makefile.am
++++ b/examples/libtracker-extract/Makefile.am
+@@ -1,7 +1,6 @@
+ include $(top_srcdir)/Makefile.decl
+ 
+ module_flags = -module -avoid-version -no-undefined
+-modulesdir = $(libdir)/tracker-$(TRACKER_API_VERSION)/extract-modules
+ 
+ AM_CPPFLAGS =                                          \
+ 	$(BUILD_CFLAGS)                                \
+@@ -22,12 +21,12 @@ libextract_mockup_la_LIBADD =                          \
+ rules_in_files = 01-mockup.rule.in
+ 
+ %.rule: %.rule.in
+-	@sed -e "s|@modulesdir[@]|${modulesdir}|" $< > $@
++	@sed -e "s|@extractmodulesdir[@]|${extractmodulesdir}|" $< > $@
+ 
+ # This is noinst_ only because it's an example, normally this would be
+ # "rules" (for rules_DATA and rulesdir) or whatever name you want to
+ # give for your rules files.
+-noinstdir = $(datadir)/tracker/extract-rules
++noinstdir = $(extractrulesdir)
+ noinst_DATA = 01-mockup.rule
+ 
+ CLEANFILES = $(noinst_DATA)
+diff --git a/src/libtracker-extract/Makefile.am b/src/libtracker-extract/Makefile.am
+index f3be025..7a61cbb 100644
+--- a/src/libtracker-extract/Makefile.am
++++ b/src/libtracker-extract/Makefile.am
+@@ -5,7 +5,8 @@ AM_CPPFLAGS =                                          \
+ 	-I$(top_srcdir)/src                            \
+ 	-I$(top_builddir)/src                          \
+ 	-DSHAREDIR=\""$(datadir)"\"                    \
+-	-DTRACKER_EXTRACTOR_RULES_DIR=\""$(datadir)/tracker/extract-rules"\" \
++	-DTRACKER_EXTRACTOR_RULES_DIR=\""$(extractrulesdir)"\" \
++	-DTRACKER_EXTRACTORS_DIR=\""$(extractmodulesdir)"\" \
+ 	$(LIBTRACKER_EXTRACT_CFLAGS)
+ 
+ lib_LTLIBRARIES = libtracker-extract-@TRACKER_API_VERSION@.la
+diff --git a/src/libtracker-extract/tracker-module-manager.c b/src/libtracker-extract/tracker-module-manager.c
+index a238916..4805f1e 100644
+--- a/src/libtracker-extract/tracker-module-manager.c
++++ b/src/libtracker-extract/tracker-module-manager.c
+@@ -68,6 +68,14 @@ load_extractor_rule (GKeyFile  *key_file,
+ 		return FALSE;
+ 	}
+ 
++	if (!G_IS_DIR_SEPARATOR (module_path[0])) {
++		gchar *tmp;
++
++		tmp = g_build_filename (TRACKER_EXTRACTORS_DIR, module_path, NULL);
++		g_free (module_path);
++		module_path = tmp;
++	}
++
+ 	mimetypes = g_key_file_get_string_list (key_file, "ExtractorRule", "MimeTypes", &n_mimetypes, error);
+ 
+ 	if (!mimetypes) {
+diff --git a/src/tracker-extract/10-abw.rule.in b/src/tracker-extract/10-abw.rule.in
+index a2fe7d1..aef9a29 100644
+--- a/src/tracker-extract/10-abw.rule.in
++++ b/src/tracker-extract/10-abw.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-abw.so
++ModulePath=libextract-abw.so
+ MimeTypes=application/x-abiword
+ 
+diff --git a/src/tracker-extract/10-dvi.rule.in b/src/tracker-extract/10-dvi.rule.in
+index c575400..617c99a 100644
+--- a/src/tracker-extract/10-dvi.rule.in
++++ b/src/tracker-extract/10-dvi.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-dvi.so
++ModulePath=libextract-dvi.so
+ MimeTypes=application/x-dvi
+ FallbackRdfType=nfo:Document
+diff --git a/src/tracker-extract/10-epub.rule.in b/src/tracker-extract/10-epub.rule.in
+index d859d80..1467488 100644
+--- a/src/tracker-extract/10-epub.rule.in
++++ b/src/tracker-extract/10-epub.rule.in
+@@ -1,3 +1,3 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-epub.so
++ModulePath=libextract-epub.so
+ MimeTypes=application/epub+zip
+diff --git a/src/tracker-extract/10-flac.rule.in b/src/tracker-extract/10-flac.rule.in
+index 39ee3ad..c0517ff 100644
+--- a/src/tracker-extract/10-flac.rule.in
++++ b/src/tracker-extract/10-flac.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-flac.so
++ModulePath=libextract-flac.so
+ MimeTypes=audio/x-flac
+ 
+diff --git a/src/tracker-extract/10-gif.rule.in b/src/tracker-extract/10-gif.rule.in
+index 83a7b13..3fdcfe0 100644
+--- a/src/tracker-extract/10-gif.rule.in
++++ b/src/tracker-extract/10-gif.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-gif.so
++ModulePath=libextract-gif.so
+ MimeTypes=image/gif
+ 
+diff --git a/src/tracker-extract/10-html.rule.in b/src/tracker-extract/10-html.rule.in
+index cf9cd7a..ec2cf27 100644
+--- a/src/tracker-extract/10-html.rule.in
++++ b/src/tracker-extract/10-html.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-html.so
++ModulePath=libextract-html.so
+ MimeTypes=text/html;application/xhtml+xml;
+ 
+diff --git a/src/tracker-extract/10-ico.rule.in b/src/tracker-extract/10-ico.rule.in
+index 4e86122..f1e161b 100644
+--- a/src/tracker-extract/10-ico.rule.in
++++ b/src/tracker-extract/10-ico.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-icon.so
++ModulePath=libextract-icon.so
+ MimeTypes=image/vnd.microsoft.icon
+ 
+diff --git a/src/tracker-extract/10-jpeg.rule.in b/src/tracker-extract/10-jpeg.rule.in
+index 4ea67e5..e20d559 100644
+--- a/src/tracker-extract/10-jpeg.rule.in
++++ b/src/tracker-extract/10-jpeg.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-jpeg.so
++ModulePath=libextract-jpeg.so
+ MimeTypes=image/jpeg
+ 
+diff --git a/src/tracker-extract/10-mp3.rule.in b/src/tracker-extract/10-mp3.rule.in
+index 31d56b5..86a9b73 100644
+--- a/src/tracker-extract/10-mp3.rule.in
++++ b/src/tracker-extract/10-mp3.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-mp3.so
++ModulePath=libextract-mp3.so
+ MimeTypes=audio/mpeg;audio/x-mp3;
+ 
+diff --git a/src/tracker-extract/10-msoffice.rule.in b/src/tracker-extract/10-msoffice.rule.in
+index 0b72b62..d6568ff 100644
+--- a/src/tracker-extract/10-msoffice.rule.in
++++ b/src/tracker-extract/10-msoffice.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-msoffice.so
++ModulePath=libextract-msoffice.so
+ MimeTypes=application/msword;application/vnd.ms-powerpoint;application/vnd.ms-excel;application/vnd.ms-*;
+ 
+diff --git a/src/tracker-extract/10-oasis.rule.in b/src/tracker-extract/10-oasis.rule.in
+index 84a3b48..10038c0 100644
+--- a/src/tracker-extract/10-oasis.rule.in
++++ b/src/tracker-extract/10-oasis.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-oasis.so
++ModulePath=libextract-oasis.so
+ MimeTypes=application/vnd.oasis.opendocument.*
+ 
+diff --git a/src/tracker-extract/10-pdf.rule.in b/src/tracker-extract/10-pdf.rule.in
+index a85de2b..455fe6b 100644
+--- a/src/tracker-extract/10-pdf.rule.in
++++ b/src/tracker-extract/10-pdf.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-pdf.so
++ModulePath=libextract-pdf.so
+ MimeTypes=application/pdf
+ FallbackRdfType=nfo:Document
+diff --git a/src/tracker-extract/10-png.rule.in b/src/tracker-extract/10-png.rule.in
+index 080d880..67b2a1b 100644
+--- a/src/tracker-extract/10-png.rule.in
++++ b/src/tracker-extract/10-png.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-png.so
++ModulePath=libextract-png.so
+ MimeTypes=image/png;sketch/png;
+ 
+diff --git a/src/tracker-extract/10-ps.rule.in b/src/tracker-extract/10-ps.rule.in
+index bdb6ebe..73734eb 100644
+--- a/src/tracker-extract/10-ps.rule.in
++++ b/src/tracker-extract/10-ps.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-ps.so
++ModulePath=libextract-ps.so
+ MimeTypes=application/x-gzpostscript;application/postscript;
+ 
+diff --git a/src/tracker-extract/10-svg.rule.in b/src/tracker-extract/10-svg.rule.in
+index 1526d6d..8b1e0ab 100644
+--- a/src/tracker-extract/10-svg.rule.in
++++ b/src/tracker-extract/10-svg.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-gstreamer.so
++ModulePath=libextract-gstreamer.so
+ MimeTypes=image/svg+xml
+ 
+diff --git a/src/tracker-extract/10-tiff.rule.in b/src/tracker-extract/10-tiff.rule.in
+index c62ee4f..c883c90 100644
+--- a/src/tracker-extract/10-tiff.rule.in
++++ b/src/tracker-extract/10-tiff.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-tiff.so
++ModulePath=libextract-tiff.so
+ MimeTypes=image/tiff
+ 
+diff --git a/src/tracker-extract/10-vorbis.rule.in b/src/tracker-extract/10-vorbis.rule.in
+index a983765..f99877b 100644
+--- a/src/tracker-extract/10-vorbis.rule.in
++++ b/src/tracker-extract/10-vorbis.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-vorbis.so
++ModulePath=libextract-vorbis.so
+ MimeTypes=audio/x-vorbis+ogg;application/ogg;
+ 
+diff --git a/src/tracker-extract/10-xmp.rule.in b/src/tracker-extract/10-xmp.rule.in
+index 82979e6..e9288db 100644
+--- a/src/tracker-extract/10-xmp.rule.in
++++ b/src/tracker-extract/10-xmp.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-xmp.so
++ModulePath=libextract-xmp.so
+ MimeTypes=application/rdf+xml
+ 
+diff --git a/src/tracker-extract/10-xps.rule.in b/src/tracker-extract/10-xps.rule.in
+index 0ab63c6..0916f8d 100644
+--- a/src/tracker-extract/10-xps.rule.in
++++ b/src/tracker-extract/10-xps.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-xps.so
++ModulePath=libextract-xps.so
+ MimeTypes=application/oxps;application/vnd.ms-xpsdocument;
+ FallbackRdfType=nfo:Document
+diff --git a/src/tracker-extract/11-iso.rule.in b/src/tracker-extract/11-iso.rule.in
+index 30d0ff6..400a072 100644
+--- a/src/tracker-extract/11-iso.rule.in
++++ b/src/tracker-extract/11-iso.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-iso.so
++ModulePath=libextract-iso.so
+ MimeTypes=application/x-cd-image
+ 
+diff --git a/src/tracker-extract/11-msoffice-xml.rule.in b/src/tracker-extract/11-msoffice-xml.rule.in
+index e6654db..8459823 100644
+--- a/src/tracker-extract/11-msoffice-xml.rule.in
++++ b/src/tracker-extract/11-msoffice-xml.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-msoffice-xml.so
++ModulePath=libextract-msoffice-xml.so
+ MimeTypes=application/vnd.openxmlformats-officedocument.presentationml.presentation;application/vnd.openxmlformats-officedocument.presentationml.slideshow;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.openxmlformats-officedocument.wordprocessingml.document;
+ 
+diff --git a/src/tracker-extract/15-gstreamer-guess.rule.in b/src/tracker-extract/15-gstreamer-guess.rule.in
+index a0a6773..6088807 100644
+--- a/src/tracker-extract/15-gstreamer-guess.rule.in
++++ b/src/tracker-extract/15-gstreamer-guess.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-gstreamer.so
++ModulePath=libextract-gstreamer.so
+ MimeTypes=video/3gpp;video/mp4;video/x-ms-asf;application/vnd.rn-realmedia
+ 
+diff --git a/src/tracker-extract/15-playlist.rule.in b/src/tracker-extract/15-playlist.rule.in
+index c9d8b93..16ec50e 100644
+--- a/src/tracker-extract/15-playlist.rule.in
++++ b/src/tracker-extract/15-playlist.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-playlist.so
++ModulePath=libextract-playlist.so
+ MimeTypes=audio/x-mpegurl;audio/mpegurl;audio/x-scpls;audio/x-pn-realaudio;application/ram;application/vnd.ms-wpl;application/smil;audio/x-ms-asx;
+ 
+diff --git a/src/tracker-extract/90-gstreamer-generic.rule.in b/src/tracker-extract/90-gstreamer-generic.rule.in
+index ae9c694..58ce23f 100644
+--- a/src/tracker-extract/90-gstreamer-generic.rule.in
++++ b/src/tracker-extract/90-gstreamer-generic.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-gstreamer.so
++ModulePath=libextract-gstreamer.so
+ MimeTypes=audio/*;video/*;image/*;
+ 
+diff --git a/src/tracker-extract/90-text-generic.rule.in b/src/tracker-extract/90-text-generic.rule.in
+index 8889e60..f1a658c 100644
+--- a/src/tracker-extract/90-text-generic.rule.in
++++ b/src/tracker-extract/90-text-generic.rule.in
+@@ -1,3 +1,3 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-text.so
++ModulePath=libextract-text.so
+ MimeTypes=text/*
+diff --git a/src/tracker-extract/91-gstreamer-generic-dlna.rule.in b/src/tracker-extract/91-gstreamer-generic-dlna.rule.in
+index 418760d..b25e84c 100644
+--- a/src/tracker-extract/91-gstreamer-generic-dlna.rule.in
++++ b/src/tracker-extract/91-gstreamer-generic-dlna.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-gstreamer.so
++ModulePath=libextract-gstreamer.so
+ MimeTypes=dlna/*;
+ 
+diff --git a/src/tracker-extract/92-xine-generic.rule.in b/src/tracker-extract/92-xine-generic.rule.in
+index 47b28bc..9250b17 100644
+--- a/src/tracker-extract/92-xine-generic.rule.in
++++ b/src/tracker-extract/92-xine-generic.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-xine.so
++ModulePath=libextract-xine.so
+ MimeTypes=audio/*;video/*;
+ 
+diff --git a/src/tracker-extract/93-mplayer-generic.rule.in b/src/tracker-extract/93-mplayer-generic.rule.in
+index fdd4dcb..8121a2f 100644
+--- a/src/tracker-extract/93-mplayer-generic.rule.in
++++ b/src/tracker-extract/93-mplayer-generic.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-mplayer.so
++ModulePath=libextract-mplayer.so
+ MimeTypes=audio/*;video/*;
+ 
+diff --git a/src/tracker-extract/93-totem-generic.rule.in b/src/tracker-extract/93-totem-generic.rule.in
+index dd3deff..39ab02a 100644
+--- a/src/tracker-extract/93-totem-generic.rule.in
++++ b/src/tracker-extract/93-totem-generic.rule.in
+@@ -1,4 +1,4 @@
+ [ExtractorRule]
+-ModulePath=@modulesdir@/libextract-totem.so
++ModulePath=libextract-totem.so
+ MimeTypes=audio/*;video/*;
+ 
+diff --git a/src/tracker-extract/Makefile.am b/src/tracker-extract/Makefile.am
+index daad169..a53a9b1 100644
+--- a/src/tracker-extract/Makefile.am
++++ b/src/tracker-extract/Makefile.am
+@@ -1,15 +1,14 @@
+ include $(top_srcdir)/Makefile.decl
+ 
+ module_flags = -module -avoid-version -no-undefined
+-modulesdir = $(libdir)/tracker-$(TRACKER_API_VERSION)/extract-modules
+-rulesdir = $(datadir)/tracker/extract-rules
++rulesdir = $(extractrulesdir)
+ 
+ AM_CPPFLAGS = \
+ 	$(BUILD_CFLAGS) \
+ 	-I$(top_srcdir)/src \
+ 	-I$(top_builddir)/src \
+ 	-DLOCALEDIR=\""$(localedir)"\" \
+-	-DTRACKER_EXTRACTORS_DIR=\"$(modulesdir)\" \
++	-DTRACKER_EXTRACTORS_DIR=\""$(extractmodulesdir)"\" \
+ 	$(TRACKER_EXTRACT_CFLAGS)
+ 
+ # NOTE: The rules are here and not in another sub-directory because we
+@@ -48,51 +47,51 @@ rules_in_files = \
+ 	93-totem-generic.rule.in
+ 
+ %.rule: %.rule.in
+-	@sed -e "s|@modulesdir[@]|${modulesdir}|" $< > $@
++	@sed -e "s|@extractmodulesdir[@]|${extractmodulesdir}|" $< > $@
+ 
+ # NOTE:
+ # We don't always link with libtracker-common, we only link
+ # against it if we directly use functions in the .so
+-modules_LTLIBRARIES = # Empty
++extractmodules_LTLIBRARIES = # Empty
+ rules_DATA = # Empty
+ 
+ if HAVE_LIBVORBIS
+-modules_LTLIBRARIES += libextract-vorbis.la
++extractmodules_LTLIBRARIES += libextract-vorbis.la
+ rules_DATA += 10-vorbis.rule
+ endif
+ 
+ if HAVE_LIBFLAC
+-modules_LTLIBRARIES += libextract-flac.la
++extractmodules_LTLIBRARIES += libextract-flac.la
+ rules_DATA += 10-flac.rule
+ endif
+ 
+ if HAVE_EXEMPI
+-modules_LTLIBRARIES += libextract-xmp.la
++extractmodules_LTLIBRARIES += libextract-xmp.la
+ rules_DATA += 10-xmp.rule
+ endif
+ 
+ if HAVE_LIBGIF
+-modules_LTLIBRARIES += libextract-gif.la
++extractmodules_LTLIBRARIES += libextract-gif.la
+ rules_DATA += 10-gif.rule
+ endif
+ 
+ if HAVE_LIBJPEG
+-modules_LTLIBRARIES += libextract-jpeg.la
++extractmodules_LTLIBRARIES += libextract-jpeg.la
+ rules_DATA += 10-jpeg.rule
+ endif
+ 
+ if HAVE_LIBTIFF
+-modules_LTLIBRARIES += libextract-tiff.la
++extractmodules_LTLIBRARIES += libextract-tiff.la
+ rules_DATA += 10-tiff.rule
+ endif
+ 
+ if HAVE_LIBXML2
+-modules_LTLIBRARIES += libextract-html.la
++extractmodules_LTLIBRARIES += libextract-html.la
+ rules_DATA += 10-html.rule
+ endif
+ 
+ if HAVE_LIBGSF
+-modules_LTLIBRARIES += \
++extractmodules_LTLIBRARIES += \
+ 	libextract-epub.la \
+ 	libextract-msoffice.la \
+ 	libextract-msoffice-xml.la \
+@@ -101,17 +100,17 @@ rules_DATA += 10-epub.rule 10-oasis.rule 10-msoffice.rule 11-msoffice-xml.rule
+ endif
+ 
+ if HAVE_LIBGXPS
+-modules_LTLIBRARIES += libextract-xps.la
++extractmodules_LTLIBRARIES += libextract-xps.la
+ rules_DATA += 10-xps.rule
+ endif
+ 
+ if HAVE_POPPLER
+-modules_LTLIBRARIES += libextract-pdf.la
++extractmodules_LTLIBRARIES += libextract-pdf.la
+ rules_DATA += 10-pdf.rule
+ endif
+ 
+ if HAVE_GSTREAMER
+-modules_LTLIBRARIES += libextract-gstreamer.la
++extractmodules_LTLIBRARIES += libextract-gstreamer.la
+ rules_DATA += 10-svg.rule 15-gstreamer-guess.rule 90-gstreamer-generic.rule
+ endif
+ 
+@@ -121,58 +120,58 @@ rules_DATA += 91-gstreamer-generic-dlna.rule
+ endif
+ 
+ if HAVE_LIBXINE
+-modules_LTLIBRARIES += libextract-xine.la
++extractmodules_LTLIBRARIES += libextract-xine.la
+ rules_DATA += 92-xine-generic.rule
+ endif
+ 
+ if USING_EXTERNAL_GENERIC_MEDIA_PLAYER
+-modules_LTLIBRARIES +=	libextract-mplayer.la \
+-			libextract-totem.la
++extractmodules_LTLIBRARIES +=	libextract-mplayer.la \
++				libextract-totem.la
+ rules_DATA += 93-mplayer-generic.rule 93-totem-generic.rule
+ endif
+ 
+ if HAVE_TOTEM_PL_PARSER
+-modules_LTLIBRARIES += libextract-playlist.la
++extractmodules_LTLIBRARIES += libextract-playlist.la
+ rules_DATA += 15-playlist.rule
+ endif
+ 
+ if HAVE_LIBOSINFO
+-modules_LTLIBRARIES += libextract-iso.la
++extractmodules_LTLIBRARIES += libextract-iso.la
+ rules_DATA += 11-iso.rule
+ endif
+ 
+ if HAVE_LIBPNG
+-modules_LTLIBRARIES += libextract-png.la
++extractmodules_LTLIBRARIES += libextract-png.la
+ rules_DATA += 10-png.rule
+ endif
+ 
+ if HAVE_ABIWORD
+-modules_LTLIBRARIES += libextract-abw.la
++extractmodules_LTLIBRARIES += libextract-abw.la
+ rules_DATA += 10-abw.rule
+ endif
+ 
+ if HAVE_DVI
+-modules_LTLIBRARIES += libextract-dvi.la
++extractmodules_LTLIBRARIES += libextract-dvi.la
+ rules_DATA += 10-dvi.rule
+ endif
+ 
+ if HAVE_MP3
+-modules_LTLIBRARIES += libextract-mp3.la
++extractmodules_LTLIBRARIES += libextract-mp3.la
+ rules_DATA += 10-mp3.rule
+ endif
+ 
+ if HAVE_PS
+-modules_LTLIBRARIES += libextract-ps.la
++extractmodules_LTLIBRARIES += libextract-ps.la
+ rules_DATA += 10-ps.rule
+ endif
+ 
+ if HAVE_TEXT
+-modules_LTLIBRARIES += libextract-text.la
++extractmodules_LTLIBRARIES += libextract-text.la
+ rules_DATA += 90-text-generic.rule
+ endif
+ 
+ if HAVE_ICON
+-modules_LTLIBRARIES += libextract-icon.la
++extractmodules_LTLIBRARIES += libextract-icon.la
+ rules_DATA += 10-ico.rule
+ endif
+ 
+-- 
+1.8.4.2
+

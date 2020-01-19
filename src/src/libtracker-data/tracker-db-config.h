@@ -29,6 +29,8 @@
 
 #include <glib-object.h>
 
+#include <libtracker-common/tracker-config-file.h>
+
 G_BEGIN_DECLS
 
 #define TRACKER_TYPE_DB_CONFIG         (tracker_db_config_get_type ())

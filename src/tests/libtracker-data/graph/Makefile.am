@@ -1,6 +1,6 @@
 include $(top_srcdir)/Makefile.decl
 
-EXTRA_DIST += \
+EXTRA_DIST =                                           \
 	data-1.ontology                                \
 	data-1.rq                                      \
 	data-2.ontology                                \
@@ -16,6 +16,4 @@ EXTRA_DIST += \
 	graph-3.out                                    \
 	graph-3.rq                                     \
 	graph-4.out                                    \
-	graph-4.rq                                     \
-	graph-5.out                                    \
-	graph-5.rq
+	graph-4.rq

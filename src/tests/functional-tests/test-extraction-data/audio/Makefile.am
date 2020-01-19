@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.decl
+
 audiotestdir = $(datadir)/tracker-tests/test-extraction-data/audio
 
 audiotest_DATA =                                       \
