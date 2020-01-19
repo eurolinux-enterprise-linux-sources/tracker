@@ -3,8 +3,10 @@
 # please keep this list sorted alphabetically
 #
 ar
-be
+as
 be@latin
+bg
+bs
 ca
 ca@valencia
 cs
@@ -16,17 +18,22 @@ en_GB
 eo
 es
 et
+eu
 fi
 fr
+fur
 gl
 he
 hu
 id
 it
 ja
+kk
 ko
 lt
+lv
 mk
+ml
 nb
 nds
 nl
@@ -43,7 +50,11 @@ sr
 sr@latin
 sv
 te
+tg
 th
+tr
+uk
+vi
 zh_CN
 zh_HK
 zh_TW

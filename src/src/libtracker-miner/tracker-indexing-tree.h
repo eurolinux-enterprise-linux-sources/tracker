@@ -46,8 +46,7 @@ G_BEGIN_DECLS
 
 typedef struct _TrackerIndexingTree TrackerIndexingTree;
 
-struct _TrackerIndexingTree
-{
+struct _TrackerIndexingTree {
 	GObject parent_instance;
 	gpointer priv;
 };
@@ -58,6 +57,7 @@ struct _TrackerIndexingTree
  * @directory_added: Called when a directory is added.
  * @directory_removed: Called when a directory is removed.
  * @directory_updated: Called when a directory is updated.
+ * @padding: Reserved for future API improvements.
  *
  * Class for the #TrackerIndexingTree.
  */
@@ -70,17 +70,27 @@ typedef struct {
 	                            GFile               *directory);
 	void (* directory_updated) (TrackerIndexingTree *indexing_tree,
 	                            GFile               *directory);
+	void (* child_updated)     (TrackerIndexingTree *indexing_tree,
+	                            GFile               *root,
+	                            GFile               *child);
+	/* <Private> */
+	gpointer padding[9];
 } TrackerIndexingTreeClass;
 
 GType                 tracker_indexing_tree_get_type (void) G_GNUC_CONST;
 
 TrackerIndexingTree * tracker_indexing_tree_new      (void);
 
+TrackerIndexingTree * tracker_indexing_tree_new_with_root (GFile            *root);
+
 void      tracker_indexing_tree_add                  (TrackerIndexingTree   *tree,
                                                       GFile                 *directory,
                                                       TrackerDirectoryFlags  flags);
 void      tracker_indexing_tree_remove               (TrackerIndexingTree   *tree,
                                                       GFile                 *directory);
+gboolean  tracker_indexing_tree_notify_update        (TrackerIndexingTree   *tree,
+                                                      GFile                 *root,
+                                                      gboolean               recursive);
 
 void      tracker_indexing_tree_add_filter           (TrackerIndexingTree  *tree,
                                                       TrackerFilterType     filter,
@@ -111,6 +121,8 @@ void                tracker_indexing_tree_set_default_policy (TrackerIndexingTre
 GFile *   tracker_indexing_tree_get_root             (TrackerIndexingTree   *tree,
                                                       GFile                 *file,
                                                       TrackerDirectoryFlags *directory_flags);
+GFile *   tracker_indexing_tree_get_master_root      (TrackerIndexingTree   *tree);
+
 gboolean  tracker_indexing_tree_file_is_root         (TrackerIndexingTree   *tree,
                                                       GFile                 *file);
 

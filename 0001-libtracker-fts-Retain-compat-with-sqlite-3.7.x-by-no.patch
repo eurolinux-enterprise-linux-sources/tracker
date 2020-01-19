@@ -1,0 +1,45 @@
+From c8aaeabc221d2f91b9e96d4a33be7dce0eba9769 Mon Sep 17 00:00:00 2001
+From: Carlos Garnacho <carlosg@gnome.org>
+Date: Thu, 8 Jun 2017 12:27:46 +0200
+Subject: [PATCH] libtracker-fts: Retain compat with sqlite 3.7.x by not using
+ WITHOUT ROWID
+
+According to https://sqlite.org/withoutrowid.html, section 2:
+"The WITHOUT ROWID syntax is an optimization. It provides no new
+capabilities. Anything that can be done using a WITHOUT ROWID table can
+also be done in exactly the same way, and exactly the same syntax, using
+an ordinary rowid table. The only advantage of a WITHOUT ROWID table is
+that it can sometimes use less disk space and/or perform a little faster
+than an ordinary rowid table."
+
+This feature was added on 3.8.2, so it seems we can do without it, at
+the expense of an almost negligible space/performance loss.
+---
+ src/libtracker-fts/fts5.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/libtracker-fts/fts5.c b/src/libtracker-fts/fts5.c
+index 5e2fb1471..7b3708db1 100644
+--- a/src/libtracker-fts/fts5.c
++++ b/src/libtracker-fts/fts5.c
+@@ -12666,7 +12666,7 @@ static int sqlite3Fts5IndexOpen(
+       if( rc==SQLITE_OK ){
+         rc = sqlite3Fts5CreateTable(pConfig, "idx", 
+             "segid, term, pgno, PRIMARY KEY(segid, term)", 
+-            1, pzErr
++            0, pzErr
+         );
+       }
+       if( rc==SQLITE_OK ){
+@@ -16991,7 +16991,7 @@ static int sqlite3Fts5StorageOpen(
+     }
+     if( rc==SQLITE_OK ){
+       rc = sqlite3Fts5CreateTable(
+-          pConfig, "config", "k PRIMARY KEY, v", 1, pzErr
++          pConfig, "config", "k PRIMARY KEY, v", 0, pzErr
+       );
+     }
+     if( rc==SQLITE_OK ){
+-- 
+2.13.0
+

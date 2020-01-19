@@ -1,80 +1,101 @@
 %global _changelog_trimtime %(date +%s -d "1 year ago")
 
-
-%if 0%{?fedora} > 15
-%global with_enca 1
-%global with_libcue 1
-%endif
+%global with_nautilus 0
 
 %if 0%{?rhel}
+%global with_enca 0
+%global with_libcue 0
 %global with_thunderbird 0
+%global with_rss 0
 %else
+%global with_enca 1
+%global with_libcue 1
 %global with_thunderbird 1
+%global with_rss 1
 %endif
 
-Summary:	Desktop-neutral search tool and indexer
-Name:		tracker
-Version:	0.16.2
-Release:	11%{?dist}
-License:	GPLv2+
-Group:		Applications/System
-URL:		http://projects.gnome.org/tracker/
-Source0:	http://download.gnome.org/sources/tracker/0.16/%{name}-%{version}.tar.xz
+%global systemd_units tracker-extract.service tracker-miner-apps.service tracker-miner-fs.service tracker-miner-rss.service tracker-miner-user-guides.service tracker-store.service tracker-writeback.service
+
+Name:           tracker
+Version:        1.10.5
+Release:        6%{?dist}
+Summary:        Desktop-neutral search tool and indexer
+
+License:        GPLv2+
+URL:            https://wiki.gnome.org/Projects/Tracker
+Source0:        https://download.gnome.org/sources/%{name}/1.10/%{name}-%{version}.tar.xz
 
 # only autostart in Gnome, see also
 # https://bugzilla.redhat.com/show_bug.cgi?id=771601
-Patch1:		tracker-0.15-onlyshowin.patch
+Patch0:         0001-Only-autostart-in-GNOME-771601.patch
+Patch1:         0001-add-osinfo-to-trackernamespace.patch
+Patch2:         0001-libtracker-common-whitelist-openat.patch
+Patch3:         0001-libtracker-fts-Retain-compat-with-sqlite-3.7.x-by-no.patch
+Patch4:         0001-nie-url-UNIQUE-constraint-fixes.patch
 
-# https://bugzilla.gnome.org/show_bug.cgi?id=703089
-Patch2:         0001-Fix-typos-in-tracker-search-man-page.patch
-
-# https://bugzilla.redhat.com/show_bug.cgi?id=884197
-Patch3:         0001-Add-a-newline-at-the-end-of-file.patch
-Patch4:         0002-libtracker-extract-tracker-extract-Remove-modulesdir.patch
-Patch5:         0003-tracker-extract-Rename-.rules.in-to-.rules.patch
-
-# https://bugzilla.redhat.com/show_bug.cgi?id=1051470
-Patch6:         0001-fts-Strengthen-against-sqlite-failures-in-FTS-functi.patch
-
-# https://bugzilla.redhat.com/show_bug.cgi?id=1028194
-Patch7:         0001-Bump-the-minimum-memory-requirement-to-768M.patch
-
-# https://bugzilla.redhat.com/show_bug.cgi?id=1096307
-Patch8:         tracker-0.16-miner-fs-crashes.patch
-
-# https://bugzilla.redhat.com/show_bug.cgi?id=1083199
-Patch9:         tracker-0.16-miner-store-crashes.patch
-
-BuildRequires:	poppler-glib-devel libxml2-devel libgsf-devel libgxps-devel
-BuildRequires:	libuuid-devel dbus-glib-devel
-BuildRequires:	nautilus-devel
-BuildRequires:	libjpeg-devel libexif-devel exempi-devel
-BuildRequires:	libiptcdata-devel libtiff-devel libpng-devel giflib-devel
-BuildRequires:	sqlite-devel vala-devel libgee06-devel
-BuildRequires:	gstreamer1-plugins-base-devel gstreamer1-devel
-BuildRequires:	totem-pl-parser-devel libvorbis-devel flac-devel
-%if 0%{?with_enca}
-BuildRequires:  enca-devel
-%endif
-BuildRequires:	upower-devel libsecret-devel NetworkManager-glib-devel
-BuildRequires:	libunistring-devel gupnp-dlna-devel taglib-devel rest-devel
-BuildRequires:	libosinfo-devel
-%if 0%{?with_libcue}
-BuildRequires:  libcue-devel
-%endif
-BuildRequires:	firefox
-BuildRequires:	gdk-pixbuf2-devel
-BuildRequires:	desktop-file-utils intltool gettext
-BuildRequires:	gtk-doc graphviz
-BuildRequires:	gobject-introspection
-BuildRequires:	autoconf
-BuildRequires:	automake
-
+BuildRequires:  desktop-file-utils
+BuildRequires:  giflib-devel
+BuildRequires:  graphviz
+BuildRequires:  gtk-doc
+BuildRequires:  intltool
+BuildRequires:  libjpeg-devel
+BuildRequires:  libtiff-devel
+BuildRequires:  libappstream-glib
+BuildRequires:  systemd
 %if 0%{?with_thunderbird}
-BuildRequires: thunderbird
+BuildRequires:  thunderbird
 %endif
+BuildRequires:  vala-devel
+%if 0%{?with_enca}
+BuildRequires:  pkgconfig(enca)
+%endif
+BuildRequires:  pkgconfig(exempi-2.0)
+BuildRequires:  pkgconfig(flac)
+BuildRequires:  pkgconfig(gee-0.8)
+BuildRequires:  pkgconfig(gobject-introspection-1.0)
+BuildRequires:  pkgconfig(gstreamer-1.0)
+BuildRequires:  pkgconfig(gstreamer-pbutils-1.0)
+BuildRequires:  pkgconfig(gstreamer-tag-1.0)
+BuildRequires:  pkgconfig(gtk+-3.0)
+BuildRequires:  pkgconfig(icu-i18n)
+BuildRequires:  pkgconfig(icu-uc)
+%if 0%{?with_libcue}
+BuildRequires:  pkgconfig(libcue)
+%endif
+BuildRequires:  pkgconfig(libexif)
+%if 0%{?with_rss}
+BuildRequires:  pkgconfig(libgrss)
+%endif
+BuildRequires:  pkgconfig(libgsf-1)
+BuildRequires:  pkgconfig(libgxps)
+BuildRequires:  pkgconfig(libiptcdata)
+BuildRequires:  pkgconfig(libmediaart-2.0)
+%if 0%{?with_nautilus}
+BuildRequires:  pkgconfig(libnautilus-extension)
+%endif
+BuildRequires:  pkgconfig(libnm-glib)
+BuildRequires:  pkgconfig(libosinfo-1.0)
+BuildRequires:  pkgconfig(libpng)
+BuildRequires:  pkgconfig(libseccomp)
+BuildRequires:  pkgconfig(libxml-2.0)
+BuildRequires:  pkgconfig(poppler-glib)
+BuildRequires:  pkgconfig(sqlite3)
+BuildRequires:  pkgconfig(taglib_c)
+BuildRequires:  pkgconfig(totem-plparser)
+BuildRequires:  pkgconfig(upower-glib)
+BuildRequires:  pkgconfig(uuid)
+BuildRequires:  pkgconfig(vorbisfile)
 
+%{?systemd_requires}
+Obsoletes: compat-tracker018 < 0.17.2-2
+Obsoletes: tracker-firefox-plugin < 1.10.4-2
 Obsoletes: tracker-miner-flickr < 0.16.0
+Obsoletes: tracker-nautilus-plugin < 0.17.2-2
+
+%if 0%{?fedora}
+# From rhughes-f20-gnome-3-12 copr
+Obsoletes: compat-tracker016 < 0.18
+%endif
 
 %description
 Tracker is a powerful desktop-neutral first class object database,
@@ -92,187 +113,215 @@ It has the ability to index, store, harvest metadata. retrieve and search
 all types of files and other first class objects
 
 %package devel
-Summary:	Headers for developing programs that will use %{name}
-Group:		Development/Libraries
-Requires:	%{name}%{?_isa} = %{version}-%{release}
-Requires:	dbus-glib-devel gtk2-devel
+Summary:        Headers for developing programs that will use %{name}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description devel
 This package contains the static libraries and header files needed for
 developing with tracker
 
-%package ui-tools
-Summary:	Tracker search tool(s)
-Group:		User Interface/Desktops
-Requires:	%{name}%{?_isa} = %{version}-%{release}
-Obsoletes:	paperbox <= 0.4.4
-Obsoletes:	tracker-search-tool <= 0.12.0
+%package needle
+Summary:        Tracker search tool
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+Obsoletes:      paperbox <= 0.4.4
+Obsoletes:      tracker-ui-tools < 1.1.4
+Obsoletes:      tracker-search-tool <= 0.12.0
 
-%description ui-tools
-Graphical frontend to tracker search (tracker-needle) and configuration
-(tracker-preferences) facilities.
+%description needle
+Graphical frontend to tracker search.
 
-%package firefox-plugin
-Summary:	A simple bookmark exporter for Tracker
-Group:		User Interface/Desktops
-Requires:	%{name}%{?_isa} = %{version}-%{release}
+%package preferences
+Summary:        Tracker preferences
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+Obsoletes:      tracker-ui-tools < 1.1.4
 
-%description firefox-plugin
-This Firefox addon exports your bookmarks to Tracker, so that you can search
-for them for example using tracker-needle.
+%description preferences
+Graphical frontend to tracker configuration.
 
+%if 0%{?with_nautilus}
 %package nautilus-plugin
-Summary:	Tracker's nautilus plugin
-Group:		User Interface/Desktops
-Requires:	%{name}%{?_isa} = %{version}-%{release}
+Summary:        Tracker's nautilus plugin
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description nautilus-plugin
 Tracker's nautilus plugin, provides 'tagging' functionality. Ability to perform
 search in nautilus using tracker is built-in directly in the nautilus package.
+%endif
 
 %if 0%{?with_thunderbird}
 %package thunderbird-plugin
-Summary:	Thunderbird extension to export mails to Tracker
-Group:		User Interface/Desktops
-Requires:	%{name}%{?_isa} = %{version}-%{release}
+Summary:        Thunderbird extension to export mails to Tracker
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description thunderbird-plugin
 A simple Thunderbird extension to export mails to Tracker.
 %endif
 
 %package docs
-Summary:	Documentations for tracker
-Group:		Documentation
-BuildArch:	noarch
+Summary:        Documentations for tracker
+BuildArch:      noarch
 
 %description docs
 This package contains the documentation for tracker
 
+
 %prep
 %setup -q
 
-%patch1 -p1 -b .onlyshowin
-%patch2 -p1 -b .manpage
-%patch3 -p1 -b .newline
-%patch4 -p1 -b .modulesdir
-%patch5 -p1 -b .rename
-%patch6 -p1 -b .fts
-%patch7 -p1 -b .memory
-%patch8 -p1 -b .miner-fs-crashes
-%patch9 -p1 -b .miner-store-crashes
+%patch0 -p1 -b .autostart-gnome
+%patch1 -p1 -b .add-osinfo-to-trackernamespace
+%patch2 -p1 -b .libtracker-common-whitelist-openat
+%patch3 -p1 -b .remove-without-rowid-optimization
+%patch4 -p1 -b .nie-url-unique-constraint-fixes
 
-autoreconf
+%if 0%{?rhel}
+# Fix the build with sqlite 3.7 that doesn't support SQLITE_DETERMINISTIC
+sed -i -e 's/ | SQLITE_DETERMINISTIC//' src/libtracker-data/tracker-db-interface-sqlite.c
+%endif
 
 ## nuke unwanted rpaths, see also
 ## https://fedoraproject.org/wiki/Packaging/Guidelines#Beware_of_Rpath
 sed -i -e 's|"/lib /usr/lib|"/%{_lib} %{_libdir}|' configure
 
+
 %build
-%configure --disable-static		\
-	--enable-gtk-doc		\
-	--enable-miner-evolution=no	\
-	--with-firefox-plugin-dir=%{_libdir}/firefox/extensions		\
-%if 0%{?with_thunderbird}
-	--with-thunderbird-plugin-dir=%{_libdir}/thunderbird/extensions	\
+%configure --disable-static \
+           --enable-gtk-doc \
+           --enable-libflac \
+           --enable-libvorbis \
+           --enable-miner-evolution=no \
+           --enable-miner-firefox=no \
+           --disable-mp3 \
+%if %{with_nautilus}
+           --enable-nautilus-extension \
+%else
+           --disable-nautilus-extension \
 %endif
-	--with-unicode-support=libunistring				\
-	--disable-qt							\
-	--disable-functional-tests
+           --enable-libmediaart \
+%if 0%{?with_thunderbird}
+           --with-thunderbird-plugin-dir=%{_libdir}/thunderbird/extensions \
+%else
+           --disable-miner-thunderbird \
+%endif
+           --with-unicode-support=libicu \
+           --disable-functional-tests
 # Disable the functional tests for now, they use python bytecodes.
 
 make V=1 %{?_smp_mflags}
 
+
 %install
-make DESTDIR=%{buildroot} install
+%make_install
 
-mkdir -p %{buildroot}%{_sysconfdir}/ld.so.conf.d
-echo "%{_libdir}/tracker-0.16"	\
-	> %{buildroot}%{_sysconfdir}/ld.so.conf.d/tracker-%{_arch}.conf
+# Update the screenshot shown in the software center
+#
+# NOTE: It would be *awesome* if this file was pushed upstream.
+#
+# See http://people.freedesktop.org/~hughsient/appdata/#screenshots for more details.
+#
+appstream-util replace-screenshots $RPM_BUILD_ROOT%{_datadir}/appdata/tracker-needle.appdata.xml \
+  https://raw.githubusercontent.com/hughsie/fedora-appstream/master/screenshots-extra/tracker-needle/a.png 
 
-%if 0%{?fedora} && 0%{?fedora} < 18
-desktop-file-install --delete-original			\
-	--vendor="fedora"				\
-	--dir=%{buildroot}%{_datadir}/applications	\
-	%{buildroot}%{_datadir}/applications/%{name}-needle.desktop
-%endif
-
-find %{buildroot} -type f -name "*.la" -exec rm -f {} ';'
+find %{buildroot} -type f -name "*.la" -delete
 rm -rf %{buildroot}%{_datadir}/tracker-tests
+
+# Remove .so symlinks for private libraries -- no external users are supposed
+# to link with them.
+rm -f %{buildroot}%{_libdir}/tracker-1.0/*.so
 
 %find_lang %{name}
 
-%post -p /sbin/ldconfig
 
-%post ui-tools
-touch --no-create %{_datadir}/icons/hicolor
+%check
+desktop-file-validate %{buildroot}%{_datadir}/applications/tracker-*.desktop
+
+
+%post
+/sbin/ldconfig
+%systemd_user_post %{systemd_units}
+
+
+%post preferences
+touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
+
+%preun
+%systemd_user_preun %{systemd_units}
+
 
 %postun
 /sbin/ldconfig
 if [ $1 -eq 0 ]; then
   glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || :
 fi
+%systemd_user_postun_with_restart %{systemd_units}
 
-%postun ui-tools
+%postun preferences
 if [ $1 -eq 0 ] ; then
-touch --no-create %{_datadir}/icons/hicolor
-if [ -x %{_bindir}/gtk-update-icon-cache ]; then
-  %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
-fi
+    touch --no-create %{_datadir}/icons/hicolor &>/dev/null
+    gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 fi
 
 %posttrans
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || :
 
-%posttrans ui-tools
-if [ -x %{_bindir}/gtk-update-icon-cache ]; then
-  %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
-fi
+%posttrans preferences
+gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
+
 
 %files -f %{name}.lang
-%doc AUTHORS COPYING NEWS README
+%license COPYING
+%doc AUTHORS NEWS README
 %{_bindir}/tracker*
 %{_libexecdir}/tracker*
 %{_datadir}/tracker/
 %{_datadir}/dbus-1/services/org.freedesktop.Tracker*
-%{_libdir}/*.so.*
-%{_libdir}/tracker-0.16/
-%{_libdir}/girepository-1.0/Tracker-0.16.typelib
-%{_libdir}/girepository-1.0/TrackerExtract-0.16.typelib
-%{_libdir}/girepository-1.0/TrackerMiner-0.16.typelib
+%{_libdir}/libtracker*-1.0.so.*
+%{_libdir}/tracker-1.0/
+%{_libdir}/girepository-1.0/Tracker-1.0.typelib
+%{_libdir}/girepository-1.0/TrackerControl-1.0.typelib
+%{_libdir}/girepository-1.0/TrackerMiner-1.0.typelib
 %{_mandir}/*/tracker*.gz
-%{_sysconfdir}/ld.so.conf.d/tracker-%{_arch}.conf
 %config(noreplace) %{_sysconfdir}/xdg/autostart/tracker*.desktop
+%dir %{_datadir}/bash-completion
+%dir %{_datadir}/bash-completion/completions
+%{_datadir}/bash-completion/completions/tracker
 %{_datadir}/glib-2.0/schemas/*
-%exclude %{_bindir}/tracker-explorer
+%{_userunitdir}/tracker-*.service
 %exclude %{_bindir}/tracker-needle
 %exclude %{_bindir}/tracker-preferences
-%exclude %{_mandir}/man1/tracker-preferences.1.gz
-%exclude %{_mandir}/man1/tracker-needle.1.gz
+%exclude %{_datadir}/tracker/tracker-needle.ui
+%exclude %{_datadir}/tracker/tracker-preferences.ui
+%exclude %{_mandir}/man1/tracker-preferences.1*
+%exclude %{_mandir}/man1/tracker-needle.1*
 
 %files devel
-%{_includedir}/tracker-0.16/
+%{_includedir}/tracker-1.0/
 %{_libdir}/*.so
 %{_libdir}/pkgconfig/*.pc
 %{_datadir}/vala/vapi/tracker*.*
-%{_datadir}/gir-1.0/Tracker-0.16.gir
-%{_datadir}/gir-1.0/TrackerExtract-0.16.gir
-%{_datadir}/gir-1.0/TrackerMiner-0.16.gir
+%{_datadir}/gir-1.0/Tracker-1.0.gir
+%{_datadir}/gir-1.0/TrackerControl-1.0.gir
+%{_datadir}/gir-1.0/TrackerMiner-1.0.gir
 
-%files ui-tools
+%files needle
 %{_bindir}/tracker-needle
+%{_datadir}/appdata/tracker-needle.appdata.xml
+%{_datadir}/applications/tracker-needle.desktop
+%{_datadir}/tracker/tracker-needle.ui
+%{_mandir}/man1/tracker-needle.1*
+
+%files preferences
 %{_bindir}/tracker-preferences
+%{_datadir}/appdata/tracker-preferences.appdata.xml
+%{_datadir}/applications/tracker-preferences.desktop
 %{_datadir}/icons/*/*/apps/tracker.*
-%{_datadir}/applications/*.desktop
-%{_mandir}/man1/tracker-preferences.1.gz
-%{_mandir}/man1/tracker-needle.1.gz
-%exclude %{_datadir}/applications/trackerbird-launcher.desktop
+%{_datadir}/tracker/tracker-preferences.ui
+%{_mandir}/man1/tracker-preferences.1*
 
-%files firefox-plugin
-%{_datadir}/xul-ext/trackerfox/
-%{_libdir}/firefox/extensions/trackerfox@bustany.org
-
+%if 0%{?with_nautilus}
 %files nautilus-plugin
 %{_libdir}/nautilus/extensions-3.0/libnautilus-tracker-tags.so
+%endif
 
 %if 0%{?with_thunderbird}
 %files thunderbird-plugin
@@ -282,28 +331,95 @@ fi
 %endif
 
 %files docs
-%doc docs/reference/COPYING
+%license docs/reference/COPYING
+%{_datadir}/gtk-doc/html/libtracker-control/
 %{_datadir}/gtk-doc/html/libtracker-miner/
-%{_datadir}/gtk-doc/html/libtracker-extract/
 %{_datadir}/gtk-doc/html/libtracker-sparql/
 %{_datadir}/gtk-doc/html/ontology/
 
+
 %changelog
-* Mon Oct 13 2014 Debarshi Ray <rishi@fedoraproject.org> 0.16.2-11
+* Mon Oct 02 2017 Carlos Garnacho <cgarnach@redhat.com> - 1.10.5-6
+- Backport 1.10.6 nie:url UNIQUE constraint fixes to 1.10.5
+- Fix the previous changelog entry
+- Resolves: #1430769
+
+* Fri Sep 29 2017 Carlos Garnacho <cgarnach@redhat.com> - 1.10.5-5
+- Update to upstream 1.10.6, backporting all fixes as of yet for UNIQUE constraint nie:url errors
+- Resolves: #1430769
+
+* Mon Jun 12 2017 Carlos Garnacho <cgarnach@redhat.com> - 1.10.5-4
+- Remove WITHOUT ROWID optimizations from fts5 to preserve compat with sqlite 3.7.x
+- Resolves: #1451669
+
+* Tue May 09 2017 Felipe Borges <feborges@redhat.com> -1.10.5-3
+- Add osinfo ontology to the default TrackerNamespace
+- Whitelist "openat" sys call in seccomp
+- Resolves: #1435340
+
+* Wed Apr 26 2017 Tomas Popela <tpopela@redhat.com> - 1.10.5-2
+- Rebuild for newer webkitgtk4 (removal of icu57)
+- Resolves: #1414413
+
+* Thu Feb 23 2017 Kalev Lember <klember@redhat.com> - 1.10.5-1
+- Update to 1.10.5
+- Resolves: #1387050
+
+* Thu Jan 19 2017 Kalev Lember <klember@redhat.com> - 1.10.4-1
+- Update to 1.10.4
+- Resolves: #1387050
+
+* Mon Jun 27 2016 Debarshi Ray <rishi@fedoraproject.org> - 1.2.7-2
+- Revert an adjustment to the test suite to accommodate older sqlite
+- Resolves: #1349508
+
+* Fri Jun 24 2016 Debarshi Ray <rishi@fedoraproject.org> - 1.2.7-1
+- Update to 1.2.7
+- Resolves: #1349508
+
+* Tue Apr 12 2016 Debarshi Ray <rishi@fedoraproject.org> - 1.2.6-5
+- Fix the previous changelog entry
+- Resolves: #1132114
+
+* Tue Apr 12 2016 Debarshi Ray <rishi@fedoraproject.org> - 1.2.6-4
+- Handle failure to get a TrackerSparqlConnection
+- Resolves: #1132114
+
+* Tue May 12 2015 Matthias Clasen <mclasen@redhat.com> - 1.2.6-3
+- Rebuild against new totem-pl-parser
+- Related: #1174534
+
+* Wed May  6 2015 Matthias Clasen <mclasen@redhat.com> - 1.2.6-2
+- Rebuild against new upower
+- Related: #1174534
+
+* Thu Apr 30 2015 David King <dking@redhat.com> - 1.2.6-1
+- Split desktop-file-validate invocation
+- Related: #1174534
+
+* Fri Apr 10 2015 Debarshi Ray <rishi@fedoraproject.org> - 1.2.6-1
+- Update to 1.2.6
+- Resolves: #1174534
+
+* Thu Mar 19 2015 Richard Hughes <rhughes@redhat.com> - 1.2.5-1
+- Update to 1.2.5
+- Resolves: #1174534
+
+* Mon Oct 13 2014 Debarshi Ray <rishi@fedoraproject.org> - 0.16.2-11
 - Fix a tracker-store crash
-Resolves: #1083199
+- Resolves: #1083199
 
-* Mon Oct 13 2014 Debarshi Ray <rishi@fedoraproject.org> 0.16.2-10
+* Mon Oct 13 2014 Debarshi Ray <rishi@fedoraproject.org> - 0.16.2-10
 - Update the tracker-miner-fs patch to cover another crash site
-Resolves: #1096307
+- Resolves: #1096307
 
-* Thu Oct 02 2014 Debarshi Ray <rishi@fedoraproject.org> 0.16.2-9
+* Thu Oct 02 2014 Debarshi Ray <rishi@fedoraproject.org> - 0.16.2-9
 - Fix a couple of tracker-miner-fs crashes
-Resolves: #1096307
+- Resolves: #1096307
 
-* Fri Feb 28 2014 Matthias Clasen <mclasen@redhat.com> 0.16.2-8
+* Fri Feb 28 2014 Matthias Clasen <mclasen@redhat.com> - 0.16.2-8
 - Rebuild
-Resolves: #1070803
+- Resolves: #1070803
 
 * Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 0.16.2-7
 - Mass rebuild 2014-01-24

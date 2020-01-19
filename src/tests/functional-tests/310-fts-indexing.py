@@ -29,6 +29,7 @@ the text contents are updated accordingly in the indexes.
 import os
 import shutil
 import locale
+import time
 
 import unittest2 as ut
 from common.utils.helpers import log
@@ -39,22 +40,34 @@ class CommonMinerFTS (CommonTrackerMinerTest):
     """
     Superclass to share methods. Shouldn't be run by itself.
     """
+    def prepare_directories (self):
+        # Override content from the base class
+        pass
+
     def setUp (self):
         self.testfile = "test-monitored/miner-fts-test.txt"
         if os.path.exists (path (self.testfile)):
             os.remove (path (self.testfile))
-        # Shouldn't we wait here for the miner to idle? (it works without it)
-            
-    def tearDown (self):
-        #if os.path.exists (path (self.testfile)):
-        #    os.remove (path (self.testfile))
-        pass
+
+        super(CommonMinerFTS, self).setUp()
 
     def set_text (self, text):
+        exists = os.path.exists(path(self.testfile))
+
         f = open (path (self.testfile), "w")
         f.write (text)
         f.close ()
-        self.system.tracker_miner_fs_wait_for_idle ()
+
+        if exists:
+            subject_id = self.tracker.get_resource_id(uri(self.testfile))
+            self.tracker.await_property_changed(
+                subject_id=subject_id, property_uri='nie:plainTextContent')
+        else:
+            self.tracker.await_resource_inserted(
+                rdf_class='nfo:Document', url=uri(self.testfile),
+                required_property='nie:plainTextContent')
+
+        self.tracker.reset_graph_updates_tracking()
 
     def search_word (self, word):
         """
@@ -83,6 +96,11 @@ class CommonMinerFTS (CommonTrackerMinerTest):
         self.assertEquals (len (results), 1)
         self.assertIn ( uri (self.testfile), results)
 
+    def _query_id (self, uri):
+        query = "SELECT tracker:id(?urn) WHERE { ?urn nie:url \"%s\". }" % uri
+        result = self.tracker.query (query)
+        assert len (result) == 1
+        return int (result[0][0])
 
 
 class MinerFTSBasicTest (CommonMinerFTS):
@@ -176,8 +194,9 @@ class MinerFTSFileOperationsTest (CommonMinerFTS):
         TEXT = "automobile is red and big and whatnot"
         self.basic_test (TEXT, "automobile")
 
+        id = self._query_id (uri (self.testfile))
         os.remove ( path (self.testfile))
-        self.system.tracker_miner_fs_wait_for_idle ()
+        self.tracker.await_resource_deleted (id)
 
         results = self.search_word ("automobile")
         self.assertEquals (len (results), 0)
@@ -185,6 +204,8 @@ class MinerFTSFileOperationsTest (CommonMinerFTS):
     def test_02_empty_the_file (self):
         """
         Emptying the file, the indexed words are also removed
+
+        FIXME: this test currently fails!
         """
         TEXT = "automobile is red and big and whatnot"
         self.basic_test (TEXT, "automobile")
@@ -196,11 +217,14 @@ class MinerFTSFileOperationsTest (CommonMinerFTS):
     def test_03_update_the_file (self):
         """
         Changing the contents of the file, updates the index
+
+        FIXME: this test fails!
         """
         TEXT = "automobile is red and big and whatnot"
         self.basic_test (TEXT, "automobile")
 
         self.set_text ("airplane is blue and small and wonderful")
+
         results = self.search_word ("automobile")
         self.assertEquals (len (results), 0)
 
@@ -237,20 +261,21 @@ class MinerFTSFileOperationsTest (CommonMinerFTS):
         Move file from unmonitored location to monitored location and index should be updated
         """
 
-        # Maybe the miner hasn't finished yet with the setUp deletion!
-        self.system.tracker_miner_fs_wait_for_idle ()
-        
         TEXT = "airplane is beautiful"
         TEST_16_SOURCE = "test-no-monitored/fts-indexing-text-16.txt"
         TEST_16_DEST = "test-monitored/fts-indexing-text-16.txt"
         
         self.__recreate_file (path (TEST_16_SOURCE), TEXT)
+        # the file is supposed to be ignored by tracker, so there is no notification..
+        time.sleep (5)
 
         results = self.search_word ("airplane")
         self.assertEquals (len (results), 0)
 
         shutil.copyfile ( path (TEST_16_SOURCE), path (TEST_16_DEST))
-        self.system.tracker_miner_fs_wait_for_idle ()
+        self.tracker.await_resource_inserted (rdf_class = 'nfo:Document',
+                                              url = uri(TEST_16_DEST),
+                                              required_property = 'nie:plainTextContent')
 
         results = self.search_word ("airplane")
         self.assertEquals (len (results), 1)
@@ -271,7 +296,7 @@ class MinerFTSStopwordsTest (CommonMinerFTS):
         if "_" in langcode:
             langcode = langcode.split ("_")[0]
 
-        stopwordsfile = os.path.join (cfg.DATADIR, "tracker", "languages", "stopwords." + langcode)
+        stopwordsfile = os.path.join (cfg.DATADIR, "tracker", "stop-words", "stopwords." + langcode)
 
         if not os.path.exists (stopwordsfile):
             self.skipTest ("No stopwords for the current locale ('%s' doesn't exist)" % (stopwordsfile))

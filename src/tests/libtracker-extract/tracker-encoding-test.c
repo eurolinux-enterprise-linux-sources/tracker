@@ -37,15 +37,12 @@ test_encoding_guessing ()
 	file = g_mapped_file_new (filen, FALSE, NULL);
 
 	output = tracker_encoding_guess (g_mapped_file_get_contents (file),
-	                                 g_mapped_file_get_length (file));
+	                                 g_mapped_file_get_length (file),
+	                                 NULL);
 
 	g_assert_cmpstr (output, ==, "UTF-8");
 
-#if GLIB_CHECK_VERSION(2,22,0)
 	g_mapped_file_unref (file);
-#else
-	g_mapped_file_free (file);
-#endif
 
 	g_free (prefix);
 	g_free (filen);
@@ -60,7 +57,7 @@ test_encoding_can_guess (void)
         g_assert (tracker_encoding_can_guess ());
 #else
         g_assert (!tracker_encoding_can_guess ());
-#endif       
+#endif
 }
 
 int

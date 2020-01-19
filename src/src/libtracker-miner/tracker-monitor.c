@@ -31,7 +31,6 @@
 #endif
 
 #include "tracker-monitor.h"
-#include "tracker-marshal.h"
 
 #define TRACKER_MONITOR_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), TRACKER_TYPE_MONITOR, TrackerMonitorPrivate))
 
@@ -160,7 +159,7 @@ tracker_monitor_class_init (TrackerMonitorClass *klass)
 		              G_SIGNAL_RUN_LAST,
 		              0,
 		              NULL, NULL,
-		              tracker_marshal_VOID__OBJECT_BOOLEAN,
+		              NULL,
 		              G_TYPE_NONE,
 		              2,
 		              G_TYPE_OBJECT,
@@ -171,7 +170,7 @@ tracker_monitor_class_init (TrackerMonitorClass *klass)
 		              G_SIGNAL_RUN_LAST,
 		              0,
 		              NULL, NULL,
-		              tracker_marshal_VOID__OBJECT_BOOLEAN,
+		              NULL,
 		              G_TYPE_NONE,
 		              2,
 		              G_TYPE_OBJECT,
@@ -182,7 +181,7 @@ tracker_monitor_class_init (TrackerMonitorClass *klass)
 		              G_SIGNAL_RUN_LAST,
 		              0,
 		              NULL, NULL,
-		              tracker_marshal_VOID__OBJECT_BOOLEAN,
+		              NULL,
 		              G_TYPE_NONE,
 		              2,
 		              G_TYPE_OBJECT,
@@ -193,7 +192,7 @@ tracker_monitor_class_init (TrackerMonitorClass *klass)
 		              G_SIGNAL_RUN_LAST,
 		              0,
 		              NULL, NULL,
-		              tracker_marshal_VOID__OBJECT_BOOLEAN,
+		              NULL,
 		              G_TYPE_NONE,
 		              2,
 		              G_TYPE_OBJECT,
@@ -204,7 +203,7 @@ tracker_monitor_class_init (TrackerMonitorClass *klass)
 		              G_SIGNAL_RUN_LAST,
 		              0,
 		              NULL, NULL,
-		              tracker_marshal_VOID__OBJECT_OBJECT_BOOLEAN_BOOLEAN,
+		              NULL,
 		              G_TYPE_NONE,
 		              4,
 		              G_TYPE_OBJECT,
@@ -282,7 +281,8 @@ tracker_monitor_init (TrackerMonitor *object)
 		name = g_type_name (priv->monitor_backend);
 
 		/* Set limits based on backend... */
-		if (strcmp (name, "GInotifyDirectoryMonitor") == 0) {
+		if (strcmp (name, "GInotifyDirectoryMonitor") == 0 ||
+		    strcmp (name, "GInotifyFileMonitor") == 0) {
 			/* Using inotify */
 			g_message ("Monitor backend is Inotify");
 
@@ -304,7 +304,8 @@ tracker_monitor_init (TrackerMonitor *object)
 			 */
 			priv->monitor_limit = MAX (priv->monitor_limit, 0);
 		}
-		else if (strcmp (name, "GKqueueDirectoryMonitor") == 0) {
+		else if (strcmp (name, "GKqueueDirectoryMonitor") == 0 ||
+		         strcmp (name, "GKqueueFileMonitor") == 0) {
 			/* Using kqueue(2) */
 			g_message ("Monitor backend is kqueue");
 
@@ -420,7 +421,13 @@ get_kqueue_limit (void)
 
 #ifdef TRACKER_MONITOR_KQUEUE
 	struct rlimit rl;
-	if (getrlimit (RLIMIT_NOFILE, &rl) == 0)
+	if (getrlimit (RLIMIT_NOFILE, &rl) == 0) {
+		rl.rlim_cur = rl.rlim_max;
+	} else {
+		return limit;
+	}
+
+	if (setrlimit(RLIMIT_NOFILE, &rl) == 0)
 		limit = (rl.rlim_cur * 90) / 100;
 #endif /* TRACKER_MONITOR_KQUEUE */
 
@@ -706,11 +713,6 @@ emit_signal_for_event (TrackerMonitor *monitor,
 		g_debug ("Emitting ITEM_DELETED for (%s) '%s'",
 		         event_data->is_directory ? "DIRECTORY" : "FILE",
 		         event_data->file_uri);
-		/* Remove monitors recursively */
-		if (event_data->is_directory) {
-			tracker_monitor_remove_recursively (monitor,
-			                                    event_data->file);
-		}
 		g_signal_emit (monitor,
 		               signals[ITEM_DELETED], 0,
 		               event_data->file,
@@ -1588,9 +1590,22 @@ tracker_monitor_remove (TrackerMonitor *monitor,
 	return removed;
 }
 
-gboolean
-tracker_monitor_remove_recursively (TrackerMonitor *monitor,
-                                    GFile          *file)
+/* If @is_strict is %TRUE, return %TRUE iff @file is a child of @prefix.
+ * If @is_strict is %FALSE, additionally return %TRUE if @file equals @prefix.
+ */
+static gboolean
+file_has_maybe_strict_prefix (GFile    *file,
+                              GFile    *prefix,
+                              gboolean  is_strict)
+{
+	return (g_file_has_prefix (file, prefix) ||
+	        (!is_strict && g_file_equal (file, prefix)));
+}
+
+static gboolean
+remove_recursively (TrackerMonitor *monitor,
+                    GFile          *file,
+                    gboolean        remove_top_level)
 {
 	GHashTableIter iter;
 	gpointer iter_file, iter_file_monitor;
@@ -1602,8 +1617,8 @@ tracker_monitor_remove_recursively (TrackerMonitor *monitor,
 
 	g_hash_table_iter_init (&iter, monitor->priv->monitors);
 	while (g_hash_table_iter_next (&iter, &iter_file, &iter_file_monitor)) {
-		if (!g_file_has_prefix (iter_file, file) &&
-		    !g_file_equal (iter_file, file)) {
+		if (!file_has_maybe_strict_prefix (iter_file, file,
+		                                   !remove_top_level)) {
 			continue;
 		}
 
@@ -1612,7 +1627,9 @@ tracker_monitor_remove_recursively (TrackerMonitor *monitor,
 	}
 
 	uri = g_file_get_uri (file);
-	g_debug ("Removed all monitors recursively for path:'%s', total monitors:%d",
+	g_debug ("Removed all monitors %srecursively for path:'%s', "
+	         "total monitors:%d",
+	         !remove_top_level ? "(except top level) " : "",
 	         uri, g_hash_table_size (monitor->priv->monitors));
 	g_free (uri);
 
@@ -1623,6 +1640,20 @@ tracker_monitor_remove_recursively (TrackerMonitor *monitor,
 	}
 
 	return FALSE;
+}
+
+gboolean
+tracker_monitor_remove_recursively (TrackerMonitor *monitor,
+                                    GFile          *file)
+{
+	return remove_recursively (monitor, file, TRUE);
+}
+
+gboolean
+tracker_monitor_remove_children_recursively (TrackerMonitor *monitor,
+                                             GFile          *file)
+{
+	return remove_recursively (monitor, file, FALSE);
 }
 
 static gboolean

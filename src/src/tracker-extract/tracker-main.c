@@ -24,34 +24,33 @@
 #include <time.h>
 #include <stdlib.h>
 #include <locale.h>
-#include <signal.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <glib.h>
 #include <glib-object.h>
+#include <glib-unix.h>
 #include <glib/gi18n.h>
+#include <glib/gprintf.h>
 #include <gio/gio.h>
 
 #ifndef G_OS_WIN32
 #include <sys/resource.h>
 #endif
 
-#include <libtracker-common/tracker-log.h>
-#include <libtracker-common/tracker-dbus.h>
-#include <libtracker-common/tracker-os-dependant.h>
-#include <libtracker-common/tracker-ioprio.h>
-#include <libtracker-common/tracker-locale.h>
-#include <libtracker-common/tracker-sched.h>
+#ifdef HAVE_LIBMEDIAART
+#include <libmediaart/mediaart.h>
+#endif
+
+#include <libtracker-common/tracker-common.h>
 
 #include <libtracker-data/tracker-db-manager.h>
 
-#include "tracker-media-art.h"
 #include "tracker-config.h"
 #include "tracker-main.h"
 #include "tracker-extract.h"
-#include "tracker-controller.h"
+#include "tracker-extract-controller.h"
+#include "tracker-extract-decorator.h"
 
 #ifdef THREAD_ENABLE_TRACE
 #warning Main thread traces enabled
@@ -67,16 +66,13 @@
 	"\n" \
 	"  http://www.gnu.org/licenses/gpl.txt\n"
 
-#define QUIT_TIMEOUT 30 /* 1/2 minutes worth of seconds */
-
 static GMainLoop *main_loop;
 
 static gint verbosity = -1;
 static gchar *filename;
 static gchar *mime_type;
-static gboolean disable_shutdown;
-static gboolean force_internal_extractors;
 static gchar *force_module;
+static gchar *output_format_name;
 static gboolean version;
 
 static TrackerConfig *config;
@@ -95,20 +91,13 @@ static GOptionEntry entries[] = {
 	  G_OPTION_ARG_STRING, &mime_type,
 	  N_("MIME type for file (if not provided, this will be guessed)"),
 	  N_("MIME") },
-	/* Debug run is used to avoid that the mainloop exits, so that
-	 * as a developer you can be relax when running the tool in gdb */
-	{ "disable-shutdown", 'd', 0,
-	  G_OPTION_ARG_NONE, &disable_shutdown,
-	  N_("Disable shutting down after 30 seconds of inactivity"),
-	  NULL },
-	{ "force-internal-extractors", 'i', 0,
-	  G_OPTION_ARG_NONE, &force_internal_extractors,
-	  N_("Force internal extractors over 3rd parties like libstreamanalyzer"),
-	  NULL },
 	{ "force-module", 'm', 0,
 	  G_OPTION_ARG_STRING, &force_module,
 	  N_("Force a module to be used for extraction (e.g. \"foo\" for \"foo.so\")"),
 	  N_("MODULE") },
+	{ "output-format", 'o', 0, G_OPTION_ARG_STRING, &output_format_name,
+	  N_("Output results format: 'sparql', or 'turtle'"),
+	  N_("FORMAT") },
 	{ "version", 'V', 0,
 	  G_OPTION_ARG_NONE, &version,
 	  N_("Displays version information"),
@@ -165,9 +154,11 @@ initialize_directories (void)
 	g_free (user_data_dir);
 }
 
-static void
-signal_handler (int signo)
+static gboolean
+signal_handler (gpointer user_data)
 {
+	int signo = GPOINTER_TO_INT (user_data);
+
 	static gboolean in_loop = FALSE;
 
 	/* Die if we get re-entrant signals handler calls */
@@ -176,14 +167,9 @@ signal_handler (int signo)
 	}
 
 	switch (signo) {
-	case SIGABRT:
-	case SIGALRM:
-		_exit (EXIT_FAILURE);
-		break;
 	case SIGTERM:
 	case SIGINT:
 		in_loop = TRUE;
-		disable_shutdown = FALSE;
 		g_main_loop_quit (main_loop);
 
 		/* Fall through */
@@ -196,25 +182,16 @@ signal_handler (int signo)
 		}
 		break;
 	}
+
+	return G_SOURCE_CONTINUE;
 }
 
 static void
 initialize_signal_handler (void)
 {
 #ifndef G_OS_WIN32
-	struct sigaction act;
-	sigset_t         empty_mask;
-
-	sigemptyset (&empty_mask);
-	act.sa_handler = signal_handler;
-	act.sa_mask    = empty_mask;
-	act.sa_flags   = 0;
-
-	sigaction (SIGTERM, &act, NULL);
-	sigaction (SIGINT,  &act, NULL);
-	sigaction (SIGHUP,  &act, NULL);
-	sigaction (SIGALRM,  &act, NULL);
-	sigaction (SIGABRT, &act, NULL);
+	g_unix_signal_add (SIGTERM, signal_handler, GINT_TO_POINTER (SIGTERM));
+	g_unix_signal_add (SIGINT, signal_handler, GINT_TO_POINTER (SIGINT));
 #endif /* G_OS_WIN32 */
 }
 
@@ -268,6 +245,9 @@ run_standalone (TrackerConfig *config)
 	TrackerExtract *object;
 	GFile *file;
 	gchar *uri;
+	GEnumClass *enum_class;
+	GEnumValue *enum_value;
+	TrackerSerializationFormat output_format;
 
 	/* Set log handler for library messages */
 	g_log_set_default_handler (log_handler, NULL);
@@ -277,8 +257,21 @@ run_standalone (TrackerConfig *config)
 		verbosity = 3;
 	}
 
+	if (!output_format_name) {
+		output_format_name = "turtle";
+	}
+
+	/* Look up the output format by name */
+	enum_class = g_type_class_ref (TRACKER_TYPE_SERIALIZATION_FORMAT);
+	enum_value = g_enum_get_value_by_nick (enum_class, output_format_name);
+	g_type_class_unref (enum_class);
+	if (!enum_value) {
+		g_printerr (N_("Unsupported serialization format '%s'\n"), output_format_name);
+		return EXIT_FAILURE;
+	}
+	output_format = enum_value->value;
+
 	tracker_locale_init ();
-	tracker_media_art_init ();
 
 	/* This makes sure we don't steal all the system's resources */
 	initialize_priority_and_scheduling (tracker_config_get_sched_idle (config),
@@ -287,27 +280,21 @@ run_standalone (TrackerConfig *config)
 	file = g_file_new_for_commandline_arg (filename);
 	uri = g_file_get_uri (file);
 
-	object = tracker_extract_new (disable_shutdown,
-	                              force_internal_extractors,
-	                              force_module);
+	object = tracker_extract_new (TRUE, force_module);
 
 	if (!object) {
 		g_object_unref (file);
 		g_free (uri);
-		tracker_media_art_shutdown ();
 		tracker_locale_shutdown ();
 		return EXIT_FAILURE;
 	}
 
-	tracker_memory_setrlimits ();
-
-	tracker_extract_get_metadata_by_cmdline (object, uri, mime_type);
+	tracker_extract_get_metadata_by_cmdline (object, uri, mime_type, output_format);
 
 	g_object_unref (object);
 	g_object_unref (file);
 	g_free (uri);
 
-	tracker_media_art_shutdown ();
 	tracker_locale_shutdown ();
 
 	return EXIT_SUCCESS;
@@ -318,11 +305,11 @@ main (int argc, char *argv[])
 {
 	GOptionContext *context;
 	GError *error = NULL;
-	TrackerExtract *object;
-	TrackerController *controller;
+	TrackerExtract *extract;
+	TrackerDecorator *decorator;
+	TrackerExtractController *controller;
 	gchar *log_filename = NULL;
 	GMainLoop *my_main_loop;
-	guint shutdown_timeout;
 
 	bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
 	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
@@ -349,20 +336,6 @@ main (int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (force_internal_extractors && force_module) {
-		gchar *help;
-
-		g_printerr ("%s\n\n",
-		            _("Options --force-internal-extractors and --force-module can't be used together"));
-
-		help = g_option_context_get_help (context, TRUE, NULL);
-		g_option_context_free (context);
-		g_printerr ("%s", help);
-		g_free (help);
-
-		return EXIT_FAILURE;
-	}
-
 	g_option_context_free (context);
 
 	if (version) {
@@ -370,21 +343,11 @@ main (int argc, char *argv[])
 		return EXIT_SUCCESS;
 	}
 
-	initialize_signal_handler ();
-
 	g_set_application_name ("tracker-extract");
 
 	setlocale (LC_ALL, "");
 
 	config = tracker_config_new ();
-
-	/* Set conditions when we use stand alone settings */
-	if (filename) {
-		return run_standalone (config);
-	}
-
-	/* Initialize subsystems */
-	initialize_directories ();
 
 	/* Extractor command line arguments */
 	if (verbosity > -1) {
@@ -397,39 +360,33 @@ main (int argc, char *argv[])
 		g_free (log_filename);
 	}
 
-	g_message ("Shutdown after 30 seconds of inactivity is %s",
-	           disable_shutdown ? "disabled" : "enabled");
-
 	sanity_check_option_values (config);
+
+	/* Set conditions when we use stand alone settings */
+	if (filename) {
+		return run_standalone (config);
+	}
+
+	/* Initialize subsystems */
+	initialize_directories ();
 
 	/* This makes sure we don't steal all the system's resources */
 	initialize_priority_and_scheduling (tracker_config_get_sched_idle (config),
 	                                    tracker_db_manager_get_first_index_done () == FALSE);
-	tracker_memory_setrlimits ();
 
-	if (disable_shutdown) {
-		shutdown_timeout = 0;
-	} else {
-		shutdown_timeout = QUIT_TIMEOUT;
-	}
+	extract = tracker_extract_new (TRUE, force_module);
 
-	object = tracker_extract_new (disable_shutdown,
-	                              force_internal_extractors,
-	                              force_module);
-
-	if (!object) {
+	if (!extract) {
 		g_object_unref (config);
 		tracker_log_shutdown ();
 		return EXIT_FAILURE;
 	}
 
-	controller = tracker_controller_new (object, shutdown_timeout, &error);
+	decorator = tracker_extract_decorator_new (extract, NULL, &error);
 
-	if (!controller) {
-		g_critical ("Controller thread failed to initialize: %s\n", error->message);
-		g_error_free (error);
+	if (error) {
+		g_critical ("Could not start decorator: %s\n", error->message);
 		g_object_unref (config);
-		g_object_unref (object);
 		tracker_log_shutdown ();
 		return EXIT_FAILURE;
 	}
@@ -440,23 +397,28 @@ main (int argc, char *argv[])
 #endif /* THREAD_ENABLE_TRACE */
 
 	tracker_locale_init ();
-	tracker_media_art_init ();
+
+	controller = tracker_extract_controller_new (decorator);
+	tracker_miner_start (TRACKER_MINER (decorator));
 
 	/* Main loop */
 	main_loop = g_main_loop_new (NULL, FALSE);
+
+	initialize_signal_handler ();
+
 	g_main_loop_run (main_loop);
 
 	my_main_loop = main_loop;
 	main_loop = NULL;
 	g_main_loop_unref (my_main_loop);
 
-	g_message ("Shutdown started");
+	tracker_miner_stop (TRACKER_MINER (decorator));
 
 	/* Shutdown subsystems */
-	tracker_media_art_shutdown ();
 	tracker_locale_shutdown ();
 
-	g_object_unref (object);
+	g_object_unref (extract);
+	g_object_unref (decorator);
 	g_object_unref (controller);
 
 	tracker_log_shutdown ();

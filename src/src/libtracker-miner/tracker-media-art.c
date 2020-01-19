@@ -24,7 +24,10 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
-#include <libtracker-common/tracker-media-art.h>
+#ifdef HAVE_LIBMEDIAART
+#include <libmediaart/mediaart.h>
+#endif
+
 #include <libtracker-sparql/tracker-sparql.h>
 
 #include "tracker-media-art.h"
@@ -46,6 +49,7 @@ on_query_finished (GObject      *source_object,
                    GAsyncResult *res,
                    gpointer      user_data)
 {
+#ifdef HAVE_LIBMEDIAART
 	GError *error = NULL;
 	TrackerSparqlCursor *cursor = NULL;
 	GDir *dir = NULL;
@@ -90,18 +94,18 @@ on_query_finished (GObject      *source_object,
 		artist = tracker_sparql_cursor_get_value_type (cursor, 1) != TRACKER_SPARQL_VALUE_TYPE_UNBOUND ? tracker_sparql_cursor_get_string (cursor, 1, NULL) : NULL;
 
 		/* The get_path API does stripping itself */
-		tracker_media_art_get_path (artist,
-		                            album,
-		                            "album", NULL,
-		                            &target, NULL);
+		media_art_get_path (artist,
+		                    album,
+		                    "album",
+		                    &target);
 
 		g_hash_table_replace (table, target, target);
 
 		/* Also add the file to which the symlinks are made */
-		tracker_media_art_get_path (NULL,
-		                            album,
-		                            "album", NULL,
-		                            &album_path, NULL);
+		media_art_get_path (NULL,
+		                    album,
+		                    "album",
+		                    &album_path);
 
 
 		g_hash_table_replace (table, album_path, album_path);
@@ -153,7 +157,9 @@ on_error:
 		            error->message ? error->message : "No error given");
 		g_error_free (error);
 	}
+#endif /* HAVE_LIBMEDIAART */
 }
+
 /**
  * tracker_media_art_queue_remove:
  * @uri: URI of the file
@@ -209,9 +215,15 @@ on_timer_destroy (gpointer data)
 }
 
 /**
- * tracker_media_art_queue_execute:
+ * tracker_media_art_queue_empty:
+ * @connection: a #TrackerSparqlConnection
  *
- * Process all stored media art requests.
+ * Using @connection, find all media art associated with content in
+ * Tracker (so as not to remove media art for other processes) and
+ * remove caches for that media art.
+ *
+ * Note, this highly depends on built in support for libmediaart. If
+ * there is no support, this API does nothing.
  *
  * Since: 0.10.4
  */
@@ -219,7 +231,6 @@ void
 tracker_media_art_queue_empty (TrackerSparqlConnection *connection)
 {
 	if (had_any && timer_id == 0) {
-
 		timer_id = g_timeout_add_seconds_full (G_PRIORITY_LOW,
 		                                       1800 /* Half an hour worth of seconds*/,
 		                                       on_timer_callback,

@@ -38,13 +38,9 @@ static gboolean  initialized;
 static FILE     *fd;
 static gint      verbosity;
 static guint     log_handler_id;
+static guint     libmediaart_log_handler_id;
 static gboolean  use_log_files;
-
-#if GLIB_CHECK_VERSION (2,31,0)
 static GMutex    mutex;
-#else
-static GMutex   *mutex;
-#endif
 
 static inline void
 log_output (const gchar    *domain,
@@ -62,11 +58,7 @@ log_output (const gchar    *domain,
 	g_return_if_fail (message != NULL && message[0] != '\0');
 
 	/* Ensure file logging is thread safe */
-#if GLIB_CHECK_VERSION (2,31,0)
 	g_mutex_lock (&mutex);
-#else
-	g_mutex_lock (mutex);
-#endif
 
 	/* Check log size, 10MiB limit */
 	if (size > (10 << 20) && fd) {
@@ -133,11 +125,7 @@ log_output (const gchar    *domain,
 
 	g_free (output);
 
-#if GLIB_CHECK_VERSION (2,31,0)
 	g_mutex_unlock (&mutex);
-#else
-	g_mutex_unlock (mutex);
-#endif
 }
 
 static void
@@ -205,7 +193,7 @@ tracker_log_init (gint    this_verbosity,
 	/* If we have debug enabled, we imply G_MESSAGES_DEBUG or we
 	 * see nothing, this came in since GLib 2.32.
 	 */
-	if (this_verbosity > 2) {
+	if (this_verbosity > 1) {
 		g_setenv ("G_MESSAGES_DEBUG", "all", TRUE);
 	}
 
@@ -247,11 +235,7 @@ tracker_log_init (gint    this_verbosity,
 
 	verbosity = CLAMP (this_verbosity, 0, 3);
 
-#if GLIB_CHECK_VERSION (2,31,0)
 	g_mutex_init (&mutex);
-#else
-	mutex = g_mutex_new ();
-#endif
 
 	switch (this_verbosity) {
 		/* Log level 3: EVERYTHING */
@@ -284,6 +268,11 @@ tracker_log_init (gint    this_verbosity,
 			                            hide_levels,
 			                            hide_log_handler,
 			                            NULL);
+
+		libmediaart_log_handler_id = g_log_set_handler ("libmediaart",
+		                                                hide_levels,
+		                                                hide_log_handler,
+		                                                NULL);
 	}
 
 	/* Set log handler function for the rest */
@@ -314,15 +303,16 @@ tracker_log_shutdown (void)
 		log_handler_id = 0;
 	}
 
+	if (libmediaart_log_handler_id) {
+		g_log_remove_handler ("libmediaart", libmediaart_log_handler_id);
+		libmediaart_log_handler_id = 0;
+	}
+
 	if (use_log_files && fd != NULL) {
 		fclose (fd);
 	}
 
-#if GLIB_CHECK_VERSION (2,31,0)
 	g_mutex_clear (&mutex);
-#else
-	g_mutex_free (mutex);
-#endif
 
 	initialized = FALSE;
 }

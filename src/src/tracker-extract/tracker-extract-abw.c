@@ -20,10 +20,6 @@
 
 #include "config.h"
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
@@ -51,12 +47,16 @@ typedef enum {
 } AbwParserTag;
 
 struct AbwParserData {
-	TrackerSparqlBuilder *metadata;
-	TrackerSparqlBuilder *preupdate;
+	TrackerResource *resource;
 	GString *content;
+	gchar *uri;
 
 	guint cur_tag;
-	guint in_text : 1;
+	guint in_text       : 1;
+	guint has_title     : 1;
+	guint has_subject   : 1;
+	guint has_comment   : 1;
+	guint has_generator : 1;
 };
 
 static void
@@ -103,31 +103,48 @@ abw_parser_text (GMarkupParseContext *context,
 
 	switch (data->cur_tag) {
 	case ABW_PARSER_TAG_TITLE:
-		tracker_sparql_builder_predicate (data->metadata, "nie:title");
-		tracker_sparql_builder_object_unvalidated (data->metadata, str);
+		if (data->has_title) {
+			g_warning ("Avoiding additional title (%s) in Abiword document '%s'",
+			           str, data->uri);
+		} else {
+			data->has_title = TRUE;
+			tracker_resource_set_string (data->resource, "nie:title", str);
+		}
 		break;
 	case ABW_PARSER_TAG_SUBJECT:
-		tracker_sparql_builder_predicate (data->metadata, "nie:subject");
-		tracker_sparql_builder_object_unvalidated (data->metadata, str);
+		if (data->has_subject) {
+			g_warning ("Avoiding additional subject (%s) in Abiword document '%s'",
+			           str, data->uri);
+		} else {
+			data->has_subject = TRUE;
+			tracker_resource_set_string (data->resource, "nie:subject", str);
+		}
 		break;
-	case ABW_PARSER_TAG_CREATOR:
-		tracker_sparql_builder_predicate (data->metadata, "nco:creator");
+	case ABW_PARSER_TAG_CREATOR: {
+		TrackerResource *creator;
+		creator = tracker_extract_new_contact (str);
+		tracker_resource_set_relation (data->resource, "nco:creator", creator);
+		g_object_unref (creator);
 
-		tracker_sparql_builder_object_blank_open (data->metadata);
-		tracker_sparql_builder_predicate (data->metadata, "a");
-		tracker_sparql_builder_object (data->metadata, "nco:Contact");
-
-		tracker_sparql_builder_predicate (data->metadata, "nco:fullname");
-		tracker_sparql_builder_object_unvalidated (data->metadata, str);
-		tracker_sparql_builder_object_blank_close (data->metadata);
 		break;
+	}
 	case ABW_PARSER_TAG_DESCRIPTION:
-		tracker_sparql_builder_predicate (data->metadata, "nie:comment");
-		tracker_sparql_builder_object_unvalidated (data->metadata, str);
+		if (data->has_comment) {
+			g_warning ("Avoiding additional comment (%s) in Abiword document '%s'",
+			           str, data->uri);
+		} else {
+			data->has_comment = TRUE;
+			tracker_resource_set_string (data->resource, "nie:comment", str);
+		}
 		break;
 	case ABW_PARSER_TAG_GENERATOR:
-		tracker_sparql_builder_predicate (data->metadata, "nie:generator");
-		tracker_sparql_builder_object_unvalidated (data->metadata, str);
+		if (data->has_generator) {
+			g_warning ("Avoiding additional generator (%s) in Abiword document '%s'",
+			           str, data->uri);
+		} else {
+			data->has_generator = TRUE;
+			tracker_resource_set_string (data->resource, "nie:generator", str);
+		}
 		break;
 	case ABW_PARSER_TAG_KEYWORDS:
 	{
@@ -135,8 +152,7 @@ abw_parser_text (GMarkupParseContext *context,
 
 		for (keyword = strtok_r (str, ",; ", &lasts); keyword;
 		     keyword = strtok_r (NULL, ",; ", &lasts)) {
-			tracker_sparql_builder_predicate (data->metadata, "nie:keyword");
-			tracker_sparql_builder_object_unvalidated (data->metadata, keyword);
+			tracker_resource_add_string (data->resource, "nie:keyword", keyword);
 		}
 	}
 		break;
@@ -166,16 +182,12 @@ static GMarkupParser parser = {
 G_MODULE_EXPORT gboolean
 tracker_extract_get_metadata (TrackerExtractInfo *info)
 {
-	TrackerSparqlBuilder *preupdate, *metadata;
 	int fd;
 	gchar *filename, *contents;
 	gboolean retval = FALSE;
 	GFile *f;
 	gsize len;
 	struct stat st;
-
-	preupdate = tracker_extract_info_get_preupdate_builder (info);
-	metadata = tracker_extract_info_get_metadata_builder (info);
 
 	f = tracker_extract_info_get_file (info);
 	filename = g_file_get_path (f);
@@ -222,11 +234,10 @@ tracker_extract_get_metadata (TrackerExtractInfo *info)
 		GMarkupParseContext *context;
 		AbwParserData data = { 0 };
 
-		data.metadata = metadata;
-		data.preupdate = preupdate;
+		data.uri = g_file_get_uri (f);
+		data.resource = tracker_resource_new (NULL);
 
-		tracker_sparql_builder_predicate (metadata, "a");
-		tracker_sparql_builder_object (metadata, "nfo:Document");
+		tracker_resource_add_uri (data.resource, "rdf:type", "nfo:Document");
 
 		context = g_markup_parse_context_new (&parser, 0, &data, NULL);
 		g_markup_parse_context_parse (context, contents, len, &error);
@@ -236,8 +247,7 @@ tracker_extract_get_metadata (TrackerExtractInfo *info)
 			g_error_free (error);
 		} else {
 			if (data.content) {
-				tracker_sparql_builder_predicate (metadata, "nie:plainTextContent");
-				tracker_sparql_builder_object_unvalidated (metadata, data.content->str);
+				tracker_resource_set_string (data.resource, "nie:plainTextContent", data.content->str);
 				g_string_free (data.content, TRUE);
 			}
 
@@ -245,8 +255,11 @@ tracker_extract_get_metadata (TrackerExtractInfo *info)
 		}
 
 		g_markup_parse_context_free (context);
-	}
+		g_free (data.uri);
 
+		tracker_extract_info_set_resource (info, data.resource);
+		g_object_unref (data.resource);
+	}
 
 	if (contents) {
 		munmap (contents, len);

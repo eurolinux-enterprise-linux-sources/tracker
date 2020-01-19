@@ -17,7 +17,11 @@
  * 02110-1301, USA.
  */
 
-#include <libtracker-miner/tracker-miner.h>
+#include "config.h"
+
+#include <locale.h>
+
+#include <libtracker-miner/tracker-crawler.h>
 
 typedef struct CrawlerTest CrawlerTest;
 
@@ -116,13 +120,13 @@ test_crawler_crawl (void)
 
 	test.main_loop = g_main_loop_new (NULL, FALSE);
 
-	crawler = tracker_crawler_new ();
+	crawler = tracker_crawler_new (NULL);
 	g_signal_connect (crawler, "finished",
 			  G_CALLBACK (crawler_finished_cb), &test);
 
 	file = g_file_new_for_path (TEST_DATA_DIR);
 
-	started = tracker_crawler_start (crawler, file, TRUE);
+	started = tracker_crawler_start (crawler, file, TRACKER_DIRECTORY_FLAG_NONE, -1);
 
 	g_assert_cmpint (started, ==, 1);
 
@@ -143,13 +147,13 @@ test_crawler_crawl_interrupted (void)
 	gboolean started;
 	GFile *file;
 
-	crawler = tracker_crawler_new ();
+	crawler = tracker_crawler_new (NULL);
 	g_signal_connect (crawler, "finished",
 			  G_CALLBACK (crawler_finished_cb), &test);
 
 	file = g_file_new_for_path (TEST_DATA_DIR);
 
-	started = tracker_crawler_start (crawler, file, TRUE);
+	started = tracker_crawler_start (crawler, file, TRACKER_DIRECTORY_FLAG_NONE, -1);
 
 	g_assert_cmpint (started, ==, 1);
 
@@ -168,10 +172,10 @@ test_crawler_crawl_nonexisting (void)
 	GFile *file;
 	gboolean started;
 
-	crawler = tracker_crawler_new ();
+	crawler = tracker_crawler_new (NULL);
 	file = g_file_new_for_path (TEST_DATA_DIR "-idontexist");
 
-	started = tracker_crawler_start (crawler, file, TRUE);
+	started = tracker_crawler_start (crawler, file, TRACKER_DIRECTORY_FLAG_NONE, -1);
 
 	g_assert_cmpint (started, ==, 0);
 
@@ -188,7 +192,7 @@ test_crawler_crawl_recursive (void)
 
 	test.main_loop = g_main_loop_new (NULL, FALSE);
 
-	crawler = tracker_crawler_new ();
+	crawler = tracker_crawler_new (NULL);
 	g_signal_connect (crawler, "finished",
 			  G_CALLBACK (crawler_finished_cb), &test);
 	g_signal_connect (crawler, "directory-crawled",
@@ -196,7 +200,7 @@ test_crawler_crawl_recursive (void)
 
 	file = g_file_new_for_path (TEST_DATA_DIR);
 
-	tracker_crawler_start (crawler, file, TRUE);
+	tracker_crawler_start (crawler, file, TRACKER_DIRECTORY_FLAG_NONE, -1);
 
 	g_main_loop_run (test.main_loop);
 
@@ -220,7 +224,7 @@ test_crawler_crawl_non_recursive (void)
 
 	test.main_loop = g_main_loop_new (NULL, FALSE);
 
-	crawler = tracker_crawler_new ();
+	crawler = tracker_crawler_new (NULL);
 	g_signal_connect (crawler, "finished",
 			  G_CALLBACK (crawler_finished_cb), &test);
 	g_signal_connect (crawler, "directory-crawled",
@@ -228,7 +232,7 @@ test_crawler_crawl_non_recursive (void)
 
 	file = g_file_new_for_path (TEST_DATA_DIR);
 
-	tracker_crawler_start (crawler, file, FALSE);
+	tracker_crawler_start (crawler, file, TRACKER_DIRECTORY_FLAG_NONE, 1);
 
 	g_main_loop_run (test.main_loop);
 
@@ -252,7 +256,7 @@ test_crawler_crawl_n_signals (void)
 
 	test.main_loop = g_main_loop_new (NULL, FALSE);
 
-	crawler = tracker_crawler_new ();
+	crawler = tracker_crawler_new (NULL);
 	g_signal_connect (crawler, "finished",
 			  G_CALLBACK (crawler_finished_cb), &test);
 	g_signal_connect (crawler, "directory-crawled",
@@ -266,7 +270,7 @@ test_crawler_crawl_n_signals (void)
 
 	file = g_file_new_for_path (TEST_DATA_DIR);
 
-	tracker_crawler_start (crawler, file, TRUE);
+	tracker_crawler_start (crawler, file, TRACKER_DIRECTORY_FLAG_NONE, -1);
 
 	g_main_loop_run (test.main_loop);
 
@@ -286,9 +290,11 @@ test_crawler_crawl_n_signals_non_recursive (void)
 	CrawlerTest test = { 0 };
 	GFile *file;
 
+	setlocale (LC_ALL, "");
+
 	test.main_loop = g_main_loop_new (NULL, FALSE);
 
-	crawler = tracker_crawler_new ();
+	crawler = tracker_crawler_new (NULL);
 	g_signal_connect (crawler, "finished",
 			  G_CALLBACK (crawler_finished_cb), &test);
 	g_signal_connect (crawler, "directory-crawled",
@@ -302,7 +308,7 @@ test_crawler_crawl_n_signals_non_recursive (void)
 
 	file = g_file_new_for_path (TEST_DATA_DIR);
 
-	tracker_crawler_start (crawler, file, FALSE);
+	tracker_crawler_start (crawler, file, TRACKER_DIRECTORY_FLAG_NONE, 1);
 
 	g_main_loop_run (test.main_loop);
 

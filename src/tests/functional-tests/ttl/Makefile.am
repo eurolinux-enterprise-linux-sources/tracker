@@ -1,10 +1,8 @@
-include $(top_srcdir)/Makefile.decl
-
 BUILT_SOURCES = gen-test-data.stamp
 
 gen-test-data.stamp:
 	@echo "Generate data"
-	mkdir ttl
+	rm -rf ttl && mkdir ttl
 	${top_srcdir}/utils/data-generators/cc/generate ${top_srcdir}/utils/data-generators/cc/max.cfg
 	mv ttl/* . && rmdir ttl
 	touch gen-test-data.stamp

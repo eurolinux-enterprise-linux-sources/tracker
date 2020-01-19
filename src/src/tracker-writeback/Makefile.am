@@ -1,5 +1,3 @@
-include $(top_srcdir)/Makefile.decl
-
 module_flags = -module -avoid-version -no-undefined
 modulesdir = $(libdir)/tracker-$(TRACKER_API_VERSION)/writeback-modules
 
@@ -41,13 +39,9 @@ endif
 #libwriteback_playlist_la_LIBADD = $(BUILD_LIBS) $(GLIB2_LIBS) $(TOTEM_PL_PARSER_LIBS)
 #endif
 
-#
-# Binaries
-#
 libexec_PROGRAMS = tracker-writeback
 
 tracker_writeback_SOURCES = \
-	$(marshal_sources) \
 	$(dbus_sources) \
 	tracker-config.c \
 	tracker-config.h \
@@ -66,21 +60,39 @@ tracker_writeback_LDADD = \
 	$(BUILD_LIBS) \
 	$(TRACKER_WRITEBACK_LIBS)
 
-marshal_sources = \
-	tracker-marshal.h \
-	tracker-marshal.c
+# DBus interfaces (XML files) and services
+configdir = $(datadir)/tracker
+config_DATA = tracker-writeback.xml
 
-tracker-marshal.h: tracker-marshal.list
-	$(AM_V_GEN)$(GLIB_GENMARSHAL) $< --prefix=tracker_marshal --header > $@
+%.service: %.service.in
+	@sed -e "s|@libexecdir[@]|${libexecdir}|" $< > $@
 
-tracker-marshal.c: tracker-marshal.list
-	$(AM_V_GEN)echo "#include \"tracker-marshal.h\"" > $@ && \
-		$(GLIB_GENMARSHAL) $< --prefix=tracker_marshal --body >> $@
+servicedir = $(DBUS_SERVICES_DIR)
+service_DATA = org.freedesktop.Tracker1.Writeback.service
 
-BUILT_SOURCES = \
-	$(marshal_sources)
+systemd_userdir = $(prefix)/lib/systemd/user
+systemd_user_DATA = tracker-writeback.service
 
-CLEANFILES = $(BUILT_SOURCES)
+# Configuration / GSettings
+gsettings_ENUM_NAMESPACE = org.freedesktop.Tracker
+gsettings_ENUM_FILES = $(top_srcdir)/src/libtracker-common/tracker-enums.h
 
-EXTRA_DIST = tracker-marshal.list
+gsettings_SCHEMAS = org.freedesktop.Tracker.Writeback.gschema.xml
 
+@INTLTOOL_XML_NOMERGE_RULE@
+
+@GSETTINGS_RULES@
+
+# Dist / Clean rules for all data
+CLEANFILES = \
+	$(service_DATA) \
+	$(systemd_user_DATA) \
+	$(gsettings_SCHEMAS) \
+	$(man_MANS)
+
+EXTRA_DIST = \
+	$(service_DATA:.service=.service.in) \
+	$(systemd_user_DATA:.service=.service.in) \
+	$(config_DATA) \
+	$(gsettings_SCHEMAS:.xml=.xml.in) \
+	$(man_MANS)

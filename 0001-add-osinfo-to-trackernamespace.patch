@@ -1,0 +1,41 @@
+From 40824c2d6fed7435da2d79d3b4260f97e781748f Mon Sep 17 00:00:00 2001
+From: Carlos Garnacho <carlosg@gnome.org>
+Date: Mon, 3 Apr 2017 15:15:41 +0200
+Subject: libtracker-sparql: Add osinfo ontology to the default
+ TrackerNamespace
+
+Otherwise namespace lookups will come out NULL.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=780968
+---
+ src/libtracker-sparql/tracker-namespace-manager.c | 1 +
+ src/libtracker-sparql/tracker-ontologies.h        | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/src/libtracker-sparql/tracker-namespace-manager.c b/src/libtracker-sparql/tracker-namespace-manager.c
+index 21a5a48..d287c39 100644
+--- a/src/libtracker-sparql/tracker-namespace-manager.c
++++ b/src/libtracker-sparql/tracker-namespace-manager.c
+@@ -152,6 +152,7 @@ tracker_namespace_manager_get_default ()
+ 		tracker_namespace_manager_add_prefix (manager, "nmm", TRACKER_PREFIX_NMM);
+ 		tracker_namespace_manager_add_prefix (manager, "mlo", TRACKER_PREFIX_MLO);
+ 		tracker_namespace_manager_add_prefix (manager, "mfo", TRACKER_PREFIX_MFO);
++		tracker_namespace_manager_add_prefix (manager, "osinfo", TRACKER_PREFIX_OSINFO);
+ 
+ 		g_once_init_leave (&default_namespace_manager__volatile, manager);
+ 	}
+diff --git a/src/libtracker-sparql/tracker-ontologies.h b/src/libtracker-sparql/tracker-ontologies.h
+index 124ffd8..24e1efe 100644
+--- a/src/libtracker-sparql/tracker-ontologies.h
++++ b/src/libtracker-sparql/tracker-ontologies.h
+@@ -42,6 +42,7 @@ G_BEGIN_DECLS
+ #define TRACKER_PREFIX_NAO      "http://www.semanticdesktop.org/ontologies/2007/08/15/nao#"
+ #define TRACKER_PREFIX_NID3     "http://www.semanticdesktop.org/ontologies/2007/05/10/nid3#"
+ #define TRACKER_PREFIX_NFO      "http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#"
++#define TRACKER_PREFIX_OSINFO   "http://www.tracker-project.org/ontologies/osinfo#"
+ 
+ /* Temporary */
+ #define TRACKER_PREFIX_SLO      "http://www.tracker-project.org/temp/slo#"
+-- 
+cgit v0.12
+

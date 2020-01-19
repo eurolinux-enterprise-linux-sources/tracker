@@ -1,15 +1,15 @@
-include $(top_srcdir)/Makefile.decl
+SUBDIRS = icons
 
 bin_PROGRAMS = tracker-needle
 
 AM_VALAFLAGS = \
 	--pkg gtk+-3.0 --pkg gio-2.0 \
-	$(BUILD_fVALAFLAGS) \
+	$(BUILD_VALAFLAGS) \
 	$(top_srcdir)/src/libtracker-sparql/tracker-sparql-$(TRACKER_API_VERSION).vapi \
 	config.vapi
 
-AM_CPPFLAGS =                                      \
-	$(BUILD_CFLAGS)                                \
+AM_CPPFLAGS =                                          \
+	$(BUILD_VALACFLAGS)                            \
 	-D_XOPEN_SOURCE                                \
 	-D_XOPEN_SOURCE_EXTENDED                       \
 	-I$(top_srcdir)/src                            \
@@ -43,14 +43,38 @@ ui_DATA = tracker-needle.ui
 desktopdir = $(datadir)/applications
 desktop_DATA = tracker-needle.desktop
 
+appdatadir = $(datadir)/appdata
+appdata_DATA = tracker-needle.appdata.xml
+
 BUILT_SOURCES = \
 	tracker_needle_vala.stamp
 
+#Desktop files
+%.desktop.in: %.desktop.in.in
+	@sed -e "s|@VERSION[@]|${VERSION}|" $< > $@
+
+#GSettings
+gsettings_ENUM_NAMESPACE = org.freedesktop.Tracker
+gsettings_ENUM_FILES = $(top_srcdir)/src/libtracker-common/tracker-enums.h
+
+gsettings_SCHEMAS = $(schemalist)
+
+schemalist = org.freedesktop.Tracker.Needle.gschema.xml
+
+@INTLTOOL_XML_NOMERGE_RULE@
+
+@GSETTINGS_RULES@
+
+# Dist / Clean rules for all data
 CLEANFILES = \
-	$(desktop_DATA)
+	$(desktop_DATA:.desktop=.desktop.in) \
+	$(desktop_DATA) \
+	$(gsettings_SCHEMAS)
 
 EXTRA_DIST = \
+	$(desktop_DATA:.desktop=.desktop.in.in) \
 	$(ui_DATA) \
 	$(desktop_DATA) \
-	config.vapi
-
+	$(appdata_DATA) \
+	config.vapi \
+	$(gsettings_SCHEMAS:.xml=.xml.in)

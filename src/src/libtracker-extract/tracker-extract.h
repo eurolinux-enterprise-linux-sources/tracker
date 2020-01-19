@@ -27,11 +27,11 @@
 #include "tracker-data.h"
 #include "tracker-encoding.h"
 #include "tracker-exif.h"
-#include "tracker-extract-client.h"
 #include "tracker-extract-info.h"
 #include "tracker-module-manager.h"
 #include "tracker-guarantee.h"
 #include "tracker-iptc.h"
+#include "tracker-resource-helpers.h"
 #include "tracker-utils.h"
 #include "tracker-xmp.h"
 

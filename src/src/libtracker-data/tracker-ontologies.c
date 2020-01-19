@@ -27,7 +27,8 @@
 
 #include <gvdb/gvdb-builder.h>
 #include <gvdb/gvdb-reader.h>
-#include <libtracker-common/tracker-ontologies.h>
+
+#include <libtracker-sparql/tracker-sparql.h>
 
 #include "tracker-ontologies.h"
 
@@ -330,7 +331,7 @@ tracker_ontologies_add_property (TrackerProperty *field)
 
 	uri = tracker_property_get_uri (field);
 
-	if (g_strcmp0 (uri, TRACKER_RDF_PREFIX "type") == 0) {
+	if (g_strcmp0 (uri, TRACKER_PREFIX_RDF "type") == 0) {
 		if (rdf_type) {
 			g_object_unref (rdf_type);
 		}
@@ -554,6 +555,10 @@ tracker_ontologies_write_gvdb (const gchar  *filename,
 
 		if (tracker_property_get_is_inverse_functional_property (property)) {
 			gvdb_hash_table_insert_variant (table, item, uri, "inverse-functional", g_variant_new_boolean (TRUE));
+		}
+
+		if (tracker_property_get_fulltext_indexed (property)) {
+			gvdb_hash_table_insert_variant (table, item, uri, "fulltext-indexed", g_variant_new_boolean (TRUE));
 		}
 
 		domain_indexes = tracker_property_get_domain_indexes (property);

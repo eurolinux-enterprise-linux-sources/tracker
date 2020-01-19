@@ -29,7 +29,9 @@
 #include <gst/gst.h>
 #include <gst/tag/tag.h>
 
-#if defined(HAVE_LIBCUE)
+#if defined(HAVE_LIBCUE2)
+#include <libcue.h>
+#elif defined(HAVE_LIBCUE)
 #include <libcue/libcue.h>
 #endif
 
@@ -37,21 +39,17 @@
 
 #include "tracker-cue-sheet.h"
 
-#if defined(HAVE_LIBCUE)
-
-static TrackerToc *
+TrackerToc *
 tracker_toc_new (void)
 {
 	TrackerToc *toc;
 
 	toc = g_slice_new (TrackerToc);
-	toc->tag_list = gst_tag_list_new (NULL);
+	toc->tag_list = gst_tag_list_new_empty ();
 	toc->entry_list = NULL;
 
 	return toc;
 }
-
-#endif /* HAVE_LIBCUE */
 
 void
 tracker_toc_free (TrackerToc *toc)
@@ -69,9 +67,26 @@ tracker_toc_free (TrackerToc *toc)
 		g_slice_free (TrackerTocEntry, entry);
 	}
 
+	gst_tag_list_free (toc->tag_list);
 	g_list_free (toc->entry_list);
 
 	g_slice_free (TrackerToc, toc);
+}
+
+void
+tracker_toc_add_entry (TrackerToc *toc,
+                       GstTagList *tags,
+                       gdouble     start,
+                       gdouble     duration)
+{
+	TrackerTocEntry *toc_entry;
+
+	toc_entry = g_slice_new (TrackerTocEntry);
+	toc_entry->tag_list = gst_tag_list_ref (tags);
+	toc_entry->start = start;
+	toc_entry->duration = duration;
+
+	toc->entry_list = g_list_append (toc->entry_list, toc_entry);
 }
 
 #if defined(HAVE_LIBCUE)
@@ -93,7 +108,11 @@ add_cdtext_string_tag (Cdtext      *cd_text,
 
 static void
 add_cdtext_comment_date_tag (Rem         *cd_comments,
+#if defined(HAVE_LIBCUE2)
+                             enum RemType index,
+#elif defined(HAVE_LIBCUE)
                              enum Cmt     index,
+#endif
                              GstTagList  *tag_list,
                              const gchar *tag)
 {
@@ -116,7 +135,11 @@ add_cdtext_comment_date_tag (Rem         *cd_comments,
 
 static void
 add_cdtext_comment_double_tag (Rem         *cd_comments,
+#if defined(HAVE_LIBCUE2)
+                               enum RemType index,
+#elif defined(HAVE_LIBCUE)
                                enum Cmt     index,
+#endif
                                GstTagList  *tag_list,
                                const gchar *tag)
 {
@@ -259,7 +282,7 @@ parse_cue_sheet_for_file (const gchar *cue_sheet,
 		}
 
 		toc_entry = g_slice_new (TrackerTocEntry);
-		toc_entry->tag_list = gst_tag_list_new (NULL);
+		toc_entry->tag_list = gst_tag_list_new_empty ();
 		toc_entry->start = track_get_start (track) / 75.0;
 		toc_entry->duration = track_get_length (track) / 75.0;
 

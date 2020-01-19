@@ -4,13 +4,10 @@ SUBDIRS =                                              \
 	limits                                         \
 	prefix
 
-noinst_PROGRAMS =                                      \
-	$(TEST_PROGS)                                  \
-	tracker-parser
+noinst_PROGRAMS += $(test_programs)
 
-TEST_PROGS +=                                          \
-	tracker-fts-test                               \
-	tracker-parser-test
+test_programs = \
+	tracker-fts-test
 
 AM_CPPFLAGS =                                          \
 	$(BUILD_CFLAGS)                                \
@@ -31,11 +28,7 @@ LDADD =                                                \
 
 tracker_fts_test_SOURCES = tracker-fts-test.c
 
-tracker_parser_test_SOURCES = tracker-parser-test.c
-
-tracker_parser_SOURCES = tracker-parser.c
-
-EXTRA_DIST =                                           \
+EXTRA_DIST += \
 	data.ontology                                  \
 	fts3aa-data.rq                                 \
 	fts3aa-1.rq                                    \

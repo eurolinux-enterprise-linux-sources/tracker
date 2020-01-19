@@ -1,5 +1,3 @@
-include $(top_srcdir)/Makefile.decl
-
 noinst_PROGRAMS = tracker-resdump
 
 AM_VALAFLAGS = \
@@ -10,7 +8,7 @@ AM_VALAFLAGS = \
 	$(top_srcdir)/src/libtracker-bus/tracker-bus.vapi
 
 AM_CPPFLAGS =\
-	$(BUILD_CFLAGS) \
+	$(BUILD_VALACFLAGS) \
 	-I$(top_srcdir)/src \
 	-I$(top_builddir)/src \
 	$(LIBTRACKER_SPARQL_CFLAGS) \

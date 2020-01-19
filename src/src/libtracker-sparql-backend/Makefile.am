@@ -1,5 +1,3 @@
-include $(top_srcdir)/Makefile.decl
-
 lib_LTLIBRARIES = libtracker-sparql-@TRACKER_API_VERSION@.la
 
 AM_VALAFLAGS =                                         \
@@ -10,7 +8,7 @@ AM_VALAFLAGS =                                         \
 	$(top_srcdir)/src/libtracker-direct/tracker-direct.vapi
 
 AM_CPPFLAGS =                                          \
-	$(BUILD_CFLAGS)                                \
+	$(BUILD_VALACFLAGS)                            \
 	-I$(top_srcdir)/src                            \
 	-I$(top_builddir)/src                          \
 	$(LIBTRACKER_SPARQL_CFLAGS)
@@ -27,5 +25,5 @@ libtracker_sparql_@TRACKER_API_VERSION@_la_LIBADD =    \
 
 libtracker_sparql_@TRACKER_API_VERSION@_la_LDFLAGS =   \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
-	-export-symbols-regex '^tracker_sparql_(connection|cursor|builder|escape|error|value|get)_.*'
+	-export-symbols-regex '^(tracker_sparql_(connection|cursor|builder|escape|error|value|get)_.*|tracker_namespace_manager_.*|tracker_resource_.*)'
 

@@ -31,6 +31,10 @@
 #include <kvm.h>
 #endif
 
+#ifdef __sun
+#include <procfs.h>
+#endif
+
 #include "tracker-dbus.h"
 #include "tracker-log.h"
 
@@ -59,11 +63,24 @@ static GDBusConnection *connection;
 static void     client_data_free    (gpointer data);
 static gboolean client_clean_up_cb (gpointer data);
 
+inline GBusType
+tracker_ipc_bus (void)
+{
+	const gchar *bus = g_getenv ("TRACKER_BUS_TYPE");
+
+	if (G_UNLIKELY (bus != NULL &&
+	                g_ascii_strcasecmp (bus, "system") == 0)) {
+		return G_BUS_TYPE_SYSTEM;
+	}
+
+	return G_BUS_TYPE_SESSION;
+}
+
 static gboolean
 clients_init (void)
 {
 	GError *error = NULL;
-	connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
+	connection = g_bus_get_sync (TRACKER_IPC_BUS, NULL, &error);
 
 	if (error) {
 		g_critical ("Could not connect to the D-Bus session bus, %s",
@@ -153,12 +170,19 @@ client_data_new (gchar *sender)
 		gchar *contents = NULL;
 		GError *error = NULL;
 		gchar **strv;
+#ifdef __sun /* Solaris */
+		psinfo_t psinfo = { 0 };
+#endif
 
 		pid_str = g_strdup_printf ("%ld", cd->pid);
 		filename = g_build_filename (G_DIR_SEPARATOR_S,
 		                             "proc",
 		                             pid_str,
+#ifdef __sun /* Solaris */
+		                             "psinfo",
+#else
 		                             "cmdline",
+#endif
 		                             NULL);
 		g_free (pid_str);
 
@@ -173,7 +197,13 @@ client_data_new (gchar *sender)
 
 		g_free (filename);
 
+#ifdef __sun /* Solaris */
+		memcpy (&psinfo, contents, sizeof (psinfo));
+		/* won't work with paths containing spaces :( */
+		strv = g_strsplit (psinfo.pr_psargs, " ", 2);
+#else
 		strv = g_strsplit (contents, "^@", 2);
+#endif
 		if (strv && strv[0]) {
 			cd->binary = g_path_get_basename (strv[0]);
 		}
@@ -382,12 +412,12 @@ tracker_dbus_request_info (TrackerDBusRequest    *request,
 	str = g_strdup_vprintf (format, args);
 	va_end (args);
 
-	tracker_info ("---- [%d%s%s|%lu] %s",
-	              request->request_id,
-	              request->cd ? "|" : "",
-	              request->cd ? request->cd->binary : "",
-	              request->cd ? request->cd->pid : 0,
-	              str);
+	g_info ("---- [%d%s%s|%lu] %s",
+	        request->request_id,
+	        request->cd ? "|" : "",
+	        request->cd ? request->cd->binary : "",
+	        request->cd ? request->cd->pid : 0,
+	        str);
 	g_free (str);
 }
 
