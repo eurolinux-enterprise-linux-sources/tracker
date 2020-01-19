@@ -1,3 +1,108 @@
+2016-01-19  Carlos Garnacho  <carlosg@gnome.org>
+
+	Release 1.2.7
+
+2016-01-19  Iain Lane  <iain@orangesquash.org.uk>
+
+	functions-tracker: Fix collate order
+	Somewhere between sqlite 3.8.7 and 3.8.10.2, sqlite seemed to fix
+	a bug on ORDER BY SOMESTRINGFUNCTION() clauses, where it would
+	invariably apply the BINARY collator, despite tracker specifying
+	its own one.
+
+	This is something that 2 libtracker-data tests were indirectly
+	testing, where queries are sorted by tracker:coalesce(), these now
+	happen to fail because the stored results inadvertently had the wrong
+	order.
+
+	https://bugzilla.gnome.org/show_bug.cgi?id=749262
+
+2016-01-19  Carlos Garnacho  <carlosg@gnome.org>
+
+	tests: Don't use the same test path twice
+	Recent glib forbids duplicate test paths, as the test relies on that
+	in order to find the .rq/.out files, copy these files from graph-4*.
+
+2016-01-19  Iain Lane  <iain@orangesquash.org.uk>
+
+	libtracker-miner: Set inotify limits for 'GInotifyFileBackend' too
+	As of GLib 2.45.1, the inotify monitor backend is called this.
+
+2016-01-19  Carlos Garnacho  <carlosg@gnome.org>
+
+	tests: Distcheck fix
+	Duplicate test name
+
+2015-12-10  Debarshi Ray  <debarshir@gnome.org>
+
+	libtracker-data: Silence a CRITICAL
+	We shouldn't be passing a NULL string argument to g_regex_match.
+
+	https://bugzilla.gnome.org/show_bug.cgi?id=759280
+
+2015-11-22  Pedro Albuquerque  <palbuquerque73@gmail.com>
+
+	Updated Portuguese translation
+
+2015-11-18  Pedro Albuquerque  <palbuquerque73@gmail.com>
+
+	Updated Portuguese translation
+
+2015-10-30  Debarshi Ray  <debarshir@gnome.org>
+
+	libtracker-control: Improve the documentation
+	Make it clear that tracker_miner_manager_index_file only tells the
+	miner to start indexing a file. It doesn't wait for the actual indexing
+	operation to complete.
+
+	https://bugzilla.gnome.org/show_bug.cgi?id=757366
+
+	libtracker-control: Fix the return value
+	As documented, tracker_miner_manager_index_file should return TRUE on
+	success, not FALSE.
+
+	https://bugzilla.gnome.org/show_bug.cgi?id=757366
+
+2015-10-23  Marius Gedminas  <marius@gedmin.as>
+
+	Fix buffer overrun in libunistring builds
+	libunistring uses UTF-8 strings without a trailing NUL byte.  We're
+	passing such strings to tracker_parser_unaccent_nfkd_string() from
+	function_sparql_unaccent() in the sqlite interface.  If the string has
+	no accented characters, writing a NUL byte at the end will step out of
+	bounds.  This causes memory corruption and crashes.
+
+	The other caller of tracker_parser_unaccent_nfkd_string() is
+	process_word_utf8(), and it looks like it wants a trailing NUL, so let's
+	add it there.
+
+	There are no more callers of the libunistring version of
+	tracker_parser_unaccent_nfkd_string().
+
+	(For extra confusion, the libicu version of
+	tracker_parser_unaccent_nfkd_string() deals with U+0000-terminated
+	UTF-16 strings.)
+
+	Should fix https://bugzilla.gnome.org/show_bug.cgi?id=746195
+
+2015-10-21  Debarshi Ray  <debarshir@gnome.org>
+
+	libtracker-miner: Handle failure to get a TrackerSparqlConnection
+	We might fail to get a TrackerSparqlConnection if the session was shut
+	down too early and the DBus connection closed. Since this is not a
+	programming error nor an example of a broken system, let's not abort
+	and use a WARNING instead of a CRITICAL.
+
+	https://bugzilla.gnome.org/show_bug.cgi?id=756869
+
+2015-10-20  Debarshi Ray  <debarshir@gnome.org>
+
+	libtracker-miner: Cancel pending async operations during destruction
+	https://bugzilla.gnome.org/show_bug.cgi?id=756877
+
+	libtracker-miner: Abort async operations once the instance is gone
+	https://bugzilla.gnome.org/show_bug.cgi?id=756877
+
 2015-04-09  Carlos Garnacho  <carlosg@gnome.org>
 
 	Release 1.2.6

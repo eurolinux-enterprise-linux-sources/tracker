@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Tracker SPARQL Library Reference Manual: TrackerSparqlConnection</title>
+<title>TrackerSparqlConnection: Tracker SPARQL Library Reference Manual</title>
 <meta name="generator" content="DocBook XSL Stylesheets V1.78.1">
 <link rel="home" href="index.html" title="Tracker SPARQL Library Reference Manual">
 <link rel="up" href="libtracker-sparql-reference.html" title="Part II. Reference">
 <link rel="prev" href="TrackerSparqlBuilder.html" title="TrackerSparqlBuilder">
 <link rel="next" href="TrackerSparqlCursor.html" title="TrackerSparqlCursor">
-<meta name="generator" content="GTK-Doc V1.21 (XML mode)">
+<meta name="generator" content="GTK-Doc V1.24.1 (XML mode)">
 <link rel="stylesheet" href="style.css" type="text/css">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
@@ -254,8 +254,6 @@
 </div>
 <div class="refsect1">
 <a name="TrackerSparqlConnection.description"></a><h2>Description</h2>
-<p>
-</p>
 </div>
 <div class="refsect1">
 <a name="TrackerSparqlConnection.functions_details"></a><h2>Functions</h2>
@@ -311,9 +309,8 @@ substantial while data is restored as best as possible.</p>
 <a name="id-1.3.4.7.2.9"></a><h4>Returns</h4>
 <p> a new <a class="link" href="TrackerSparqlConnection.html" title="TrackerSparqlConnection"><span class="type">TrackerSparqlConnection</span></a>. Call <code class="function">g_object_unref()</code> on the
 object when no longer used.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -322,8 +319,6 @@ object when no longer used.</p>
 tracker_sparql_connection_get_async (<em class="parameter"><code><span class="type">GCancellable</span> *cancellable</code></em>,
                                      <em class="parameter"><code><span class="type">GAsyncReadyCallback</span> _callback_</code></em>,
                                      <em class="parameter"><code><span class="type">gpointer</span> _user_data_</code></em>);</pre>
-<p>
-</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -360,9 +355,8 @@ or an error in cases of failure.</p>
 <a name="id-1.3.4.7.4.6"></a><h4>Returns</h4>
 <p> a new <a class="link" href="TrackerSparqlConnection.html" title="TrackerSparqlConnection"><span class="type">TrackerSparqlConnection</span></a>. Call <code class="function">g_object_unref()</code> on the
 object when no longer used.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -405,9 +399,8 @@ D-Bus which may be the case with <a class="link" href="TrackerSparqlConnection.h
 <a name="id-1.3.4.7.5.8"></a><h4>Returns</h4>
 <p> a new <a class="link" href="TrackerSparqlConnection.html" title="TrackerSparqlConnection"><span class="type">TrackerSparqlConnection</span></a>. Call <code class="function">g_object_unref()</code> on the
 object when no longer used.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -417,8 +410,6 @@ tracker_sparql_connection_get_direct_async
                                (<em class="parameter"><code><span class="type">GCancellable</span> *cancellable</code></em>,
                                 <em class="parameter"><code><span class="type">GAsyncReadyCallback</span> _callback_</code></em>,
                                 <em class="parameter"><code><span class="type">gpointer</span> _user_data_</code></em>);</pre>
-<p>
-</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -460,9 +451,8 @@ requested or an error in cases of failure.</p>
 <a name="id-1.3.4.7.7.8"></a><h4>Returns</h4>
 <p> a new <a class="link" href="TrackerSparqlConnection.html" title="TrackerSparqlConnection"><span class="type">TrackerSparqlConnection</span></a>. Call <code class="function">g_object_unref()</code> on the
 object when no longer used.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -512,9 +502,8 @@ it may block.</p>
 On error, <span class="type">NULL</span> is returned and the <em class="parameter"><code>error</code></em>
 is set accordingly.
 Call <code class="function">g_object_unref()</code> on the returned cursor when no longer needed.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -525,8 +514,6 @@ tracker_sparql_connection_query_async (<em class="parameter"><code><a class="lin
                                        <em class="parameter"><code><span class="type">GCancellable</span> *cancellable</code></em>,
                                        <em class="parameter"><code><span class="type">GAsyncReadyCallback</span> _callback_</code></em>,
                                        <em class="parameter"><code><span class="type">gpointer</span> _user_data_</code></em>);</pre>
-<p>
-</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -570,9 +557,8 @@ tracker_sparql_connection_query_finish
 On error, <span class="type">NULL</span> is returned and the <em class="parameter"><code>error</code></em>
 is set accordingly.
 Call <code class="function">g_object_unref()</code> on the returned cursor when no longer needed.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -622,7 +608,7 @@ synchronous, so it may block.</p>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -680,7 +666,7 @@ asynchronous operation is finished.</p></td>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -718,7 +704,7 @@ tracker_sparql_connection_update_finish
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -785,7 +771,7 @@ asynchronous operation is finished.</p></td>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -885,9 +871,8 @@ you use errors of the array, you must g_error_copy them. Errors inside of
 the array must be considered as const data and not freed. The index of
 the error corresponds to the index of the update query in the array that
 you passed to tracker_sparql_connection_update_array_async.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -942,9 +927,8 @@ if any. The API call is completely synchronous, so it may block.</p>
 <a name="id-1.3.4.7.16.6"></a><h4>Returns</h4>
 <p> a <span class="type">GVariant</span> with the generated URNs, which should be freed with
 <code class="function">g_variant_unref()</code> when no longer used.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1002,7 +986,7 @@ asynchronous operation is finished.</p></td>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1045,9 +1029,8 @@ the URNs of the generated nodes, if any.</p>
 <a name="id-1.3.4.7.18.6"></a><h4>Returns</h4>
 <p> a <span class="type">GVariant</span> with the generated URNs, which should be freed with
 <code class="function">g_variant_unref()</code> when no longer used.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1091,7 +1074,7 @@ synchronous, so it may block.</p>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1142,7 +1125,7 @@ asynchronous operation is finished.</p></td>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1179,7 +1162,7 @@ tracker_sparql_connection_load_finish (<em class="parameter"><code><a class="lin
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1222,9 +1205,8 @@ synchronous, so it may block.</p>
 <p> a <a class="link" href="TrackerSparqlCursor.html" title="TrackerSparqlCursor"><span class="type">TrackerSparqlCursor</span></a> to iterate the reply if successful, <span class="type">NULL</span>
 on error. Call <code class="function">g_object_unref()</code> on the returned cursor when no longer
 needed.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1270,7 +1252,7 @@ asynchronous operation is finished.</p></td>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1313,19 +1295,16 @@ tracker_sparql_connection_statistics_finish
 <p> a <a class="link" href="TrackerSparqlCursor.html" title="TrackerSparqlCursor"><span class="type">TrackerSparqlCursor</span></a> to iterate the reply if successful, <span class="type">NULL</span>
 on error. Call <code class="function">g_object_unref()</code> on the returned cursor when no longer
 needed.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 </div>
 <div class="refsect1">
 <a name="TrackerSparqlConnection.other_details"></a><h2>Types and Values</h2>
 <div class="refsect2">
 <a name="TrackerSparqlError"></a><h3>enum TrackerSparqlError</h3>
-<p>
-</p>
 <div class="refsect3">
-<a name="id-1.3.4.8.2.4"></a><h4>Members</h4>
+<a name="id-1.3.4.8.2.3"></a><h4>Members</h4>
 <div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="300px" class="enum_members_name">
@@ -1335,43 +1314,43 @@ needed.</p>
 <tbody>
 <tr>
 <td class="enum_member_name"><p><a name="TRACKER-SPARQL-ERROR-PARSE:CAPS"></a>TRACKER_SPARQL_ERROR_PARSE</p></td>
-<td class="enum_member_description"> </td>
-<td class="enum_member_annotations"> </td>
+<td> </td>
+<td> </td>
 </tr>
 <tr>
 <td class="enum_member_name"><p><a name="TRACKER-SPARQL-ERROR-UNKNOWN-CLASS:CAPS"></a>TRACKER_SPARQL_ERROR_UNKNOWN_CLASS</p></td>
-<td class="enum_member_description"> </td>
-<td class="enum_member_annotations"> </td>
+<td> </td>
+<td> </td>
 </tr>
 <tr>
 <td class="enum_member_name"><p><a name="TRACKER-SPARQL-ERROR-UNKNOWN-PROPERTY:CAPS"></a>TRACKER_SPARQL_ERROR_UNKNOWN_PROPERTY</p></td>
-<td class="enum_member_description"> </td>
-<td class="enum_member_annotations"> </td>
+<td> </td>
+<td> </td>
 </tr>
 <tr>
 <td class="enum_member_name"><p><a name="TRACKER-SPARQL-ERROR-TYPE:CAPS"></a>TRACKER_SPARQL_ERROR_TYPE</p></td>
-<td class="enum_member_description"> </td>
-<td class="enum_member_annotations"> </td>
+<td> </td>
+<td> </td>
 </tr>
 <tr>
 <td class="enum_member_name"><p><a name="TRACKER-SPARQL-ERROR-CONSTRAINT:CAPS"></a>TRACKER_SPARQL_ERROR_CONSTRAINT</p></td>
-<td class="enum_member_description"> </td>
-<td class="enum_member_annotations"> </td>
+<td> </td>
+<td> </td>
 </tr>
 <tr>
 <td class="enum_member_name"><p><a name="TRACKER-SPARQL-ERROR-NO-SPACE:CAPS"></a>TRACKER_SPARQL_ERROR_NO_SPACE</p></td>
-<td class="enum_member_description"> </td>
-<td class="enum_member_annotations"> </td>
+<td> </td>
+<td> </td>
 </tr>
 <tr>
 <td class="enum_member_name"><p><a name="TRACKER-SPARQL-ERROR-INTERNAL:CAPS"></a>TRACKER_SPARQL_ERROR_INTERNAL</p></td>
-<td class="enum_member_description"> </td>
-<td class="enum_member_annotations"> </td>
+<td> </td>
+<td> </td>
 </tr>
 <tr>
 <td class="enum_member_name"><p><a name="TRACKER-SPARQL-ERROR-UNSUPPORTED:CAPS"></a>TRACKER_SPARQL_ERROR_UNSUPPORTED</p></td>
-<td class="enum_member_description"> </td>
-<td class="enum_member_annotations"> </td>
+<td> </td>
+<td> </td>
 </tr>
 </tbody>
 </table></div>
@@ -1388,7 +1367,6 @@ non-direct requests.</p>
 </div>
 </div>
 <div class="footer">
-<hr>
-          Generated by GTK-Doc V1.21</div>
+<hr>Generated by GTK-Doc V1.24.1</div>
 </body>
 </html>

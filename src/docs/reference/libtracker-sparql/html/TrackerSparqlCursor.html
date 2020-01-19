@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Tracker SPARQL Library Reference Manual: TrackerSparqlCursor</title>
+<title>TrackerSparqlCursor: Tracker SPARQL Library Reference Manual</title>
 <meta name="generator" content="DocBook XSL Stylesheets V1.78.1">
 <link rel="home" href="index.html" title="Tracker SPARQL Library Reference Manual">
 <link rel="up" href="libtracker-sparql-reference.html" title="Part II. Reference">
 <link rel="prev" href="TrackerSparqlConnection.html" title="TrackerSparqlConnection">
 <link rel="next" href="libtracker-sparql-Utilities.html" title="Utilities">
-<meta name="generator" content="GTK-Doc V1.21 (XML mode)">
+<meta name="generator" content="GTK-Doc V1.24.1 (XML mode)">
 <link rel="stylesheet" href="style.css" type="text/css">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
@@ -250,9 +250,8 @@ tracker_sparql_cursor_get_connection (<em class="parameter"><code><a class="link
 <p> the <a class="link" href="TrackerSparqlConnection.html" title="TrackerSparqlConnection"><span class="type">TrackerSparqlConnection</span></a> associated with this
 <a class="link" href="TrackerSparqlCursor.html" title="TrackerSparqlCursor"><span class="type">TrackerSparqlCursor</span></a>. The returned object must not be unreferenced
 by the caller.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -281,9 +280,8 @@ will be undefined.</p>
 <a name="id-1.3.5.10.3.6"></a><h4>Returns</h4>
 <p> a <span class="type">gint</span> representing the number of columns available in the
 results to iterate.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -326,9 +324,8 @@ row in <em class="parameter"><code>column</code></em>
 <a name="id-1.3.5.10.4.6"></a><h4>Returns</h4>
 <p> a string which must not be freed. <code class="literal">NULL</code> is returned if
 the column is not in the [0,<span class="type">n_columns</span>] range.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -363,9 +360,8 @@ tracker_sparql_cursor_get_boolean (<em class="parameter"><code><a class="link" h
 <div class="refsect3">
 <a name="id-1.3.5.10.5.6"></a><h4>Returns</h4>
 <p> a <span class="type">gboolean</span>.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -400,9 +396,8 @@ tracker_sparql_cursor_get_double (<em class="parameter"><code><a class="link" hr
 <div class="refsect3">
 <a name="id-1.3.5.10.6.6"></a><h4>Returns</h4>
 <p> a double.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -437,9 +432,8 @@ tracker_sparql_cursor_get_integer (<em class="parameter"><code><a class="link" h
 <div class="refsect3">
 <a name="id-1.3.5.10.7.6"></a><h4>Returns</h4>
 <p> a <span class="type">gint64</span>.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -474,9 +468,8 @@ tracker_sparql_cursor_get_value_type (<em class="parameter"><code><a class="link
 <div class="refsect3">
 <a name="id-1.3.5.10.8.6"></a><h4>Returns</h4>
 <p> a <a class="link" href="TrackerSparqlCursor.html#TrackerSparqlValueType" title="enum TrackerSparqlValueType"><span class="type">TrackerSparqlValueType</span></a>.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -512,9 +505,8 @@ tracker_sparql_cursor_get_variable_name
 <div class="refsect3">
 <a name="id-1.3.5.10.9.6"></a><h4>Returns</h4>
 <p> a string which must not be freed.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -537,7 +529,7 @@ tracker_sparql_cursor_close (<em class="parameter"><code><a class="link" href="T
 </tr></tbody>
 </table></div>
 </div>
-<p class="since">Since 0.12</p>
+<p class="since">Since: 0.12</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -572,9 +564,8 @@ tracker_sparql_cursor_is_bound (<em class="parameter"><code><a class="link" href
 <div class="refsect3">
 <a name="id-1.3.5.10.11.6"></a><h4>Returns</h4>
 <p> a <code class="literal">TRUE</code> or <code class="literal">FALSE</code>.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -615,9 +606,8 @@ it may block.</p>
 <div class="refsect3">
 <a name="id-1.3.5.10.12.6"></a><h4>Returns</h4>
 <p> <code class="literal">FALSE</code> if no more results found, otherwise <code class="literal">TRUE</code>.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -627,8 +617,6 @@ tracker_sparql_cursor_next_async (<em class="parameter"><code><a class="link" hr
                                   <em class="parameter"><code><span class="type">GCancellable</span> *cancellable</code></em>,
                                   <em class="parameter"><code><span class="type">GAsyncReadyCallback</span> _callback_</code></em>,
                                   <em class="parameter"><code><span class="type">gpointer</span> _user_data_</code></em>);</pre>
-<p>
-</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -668,9 +656,8 @@ tracker_sparql_cursor_next_finish (<em class="parameter"><code><a class="link" h
 <div class="refsect3">
 <a name="id-1.3.5.10.14.6"></a><h4>Returns</h4>
 <p> <code class="literal">FALSE</code> if no more results found, otherwise <code class="literal">TRUE</code>.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -693,7 +680,7 @@ tracker_sparql_cursor_rewind (<em class="parameter"><code><a class="link" href="
 </tr></tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 </div>
 <div class="refsect1">
@@ -776,7 +763,7 @@ iterator of results.</p>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 </div>
 <div class="refsect1">
@@ -786,7 +773,7 @@ iterator of results.</p>
 <pre class="programlisting">  “connection”               <a class="link" href="TrackerSparqlConnection.html" title="TrackerSparqlConnection"><span class="type">TrackerSparqlConnection</span></a> *</pre>
 <p>The <a class="link" href="TrackerSparqlConnection.html" title="TrackerSparqlConnection"><span class="type">TrackerSparqlConnection</span></a> used to retrieve the results.</p>
 <p>Flags: Read / Write</p>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -799,7 +786,6 @@ iterator of results.</p>
 </div>
 </div>
 <div class="footer">
-<hr>
-          Generated by GTK-Doc V1.21</div>
+<hr>Generated by GTK-Doc V1.24.1</div>
 </body>
 </html>

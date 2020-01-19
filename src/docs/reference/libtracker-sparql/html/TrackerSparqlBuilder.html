@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Tracker SPARQL Library Reference Manual: TrackerSparqlBuilder</title>
+<title>TrackerSparqlBuilder: Tracker SPARQL Library Reference Manual</title>
 <meta name="generator" content="DocBook XSL Stylesheets V1.78.1">
 <link rel="home" href="index.html" title="Tracker SPARQL Library Reference Manual">
 <link rel="up" href="libtracker-sparql-reference.html" title="Part II. Reference">
 <link rel="prev" href="libtracker-sparql-reference.html" title="Part II. Reference">
 <link rel="next" href="TrackerSparqlConnection.html" title="TrackerSparqlConnection">
-<meta name="generator" content="GTK-Doc V1.21 (XML mode)">
+<meta name="generator" content="GTK-Doc V1.24.1 (XML mode)">
 <link rel="stylesheet" href="style.css" type="text/css">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
@@ -366,7 +366,7 @@ justifications.
 </div>
 <div class="refsect1">
 <a name="TrackerSparqlBuilder.object-hierarchy"></a><h2>Object Hierarchy</h2>
-<pre class="screen">    GEnum
+<pre class="screen">    <a href="/home/carlos/Build/gnome/share/gtk-doc/html/gobject/gobject-Enumeration-and-Flag-Types.html">GEnum</a>
     <span class="lineart">╰──</span> TrackerSparqlBuilderState
     GObject
     <span class="lineart">╰──</span> TrackerSparqlBuilder
@@ -399,9 +399,8 @@ tracker_sparql_builder_new (<em class="parameter"><code><span class="type">void<
 <div class="refsect3">
 <a name="id-1.3.3.10.2.5"></a><h4>Returns</h4>
 <p> a newly created <a class="link" href="TrackerSparqlBuilder.html" title="TrackerSparqlBuilder"><span class="type">TrackerSparqlBuilder</span></a>. Free with <code class="function">g_object_unref()</code> when done</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -415,9 +414,8 @@ append predicates and objects for the given subject are allowed.</p>
 <div class="refsect3">
 <a name="id-1.3.3.10.3.5"></a><h4>Returns</h4>
 <p> a newly created <a class="link" href="TrackerSparqlBuilder.html" title="TrackerSparqlBuilder"><span class="type">TrackerSparqlBuilder</span></a>. Free with <code class="function">g_object_unref()</code> when done</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -428,9 +426,8 @@ tracker_sparql_builder_new_update (<em class="parameter"><code><span class="type
 <div class="refsect3">
 <a name="id-1.3.3.10.4.5"></a><h4>Returns</h4>
 <p> a newly created <a class="link" href="TrackerSparqlBuilder.html" title="TrackerSparqlBuilder"><span class="type">TrackerSparqlBuilder</span></a>. Free with <code class="function">g_object_unref()</code> when done</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -458,9 +455,8 @@ tracker_sparql_builder_get_state (<em class="parameter"><code><a class="link" hr
 <a name="id-1.3.3.10.5.6"></a><h4>Returns</h4>
 <p> a <a class="link" href="TrackerSparqlBuilder.html#TrackerSparqlBuilderState" title="enum TrackerSparqlBuilderState"><span class="type">TrackerSparqlBuilderState</span></a> defining the current state of <em class="parameter"><code>self</code></em>
 </p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -487,9 +483,8 @@ tracker_sparql_builder_get_result (<em class="parameter"><code><a class="link" h
 <a name="id-1.3.3.10.6.6"></a><h4>Returns</h4>
 <p> the created SPARQL query. The string is contained in the
 <a class="link" href="TrackerSparqlBuilder.html" title="TrackerSparqlBuilder"><span class="type">TrackerSparqlBuilder</span></a> object, and should not be freed by the caller.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -516,9 +511,8 @@ tracker_sparql_builder_get_length (<em class="parameter"><code><a class="link" h
 <div class="refsect3">
 <a name="id-1.3.3.10.7.6"></a><h4>Returns</h4>
 <p> the number of objects contained.</p>
-<p></p>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -550,7 +544,7 @@ tracker_sparql_builder_append (<em class="parameter"><code><a class="link" href=
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -582,7 +576,7 @@ tracker_sparql_builder_prepend (<em class="parameter"><code><a class="link" href
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -613,7 +607,7 @@ tracker_sparql_builder_insert_open (<em class="parameter"><code><a class="link" 
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -645,7 +639,7 @@ tracker_sparql_builder_insert_silent_open
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -668,7 +662,7 @@ tracker_sparql_builder_insert_close (<em class="parameter"><code><a class="link"
 </tr></tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -692,7 +686,7 @@ to which the update query applies.</p>
 </tr></tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -715,7 +709,7 @@ tracker_sparql_builder_where_close (<em class="parameter"><code><a class="link" 
 </tr></tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -747,7 +741,7 @@ a query to delete them.</p>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -770,7 +764,7 @@ tracker_sparql_builder_delete_close (<em class="parameter"><code><a class="link"
 </tr></tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -801,7 +795,7 @@ tracker_sparql_builder_graph_open (<em class="parameter"><code><a class="link" h
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -824,7 +818,7 @@ tracker_sparql_builder_graph_close (<em class="parameter"><code><a class="link" 
 </tr></tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -856,7 +850,7 @@ tracker_sparql_builder_subject_variable
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -888,7 +882,7 @@ univocally identify a resource in tracker-store.</p>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -919,7 +913,7 @@ tracker_sparql_builder_subject (<em class="parameter"><code><a class="link" href
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -950,7 +944,7 @@ tracker_sparql_builder_predicate_iri (<em class="parameter"><code><a class="link
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -981,7 +975,7 @@ tracker_sparql_builder_predicate (<em class="parameter"><code><a class="link" hr
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1012,7 +1006,7 @@ tracker_sparql_builder_object_iri (<em class="parameter"><code><a class="link" h
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1043,7 +1037,7 @@ tracker_sparql_builder_object (<em class="parameter"><code><a class="link" href=
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1076,7 +1070,7 @@ by double quotes.</p>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1107,7 +1101,7 @@ tracker_sparql_builder_object_boolean (<em class="parameter"><code><a class="lin
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1138,7 +1132,7 @@ tracker_sparql_builder_object_int64 (<em class="parameter"><code><a class="link"
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1171,7 +1165,7 @@ to a string in the date format used by tracker-store.</p>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1202,7 +1196,7 @@ tracker_sparql_builder_object_double (<em class="parameter"><code><a class="link
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1234,7 +1228,7 @@ tracker_sparql_builder_object_variable
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1260,7 +1254,7 @@ separate insertion.</p>
 </tr></tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1284,7 +1278,7 @@ tracker_sparql_builder_object_blank_close
 </tr></tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1316,7 +1310,7 @@ tracker_sparql_builder_object_unvalidated
 </tbody>
 </table></div>
 </div>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 </div>
 <div class="refsect1">
@@ -1423,7 +1417,7 @@ insertion/update SPARQL query.</p>
 <p>Number of objects added to the <a class="link" href="TrackerSparqlBuilder.html" title="TrackerSparqlBuilder"><span class="type">TrackerSparqlBuilder</span></a>.</p>
 <p>Flags: Read</p>
 <p>Default value: 0</p>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1432,7 +1426,7 @@ insertion/update SPARQL query.</p>
 <p>String containing the constructed SPARQL in the <a class="link" href="TrackerSparqlBuilder.html" title="TrackerSparqlBuilder"><span class="type">TrackerSparqlBuilder</span></a>.</p>
 <p>Flags: Read</p>
 <p>Default value: NULL</p>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -1441,12 +1435,11 @@ insertion/update SPARQL query.</p>
 <p>Current state of the <a class="link" href="TrackerSparqlBuilder.html" title="TrackerSparqlBuilder"><span class="type">TrackerSparqlBuilder</span></a>.</p>
 <p>Flags: Read</p>
 <p>Default value: TRACKER_SPARQL_BUILDER_STATE_UPDATE</p>
-<p class="since">Since 0.10</p>
+<p class="since">Since: 0.10</p>
 </div>
 </div>
 </div>
 <div class="footer">
-<hr>
-          Generated by GTK-Doc V1.21</div>
+<hr>Generated by GTK-Doc V1.24.1</div>
 </body>
 </html>

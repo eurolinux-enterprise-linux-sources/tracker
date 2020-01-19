@@ -14,8 +14,8 @@
 
 Summary:	Desktop-neutral search tool and indexer
 Name:		tracker
-Version:	1.2.6
-Release:	3%{?dist}
+Version:	1.2.7
+Release:	2%{?dist}
 License:	GPLv2+
 Group:		Applications/System
 URL:		https://wiki.gnome.org/Projects/Tracker
@@ -27,6 +27,9 @@ Patch1:         tracker-0.15-onlyshowin.patch
 
 # https://bugzilla.redhat.com/show_bug.cgi?id=1133924
 Patch2:         0001-tracker-extract-Avoid-the-use-of-setrlimit-it-s-caus.patch
+
+# https://bugzilla.redhat.com/show_bug.cgi?id=1349508
+Patch3:         0001-Revert-functions-tracker-Fix-collate-order.patch
 
 BuildRequires:  desktop-file-utils
 BuildRequires:  firefox
@@ -168,6 +171,7 @@ This package contains the documentation for tracker
 
 %patch1 -p1 -b .onlyshowin
 %patch2 -p1 -b .rlimits
+%patch3 -p1 -b .collate-order
 
 ## nuke unwanted rpaths, see also
 ## https://fedoraproject.org/wiki/Packaging/Guidelines#Beware_of_Rpath
@@ -310,6 +314,22 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 
 
 %changelog
+* Mon Jun 27 2016 Debarshi Ray <rishi@fedoraproject.org> - 1.2.7-2
+- Revert an adjustment to the test suite to accommodate older sqlite
+- Resolves: #1349508
+
+* Fri Jun 24 2016 Debarshi Ray <rishi@fedoraproject.org> - 1.2.7-1
+- Update to 1.2.7
+- Resolves: #1349508
+
+* Tue Apr 12 2016 Debarshi Ray <rishi@fedoraproject.org> - 1.2.6-5
+- Fix the previous changelog entry
+- Resolves: #1132114
+
+* Tue Apr 12 2016 Debarshi Ray <rishi@fedoraproject.org> - 1.2.6-4
+- Handle failure to get a TrackerSparqlConnection
+- Resolves: #1132114
+
 * Tue May 12 2015 Matthias Clasen <mclasen@redhat.com> - 1.2.6-3
 - Rebuild against new totem-pl-parser
 - Related: #1174534

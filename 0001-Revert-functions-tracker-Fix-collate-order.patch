@@ -1,0 +1,36 @@
+From e0159ada2697b3006a4e0aa0145bbc9db7c33936 Mon Sep 17 00:00:00 2001
+From: Debarshi Ray <debarshir@gnome.org>
+Date: Mon, 27 Jun 2016 13:43:35 +0200
+Subject: [PATCH] Revert "functions-tracker: Fix collate order"
+
+This reverts commit 38764ae59415868bbe0acad1c923cde20f2879fa.
+---
+ tests/libtracker-data/functions/functions-tracker-1.out | 2 +-
+ tests/libtracker-data/functions/functions-tracker-2.out | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tests/libtracker-data/functions/functions-tracker-1.out b/tests/libtracker-data/functions/functions-tracker-1.out
+index 8fc886dca89a..d8c248445257 100644
+--- a/tests/libtracker-data/functions/functions-tracker-1.out
++++ b/tests/libtracker-data/functions/functions-tracker-1.out
+@@ -1,7 +1,7 @@
++"Text"
+ "default"
+ "optional"
+ "optional for third"
+ "other"
+ "purposes"
+ "testing"
+-"Text"
+diff --git a/tests/libtracker-data/functions/functions-tracker-2.out b/tests/libtracker-data/functions/functions-tracker-2.out
+index 80bddb590486..9045c233789d 100644
+--- a/tests/libtracker-data/functions/functions-tracker-2.out
++++ b/tests/libtracker-data/functions/functions-tracker-2.out
+@@ -1,3 +1,3 @@
+-"title of a film"
+ "Title X"
+ "UnitTesting"
++"title of a film"
+-- 
+2.5.5
+
