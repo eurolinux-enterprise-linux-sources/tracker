@@ -21,10 +21,7 @@
 """
 Peculiar Sparql behavour reported in bugs
 """
-
-from gi.repository import GLib
-
-import sys,os
+import sys,os,dbus
 import unittest
 import time
 import random
@@ -200,7 +197,7 @@ class TrackerStoreSparqlBugsTests (CommonTrackerStoreTest):
                 original_data = self.tracker.query (query)
 
                 wrong_insert = "INSERT { <test://nb222645-wrong-class-contact> a nco:IMContact. } "
-                self.assertRaises (GLib.Error,
+                self.assertRaises (dbus.DBusException,
                                    self.tracker.update,
                                    wrong_insert)
 

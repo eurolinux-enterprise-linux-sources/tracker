@@ -4,10 +4,14 @@ SUBDIRS =                                              \
 	limits                                         \
 	prefix
 
+check_PROGRAMS += \
+	tracker-parser
+
 noinst_PROGRAMS += $(test_programs)
 
 test_programs = \
-	tracker-fts-test
+	tracker-fts-test                               \
+	tracker-parser-test
 
 AM_CPPFLAGS =                                          \
 	$(BUILD_CFLAGS)                                \
@@ -27,6 +31,10 @@ LDADD =                                                \
 	$(LIBTRACKER_FTS_LIBS)
 
 tracker_fts_test_SOURCES = tracker-fts-test.c
+
+tracker_parser_test_SOURCES = tracker-parser-test.c
+
+tracker_parser_SOURCES = tracker-parser.c
 
 EXTRA_DIST += \
 	data.ontology                                  \

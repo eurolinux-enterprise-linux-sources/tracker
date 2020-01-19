@@ -6,7 +6,6 @@ SUBDIRS =                                              \
 	anon                                           \
 	ask                                            \
 	basic                                          \
-	bind                                           \
 	bnode-coreference                              \
 	bound                                          \
 	datetime                                       \
@@ -15,14 +14,12 @@ SUBDIRS =                                              \
 	graph                                          \
 	nie                                            \
 	nmo                                            \
-	mixed-cardinality                              \
 	optional                                       \
 	regex                                          \
 	sort                                           \
 	subqueries                                     \
 	error                                          \
 	backup                                         \
-	update                                         \
 	turtle
 
 noinst_PROGRAMS += $(test_programs)
@@ -32,7 +29,6 @@ test_programs = \
 	tracker-sparql-blank                           \
 	tracker-ontology                               \
 	tracker-backup                                 \
-	tracker-crc32-test			       \
 	tracker-ontology-change                        \
 	tracker-db-journal
 
@@ -58,7 +54,6 @@ tracker_sparql_blank_SOURCES = tracker-sparql-blank-test.c
 tracker_ontology_SOURCES = tracker-ontology-test.c
 tracker_ontology_change_SOURCES = tracker-ontology-change-test.c
 tracker_backup_SOURCES = tracker-backup-test.c
-tracker_crc32_test_SOURCES = tracker-crc32-test.c
 tracker_db_journal_SOURCES = tracker-db-journal.c
 
 EXTRA_DIST += \

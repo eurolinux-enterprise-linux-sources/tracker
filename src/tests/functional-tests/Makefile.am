@@ -48,12 +48,14 @@ if HAVE_TRACKER_FTS
 standard_tests += 310-fts-indexing.py
 endif
 standard_tests += \
-	400-extractor-metadata.py \
-	410-extractor-decorator.py \
+	400-extractor.py \
 	500-writeback.py \
 	501-writeback-details.py \
 	600-applications-camera.py \
-	601-applications-sync.py
+	601-applications-sync.py \
+	mass-storage-mode.py \
+	performance-tc-modified.py \
+	virtual-files-tc.py
 
 slow_tests = \
 	10-sqlite-misused.py \

@@ -22,7 +22,7 @@
 #include <string.h>
 #include <locale.h>
 
-#include <glib/gstdio.h>
+#include <glib.h>
 #include <gio/gio.h>
 
 #include <libtracker-common/tracker-common.h>
@@ -101,16 +101,11 @@ const TestInfo tests[] = {
 	{ "functions/functions-xpath-7", "functions/data-1", FALSE },
 	{ "functions/functions-xpath-8", "functions/data-1", FALSE },
 	{ "functions/functions-xpath-9", "functions/data-1", FALSE },
-	{ "functions/functions-xpath-10", "functions/data-4", FALSE },
-	{ "functions/functions-xpath-11", "functions/data-4", FALSE },
-	{ "functions/functions-xpath-12", "functions/data-4", FALSE },
-	{ "functions/functions-xpath-13", "functions/data-4", FALSE },
-	{ "functions/functions-xpath-14", "functions/data-4", FALSE },
 	{ "graph/graph-1", "graph/data-1", FALSE },
 	{ "graph/graph-2", "graph/data-2", FALSE },
 	{ "graph/graph-3", "graph/data-3", FALSE },
 	{ "graph/graph-4", "graph/data-3", FALSE },
-	{ "graph/graph-5", "graph/data-4", FALSE },
+	{ "graph/graph-4", "graph/data-4", FALSE },
 	{ "optional/q-opt-complex-1", "optional/complex-data-1", FALSE },
 	{ "optional/simple-optional-triple", "optional/simple-optional-triple", FALSE },
 	{ "regex/regex-query-001", "regex/regex-data-01", FALSE },
@@ -134,28 +129,6 @@ const TestInfo tests[] = {
 
 	{ "turtle/turtle-query-001", "turtle/turtle-data-001", FALSE },
 	{ "turtle/turtle-query-002", "turtle/turtle-data-002", FALSE },
-	/* Mixed cardinality tests */
-	{ "mixed-cardinality/insert-mixed-cardinality-query-1", "mixed-cardinality/insert-mixed-cardinality-1", FALSE, FALSE },
-	{ "mixed-cardinality/update-mixed-cardinality-query-1", "mixed-cardinality/update-mixed-cardinality-1", FALSE, FALSE },
-	/* Bind tests */
-	{ "bind/bind1", "bind/data", FALSE },
-	{ "bind/bind2", "bind/data", FALSE },
-	{ "bind/bind3", "bind/data", FALSE },
-	{ "bind/bind4", "bind/data", FALSE },
-	/* Update tests */
-	{ "update/insert-data-query-1", "update/insert-data-1", FALSE, FALSE },
-	{ "update/insert-data-query-2", "update/insert-data-2", FALSE, TRUE },
-	{ "update/delete-data-query-1", "update/delete-data-1", FALSE, FALSE },
-	{ "update/delete-data-query-2", "update/delete-data-2", FALSE, TRUE },
-	{ "update/delete-where-query-1", "update/delete-where-1", FALSE, FALSE },
-	{ "update/delete-where-query-2", "update/delete-where-2", FALSE, FALSE },
-	{ "update/invalid-insert-where-query-1", "update/invalid-insert-where-1", FALSE, TRUE },
-	{ "update/delete-insert-where-query-1", "update/delete-insert-where-1", FALSE, FALSE },
-	{ "update/delete-insert-where-query-2", "update/delete-insert-where-2", FALSE, FALSE },
-	{ "update/delete-insert-where-query-3", "update/delete-insert-where-3", FALSE, FALSE },
-	{ "update/delete-insert-where-query-4", "update/delete-insert-where-4", FALSE, FALSE },
-	{ "update/delete-insert-where-query-5", "update/delete-insert-where-5", FALSE, FALSE },
-	{ "update/delete-insert-where-query-6", "update/delete-insert-where-6", FALSE, FALSE },
 	{ NULL }
 };
 
@@ -367,7 +340,7 @@ setup (TestInfo      *info,
 
 		g_assert_true (g_setenv ("XDG_DATA_HOME", xdg_location, TRUE));
 		g_assert_true (g_setenv ("XDG_CACHE_HOME", xdg_location, TRUE));
-		g_assert_true (g_setenv ("TRACKER_DB_ONTOLOGIES_DIR", TOP_SRCDIR "/src/ontologies/", TRUE));
+		g_assert_true (g_setenv ("TRACKER_DB_ONTOLOGIES_DIR", TOP_SRCDIR "/data/ontologies/", TRUE));
 	}
 }
 

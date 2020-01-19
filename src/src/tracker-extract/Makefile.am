@@ -52,7 +52,8 @@ rules_files = \
 	90-text-generic.rule \
 	90-libav-audio-generic.rule \
 	90-libav-video-generic.rule \
-	91-gstreamer-generic-dlna.rule
+	91-gstreamer-generic-dlna.rule \
+	93-mplayer-generic.rule
 
 # NOTE:
 # We don't always link with libtracker-common, we only link
@@ -126,6 +127,11 @@ endif
 # Gstreamer with GUPnP-DLNA backend?
 if HAVE_GUPNP_DLNA
 rules_DATA += 91-gstreamer-generic-dlna.rule
+endif
+
+if USING_EXTERNAL_GENERIC_MEDIA_PLAYER
+extractmodules_LTLIBRARIES +=	libextract-mplayer.la
+rules_DATA += 93-mplayer-generic.rule
 endif
 
 if HAVE_TOTEM_PL_PARSER
@@ -227,6 +233,16 @@ libextract_flac_la_LIBADD = \
 	$(BUILD_LIBS) \
 	$(TRACKER_EXTRACT_MODULES_LIBS) \
 	$(LIBFLAC_LIBS)
+
+# MPlayer
+libextract_mplayer_la_SOURCES = tracker-extract-mplayer.c
+libextract_mplayer_la_CFLAGS = $(TRACKER_EXTRACT_MODULES_CFLAGS)
+libextract_mplayer_la_LDFLAGS = $(module_flags)
+libextract_mplayer_la_LIBADD = \
+	$(top_builddir)/src/libtracker-extract/libtracker-extract.la \
+	$(top_builddir)/src/libtracker-common/libtracker-common.la \
+	$(BUILD_LIBS) \
+	$(TRACKER_EXTRACT_MODULES_LIBS)
 
 # Oasis
 libextract_oasis_la_SOURCES = tracker-extract-oasis.c
@@ -510,6 +526,9 @@ libextract_dummy_la_LIBADD = \
 	$(BUILD_LIBS) \
 	$(TRACKER_EXTRACT_MODULES_LIBS)
 
+#
+# Binaries
+#
 libexec_PROGRAMS = tracker-extract
 
 tracker_extract_SOURCES = \
@@ -552,12 +571,12 @@ tracker-extract-priority-dbus.c: tracker-extract-priority-dbus-stamp
 tracker-extract-priority-dbus.h: tracker-extract-priority-dbus-stamp
 	@:
 
-tracker-extract-priority-dbus-stamp: Makefile.am $(top_srcdir)/src/tracker-extract/tracker-extract-priority.xml
+tracker-extract-priority-dbus-stamp: Makefile.am $(top_srcdir)/data/dbus/tracker-extract-priority.xml
 	$(AM_V_GEN) $(GDBUS_CODEGEN) \
 	              --interface-prefix org.freedesktop.Tracker1.Extract. \
 	              --generate-c-code tracker-extract-priority-dbus \
 	              --c-namespace TrackerExtractDBus \
-	              $(top_srcdir)/src/tracker-extract/tracker-extract-priority.xml
+	              $(top_srcdir)/data/dbus/tracker-extract-priority.xml
 	touch $@
 
 BUILT_SOURCES = \
@@ -568,71 +587,5 @@ BUILT_SOURCES = \
 
 CLEANFILES = $(BUILT_SOURCES)
 
-EXTRA_DIST = $(rules_files)
-
-# DBus interfaces (XML files) and services
-configdir = $(datadir)/tracker
-config_DATA = \
-	tracker-extract-priority.xml
-
-%.service.in: %.service.in.in
-	@sed -e "s|@libexecdir[@]|${libexecdir}|" $< > $@
-
-servicedir = $(DBUS_SERVICES_DIR)
-service_DATA = org.freedesktop.Tracker1.Miner.Extract.service
-
-INTLTOOL_SERVICE_RULE='%.service:   %.service.in   $(INTLTOOL_MERGE) $(wildcard $(top_srcdir)/po/*.po) ; $(INTLTOOL_MERGE) $(top_srcdir)/po $< [$]@ -d -u'
-@INTLTOOL_SERVICE_RULE@
-
-tracker-extract.service: tracker-extract.service.in Makefile
-	@sed -e "s|@libexecdir[@]|${libexecdir}|" $< > $@
-
-systemd_userdir = $(prefix)/lib/systemd/user
-systemd_user_DATA = tracker-extract.service
-
-install-data-hook:
-	$(MKDIR_P) "$(DESTDIR)$(datadir)/tracker/miners" && \
-	$(LN_S) -f "$(servicedir)/$(service_DATA)" \
-                   "$(DESTDIR)$(datadir)/tracker/miners/$(service_DATA)"
-
-uninstall-local:
-	$(RM) "$(DESTDIR)$(datadir)/tracker/miners/$(service_DATA)" && \
-	$(RM) "$(servicedir)/$(service_DATA)"
-
-# Desktop files: First we fix the VERSION and libexecdir
-%.desktop.in: %.desktop.in.in
-	@sed -e "s|@libexecdir[@]|${libexecdir}|" \
-	     -e "s|@VERSION[@]|${VERSION}|" $< > $@
-
-autostartdir = $(sysconfdir)/xdg/autostart
-autostart_DATA = tracker-extract.desktop
-
-@INTLTOOL_DESKTOP_RULE@
-
-# Configuration / GSettings
-gsettings_ENUM_NAMESPACE = org.freedesktop.Tracker
-gsettings_ENUM_FILES = $(top_srcdir)/src/libtracker-common/tracker-enums.h
-
-gsettings_SCHEMAS = org.freedesktop.Tracker.Extract.gschema.xml
-
-@INTLTOOL_XML_NOMERGE_RULE@
-
-@GSETTINGS_RULES@
-
-# Dist / Clean rules for all data
-CLEANFILES += \
-	$(autostart_DATA) \
-	$(autostart_DATA:.desktop=.desktop.in) \
-	$(service_DATA) \
-	$(service_DATA:.service=.service.in) \
-	$(systemd_user_DATA) \
-	$(gsettings_SCHEMAS) \
-	$(man_MANS)
-
-EXTRA_DIST += \
-	$(autostart_DATA:.desktop=.desktop.in.in) \
-	$(config_DATA) \
-	$(service_DATA:.service=.service.in.in) \
-	$(systemd_user_DATA:.service=.service.in) \
-	$(gsettings_SCHEMAS:.xml=.xml.in) \
-	$(man_MANS)
+EXTRA_DIST = \
+	$(rules_files)

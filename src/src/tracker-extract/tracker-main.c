@@ -24,14 +24,14 @@
 #include <time.h>
 #include <stdlib.h>
 #include <locale.h>
+#include <signal.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <glib.h>
 #include <glib-object.h>
-#include <glib-unix.h>
 #include <glib/gi18n.h>
-#include <glib/gprintf.h>
 #include <gio/gio.h>
 
 #ifndef G_OS_WIN32
@@ -42,7 +42,12 @@
 #include <libmediaart/mediaart.h>
 #endif
 
-#include <libtracker-common/tracker-common.h>
+#include <libtracker-common/tracker-log.h>
+#include <libtracker-common/tracker-dbus.h>
+#include <libtracker-common/tracker-os-dependant.h>
+#include <libtracker-common/tracker-ioprio.h>
+#include <libtracker-common/tracker-locale.h>
+#include <libtracker-common/tracker-sched.h>
 
 #include <libtracker-data/tracker-db-manager.h>
 
@@ -72,7 +77,6 @@ static gint verbosity = -1;
 static gchar *filename;
 static gchar *mime_type;
 static gchar *force_module;
-static gchar *output_format_name;
 static gboolean version;
 
 static TrackerConfig *config;
@@ -95,9 +99,6 @@ static GOptionEntry entries[] = {
 	  G_OPTION_ARG_STRING, &force_module,
 	  N_("Force a module to be used for extraction (e.g. \"foo\" for \"foo.so\")"),
 	  N_("MODULE") },
-	{ "output-format", 'o', 0, G_OPTION_ARG_STRING, &output_format_name,
-	  N_("Output results format: 'sparql', or 'turtle'"),
-	  N_("FORMAT") },
 	{ "version", 'V', 0,
 	  G_OPTION_ARG_NONE, &version,
 	  N_("Displays version information"),
@@ -154,11 +155,9 @@ initialize_directories (void)
 	g_free (user_data_dir);
 }
 
-static gboolean
-signal_handler (gpointer user_data)
+static void
+signal_handler (int signo)
 {
-	int signo = GPOINTER_TO_INT (user_data);
-
 	static gboolean in_loop = FALSE;
 
 	/* Die if we get re-entrant signals handler calls */
@@ -182,16 +181,23 @@ signal_handler (gpointer user_data)
 		}
 		break;
 	}
-
-	return G_SOURCE_CONTINUE;
 }
 
 static void
 initialize_signal_handler (void)
 {
 #ifndef G_OS_WIN32
-	g_unix_signal_add (SIGTERM, signal_handler, GINT_TO_POINTER (SIGTERM));
-	g_unix_signal_add (SIGINT, signal_handler, GINT_TO_POINTER (SIGINT));
+	struct sigaction act;
+	sigset_t         empty_mask;
+
+	sigemptyset (&empty_mask);
+	act.sa_handler = signal_handler;
+	act.sa_mask    = empty_mask;
+	act.sa_flags   = 0;
+
+	sigaction (SIGTERM, &act, NULL);
+	sigaction (SIGINT,  &act, NULL);
+	sigaction (SIGHUP,  &act, NULL);
 #endif /* G_OS_WIN32 */
 }
 
@@ -245,9 +251,6 @@ run_standalone (TrackerConfig *config)
 	TrackerExtract *object;
 	GFile *file;
 	gchar *uri;
-	GEnumClass *enum_class;
-	GEnumValue *enum_value;
-	TrackerSerializationFormat output_format;
 
 	/* Set log handler for library messages */
 	g_log_set_default_handler (log_handler, NULL);
@@ -256,20 +259,6 @@ run_standalone (TrackerConfig *config)
 	if (verbosity == -1) {
 		verbosity = 3;
 	}
-
-	if (!output_format_name) {
-		output_format_name = "turtle";
-	}
-
-	/* Look up the output format by name */
-	enum_class = g_type_class_ref (TRACKER_TYPE_SERIALIZATION_FORMAT);
-	enum_value = g_enum_get_value_by_nick (enum_class, output_format_name);
-	g_type_class_unref (enum_class);
-	if (!enum_value) {
-		g_printerr (N_("Unsupported serialization format '%s'\n"), output_format_name);
-		return EXIT_FAILURE;
-	}
-	output_format = enum_value->value;
 
 	tracker_locale_init ();
 
@@ -289,7 +278,9 @@ run_standalone (TrackerConfig *config)
 		return EXIT_FAILURE;
 	}
 
-	tracker_extract_get_metadata_by_cmdline (object, uri, mime_type, output_format);
+	tracker_memory_setrlimits ();
+
+	tracker_extract_get_metadata_by_cmdline (object, uri, mime_type);
 
 	g_object_unref (object);
 	g_object_unref (file);
@@ -349,6 +340,14 @@ main (int argc, char *argv[])
 
 	config = tracker_config_new ();
 
+	/* Set conditions when we use stand alone settings */
+	if (filename) {
+		return run_standalone (config);
+	}
+
+	/* Initialize subsystems */
+	initialize_directories ();
+
 	/* Extractor command line arguments */
 	if (verbosity > -1) {
 		tracker_config_set_verbosity (config, verbosity);
@@ -362,17 +361,10 @@ main (int argc, char *argv[])
 
 	sanity_check_option_values (config);
 
-	/* Set conditions when we use stand alone settings */
-	if (filename) {
-		return run_standalone (config);
-	}
-
-	/* Initialize subsystems */
-	initialize_directories ();
-
 	/* This makes sure we don't steal all the system's resources */
 	initialize_priority_and_scheduling (tracker_config_get_sched_idle (config),
 	                                    tracker_db_manager_get_first_index_done () == FALSE);
+	tracker_memory_setrlimits ();
 
 	extract = tracker_extract_new (TRUE, force_module);
 
@@ -401,11 +393,10 @@ main (int argc, char *argv[])
 	controller = tracker_extract_controller_new (decorator);
 	tracker_miner_start (TRACKER_MINER (decorator));
 
-	/* Main loop */
-	main_loop = g_main_loop_new (NULL, FALSE);
-
 	initialize_signal_handler ();
 
+	/* Main loop */
+	main_loop = g_main_loop_new (NULL, FALSE);
 	g_main_loop_run (main_loop);
 
 	my_main_loop = main_loop;

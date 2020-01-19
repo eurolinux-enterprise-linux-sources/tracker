@@ -27,7 +27,7 @@
 
 G_BEGIN_DECLS
 
-typedef GStrv (*TrackerWritebackGetPredicatesFunc) ();
+typedef GStrv (*TrackerWritebackGetPredicatesFunc) (void);
 
 void        tracker_writeback_init          (TrackerWritebackGetPredicatesFunc callback);
 void        tracker_writeback_shutdown      (void);

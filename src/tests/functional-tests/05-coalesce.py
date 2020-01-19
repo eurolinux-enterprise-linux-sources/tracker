@@ -20,6 +20,7 @@
 """
 Test tracker:coalesce function in Sparql. Only uses the Store
 """
+import dbus
 import unittest
 import random
 

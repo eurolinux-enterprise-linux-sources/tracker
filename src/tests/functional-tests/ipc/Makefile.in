@@ -98,14 +98,11 @@ noinst_PROGRAMS = test-insert-or-replace$(EXEEXT) \
 subdir = tests/functional-tests/ipc
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/attributes.m4 \
-	$(top_srcdir)/m4/gsettings.m4 $(top_srcdir)/m4/gtk-doc.m4 \
-	$(top_srcdir)/m4/intltool.m4 $(top_srcdir)/m4/introspection.m4 \
+	$(top_srcdir)/m4/gtk-doc.m4 $(top_srcdir)/m4/intltool.m4 \
 	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/m4/nls.m4 \
-	$(top_srcdir)/m4/pkg.m4 \
-	$(top_srcdir)/m4/sqlite-auto-extension.m4 \
-	$(top_srcdir)/m4/sqlite-builtin-fts5.m4 \
+	$(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/sqlite-builtin-fts4.m4 \
 	$(top_srcdir)/m4/sqlite-threadsafe.m4 \
 	$(top_srcdir)/m4/tracker.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -346,9 +343,6 @@ AVFORMAT_LIBS = @AVFORMAT_LIBS@
 AVUTIL_CFLAGS = @AVUTIL_CFLAGS@
 AVUTIL_LIBS = @AVUTIL_LIBS@
 AWK = @AWK@
-BASH_COMPLETION_CFLAGS = @BASH_COMPLETION_CFLAGS@
-BASH_COMPLETION_DIR = @BASH_COMPLETION_DIR@
-BASH_COMPLETION_LIBS = @BASH_COMPLETION_LIBS@
 BUILD_CFLAGS = @BUILD_CFLAGS@
 BUILD_LIBS = @BUILD_LIBS@
 BUILD_VALACFLAGS = @BUILD_VALACFLAGS@
@@ -391,6 +385,7 @@ GLIB_COMPILE_SCHEMAS = @GLIB_COMPILE_SCHEMAS@
 GLIB_MKENUMS = @GLIB_MKENUMS@
 GLIB_PREFIX = @GLIB_PREFIX@
 GMSGFMT = @GMSGFMT@
+GRAPHVIZ_FDP = @GRAPHVIZ_FDP@
 GREP = @GREP@
 GSETTINGS_DISABLE_SCHEMAS_COMPILE = @GSETTINGS_DISABLE_SCHEMAS_COMPILE@
 GSTREAMER_CFLAGS = @GSTREAMER_CFLAGS@
@@ -462,8 +457,6 @@ LIBOSINFO_LIBS = @LIBOSINFO_LIBS@
 LIBPNG_CFLAGS = @LIBPNG_CFLAGS@
 LIBPNG_LIBS = @LIBPNG_LIBS@
 LIBS = @LIBS@
-LIBSECCOMP_CFLAGS = @LIBSECCOMP_CFLAGS@
-LIBSECCOMP_LIBS = @LIBSECCOMP_LIBS@
 LIBTIFF_CFLAGS = @LIBTIFF_CFLAGS@
 LIBTIFF_LIBS = @LIBTIFF_LIBS@
 LIBTOOL = @LIBTOOL@
@@ -498,7 +491,6 @@ LT_CURRENT = @LT_CURRENT@
 LT_CURRENT_MINUS_AGE = @LT_CURRENT_MINUS_AGE@
 LT_RELEASE = @LT_RELEASE@
 LT_REVISION = @LT_REVISION@
-LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MEEGOTOUCH_CFLAGS = @MEEGOTOUCH_CFLAGS@
@@ -551,7 +543,8 @@ TRACKER_API_VERSION = @TRACKER_API_VERSION@
 TRACKER_API_VERSION_UNDERSCORES = @TRACKER_API_VERSION_UNDERSCORES@
 TRACKER_BINARY_AGE = @TRACKER_BINARY_AGE@
 TRACKER_BINARY_VERSION = @TRACKER_BINARY_VERSION@
-TRACKER_CFLAGS = @TRACKER_CFLAGS@
+TRACKER_CONTROL_CFLAGS = @TRACKER_CONTROL_CFLAGS@
+TRACKER_CONTROL_LIBS = @TRACKER_CONTROL_LIBS@
 TRACKER_EXTRACT_CFLAGS = @TRACKER_EXTRACT_CFLAGS@
 TRACKER_EXTRACT_LIBS = @TRACKER_EXTRACT_LIBS@
 TRACKER_EXTRACT_MODULES_CFLAGS = @TRACKER_EXTRACT_MODULES_CFLAGS@
@@ -559,7 +552,6 @@ TRACKER_EXTRACT_MODULES_DIR = @TRACKER_EXTRACT_MODULES_DIR@
 TRACKER_EXTRACT_MODULES_LIBS = @TRACKER_EXTRACT_MODULES_LIBS@
 TRACKER_EXTRACT_RULES_DIR = @TRACKER_EXTRACT_RULES_DIR@
 TRACKER_INTERFACE_AGE = @TRACKER_INTERFACE_AGE@
-TRACKER_LIBS = @TRACKER_LIBS@
 TRACKER_MAJOR_VERSION = @TRACKER_MAJOR_VERSION@
 TRACKER_MICRO_VERSION = @TRACKER_MICRO_VERSION@
 TRACKER_MINER_APPS_CFLAGS = @TRACKER_MINER_APPS_CFLAGS@
@@ -587,6 +579,8 @@ TRACKER_RESDUMP_CFLAGS = @TRACKER_RESDUMP_CFLAGS@
 TRACKER_RESDUMP_LIBS = @TRACKER_RESDUMP_LIBS@
 TRACKER_STORE_CFLAGS = @TRACKER_STORE_CFLAGS@
 TRACKER_STORE_LIBS = @TRACKER_STORE_LIBS@
+TRACKER_UTILS_CFLAGS = @TRACKER_UTILS_CFLAGS@
+TRACKER_UTILS_LIBS = @TRACKER_UTILS_LIBS@
 TRACKER_VERSION = @TRACKER_VERSION@
 TRACKER_WRITEBACK_CFLAGS = @TRACKER_WRITEBACK_CFLAGS@
 TRACKER_WRITEBACK_LIBS = @TRACKER_WRITEBACK_LIBS@
@@ -834,15 +828,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
-$(srcdir)/test-insert-or-replace.c: $(srcdir)/test_insert_or_replace_vala.stamp
-	@if test -f $@; then :; else rm -f $(srcdir)/test_insert_or_replace_vala.stamp; fi
-	@if test -f $@; then :; else \
-	  $(MAKE) $(AM_MAKEFLAGS) $(srcdir)/test_insert_or_replace_vala.stamp; \
-	fi
-$(srcdir)/test_insert_or_replace_vala.stamp: test-insert-or-replace.vala
-	$(AM_V_at)rm -f $@ && echo stamp > $@-t
-	$(AM_V_VALAC)$(am__cd) $(srcdir) && $(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C test-insert-or-replace.vala
-	$(AM_V_at)mv -f $@-t $@
 $(srcdir)/test-shared-update.c: $(srcdir)/test_default_update_vala.stamp
 	@if test -f $@; then :; else rm -f $(srcdir)/test_default_update_vala.stamp; fi
 	@if test -f $@; then :; else \
@@ -857,20 +842,6 @@ $(srcdir)/test_default_update_vala.stamp: test-shared-update.vala test-default-u
 	$(AM_V_at)rm -f $@ && echo stamp > $@-t
 	$(AM_V_VALAC)$(am__cd) $(srcdir) && $(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C test-shared-update.vala test-default-update.vala
 	$(AM_V_at)mv -f $@-t $@
-$(srcdir)/test-shared-query.c: $(srcdir)/test_direct_query_vala.stamp
-	@if test -f $@; then :; else rm -f $(srcdir)/test_direct_query_vala.stamp; fi
-	@if test -f $@; then :; else \
-	  $(MAKE) $(AM_MAKEFLAGS) $(srcdir)/test_direct_query_vala.stamp; \
-	fi
-$(srcdir)/test-direct-query.c: $(srcdir)/test_direct_query_vala.stamp
-	@if test -f $@; then :; else rm -f $(srcdir)/test_direct_query_vala.stamp; fi
-	@if test -f $@; then :; else \
-	  $(MAKE) $(AM_MAKEFLAGS) $(srcdir)/test_direct_query_vala.stamp; \
-	fi
-$(srcdir)/test_direct_query_vala.stamp: test-shared-query.vala test-direct-query.vala
-	$(AM_V_at)rm -f $@ && echo stamp > $@-t
-	$(AM_V_VALAC)$(am__cd) $(srcdir) && $(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C test-shared-query.vala test-direct-query.vala
-	$(AM_V_at)mv -f $@-t $@
 $(srcdir)/test-busy-handling.c: $(srcdir)/test_busy_handling_vala.stamp
 	@if test -f $@; then :; else rm -f $(srcdir)/test_busy_handling_vala.stamp; fi
 	@if test -f $@; then :; else \
@@ -879,20 +850,6 @@ $(srcdir)/test-busy-handling.c: $(srcdir)/test_busy_handling_vala.stamp
 $(srcdir)/test_busy_handling_vala.stamp: test-busy-handling.vala
 	$(AM_V_at)rm -f $@ && echo stamp > $@-t
 	$(AM_V_VALAC)$(am__cd) $(srcdir) && $(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C test-busy-handling.vala
-	$(AM_V_at)mv -f $@-t $@
-$(srcdir)/test-shared-query.c: $(srcdir)/test_bus_query_vala.stamp
-	@if test -f $@; then :; else rm -f $(srcdir)/test_bus_query_vala.stamp; fi
-	@if test -f $@; then :; else \
-	  $(MAKE) $(AM_MAKEFLAGS) $(srcdir)/test_bus_query_vala.stamp; \
-	fi
-$(srcdir)/test-bus-query.c: $(srcdir)/test_bus_query_vala.stamp
-	@if test -f $@; then :; else rm -f $(srcdir)/test_bus_query_vala.stamp; fi
-	@if test -f $@; then :; else \
-	  $(MAKE) $(AM_MAKEFLAGS) $(srcdir)/test_bus_query_vala.stamp; \
-	fi
-$(srcdir)/test_bus_query_vala.stamp: test-shared-query.vala test-bus-query.vala
-	$(AM_V_at)rm -f $@ && echo stamp > $@-t
-	$(AM_V_VALAC)$(am__cd) $(srcdir) && $(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C test-shared-query.vala test-bus-query.vala
 	$(AM_V_at)mv -f $@-t $@
 $(srcdir)/test-shared-update.c: $(srcdir)/test_bus_update_vala.stamp
 	@if test -f $@; then :; else rm -f $(srcdir)/test_bus_update_vala.stamp; fi
@@ -908,14 +865,28 @@ $(srcdir)/test_bus_update_vala.stamp: test-shared-update.vala test-bus-update.va
 	$(AM_V_at)rm -f $@ && echo stamp > $@-t
 	$(AM_V_VALAC)$(am__cd) $(srcdir) && $(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C test-shared-update.vala test-bus-update.vala
 	$(AM_V_at)mv -f $@-t $@
-$(srcdir)/test-class-signal-performance-batch.c: $(srcdir)/test_class_signal_performance_batch_vala.stamp
-	@if test -f $@; then :; else rm -f $(srcdir)/test_class_signal_performance_batch_vala.stamp; fi
+$(srcdir)/test-insert-or-replace.c: $(srcdir)/test_insert_or_replace_vala.stamp
+	@if test -f $@; then :; else rm -f $(srcdir)/test_insert_or_replace_vala.stamp; fi
 	@if test -f $@; then :; else \
-	  $(MAKE) $(AM_MAKEFLAGS) $(srcdir)/test_class_signal_performance_batch_vala.stamp; \
+	  $(MAKE) $(AM_MAKEFLAGS) $(srcdir)/test_insert_or_replace_vala.stamp; \
 	fi
-$(srcdir)/test_class_signal_performance_batch_vala.stamp: test-class-signal-performance-batch.vala
+$(srcdir)/test_insert_or_replace_vala.stamp: test-insert-or-replace.vala
 	$(AM_V_at)rm -f $@ && echo stamp > $@-t
-	$(AM_V_VALAC)$(am__cd) $(srcdir) && $(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C test-class-signal-performance-batch.vala
+	$(AM_V_VALAC)$(am__cd) $(srcdir) && $(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C test-insert-or-replace.vala
+	$(AM_V_at)mv -f $@-t $@
+$(srcdir)/test-shared-query.c: $(srcdir)/test_direct_query_vala.stamp
+	@if test -f $@; then :; else rm -f $(srcdir)/test_direct_query_vala.stamp; fi
+	@if test -f $@; then :; else \
+	  $(MAKE) $(AM_MAKEFLAGS) $(srcdir)/test_direct_query_vala.stamp; \
+	fi
+$(srcdir)/test-direct-query.c: $(srcdir)/test_direct_query_vala.stamp
+	@if test -f $@; then :; else rm -f $(srcdir)/test_direct_query_vala.stamp; fi
+	@if test -f $@; then :; else \
+	  $(MAKE) $(AM_MAKEFLAGS) $(srcdir)/test_direct_query_vala.stamp; \
+	fi
+$(srcdir)/test_direct_query_vala.stamp: test-shared-query.vala test-direct-query.vala
+	$(AM_V_at)rm -f $@ && echo stamp > $@-t
+	$(AM_V_VALAC)$(am__cd) $(srcdir) && $(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C test-shared-query.vala test-direct-query.vala
 	$(AM_V_at)mv -f $@-t $@
 $(srcdir)/test-class-signal-performance.c: $(srcdir)/test_class_signal_performance_vala.stamp
 	@if test -f $@; then :; else rm -f $(srcdir)/test_class_signal_performance_vala.stamp; fi
@@ -934,6 +905,29 @@ $(srcdir)/test-class-signal.c: $(srcdir)/test_class_signal_vala.stamp
 $(srcdir)/test_class_signal_vala.stamp: test-class-signal.vala
 	$(AM_V_at)rm -f $@ && echo stamp > $@-t
 	$(AM_V_VALAC)$(am__cd) $(srcdir) && $(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C test-class-signal.vala
+	$(AM_V_at)mv -f $@-t $@
+$(srcdir)/test-class-signal-performance-batch.c: $(srcdir)/test_class_signal_performance_batch_vala.stamp
+	@if test -f $@; then :; else rm -f $(srcdir)/test_class_signal_performance_batch_vala.stamp; fi
+	@if test -f $@; then :; else \
+	  $(MAKE) $(AM_MAKEFLAGS) $(srcdir)/test_class_signal_performance_batch_vala.stamp; \
+	fi
+$(srcdir)/test_class_signal_performance_batch_vala.stamp: test-class-signal-performance-batch.vala
+	$(AM_V_at)rm -f $@ && echo stamp > $@-t
+	$(AM_V_VALAC)$(am__cd) $(srcdir) && $(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C test-class-signal-performance-batch.vala
+	$(AM_V_at)mv -f $@-t $@
+$(srcdir)/test-shared-query.c: $(srcdir)/test_bus_query_vala.stamp
+	@if test -f $@; then :; else rm -f $(srcdir)/test_bus_query_vala.stamp; fi
+	@if test -f $@; then :; else \
+	  $(MAKE) $(AM_MAKEFLAGS) $(srcdir)/test_bus_query_vala.stamp; \
+	fi
+$(srcdir)/test-bus-query.c: $(srcdir)/test_bus_query_vala.stamp
+	@if test -f $@; then :; else rm -f $(srcdir)/test_bus_query_vala.stamp; fi
+	@if test -f $@; then :; else \
+	  $(MAKE) $(AM_MAKEFLAGS) $(srcdir)/test_bus_query_vala.stamp; \
+	fi
+$(srcdir)/test_bus_query_vala.stamp: test-shared-query.vala test-bus-query.vala
+	$(AM_V_at)rm -f $@ && echo stamp > $@-t
+	$(AM_V_VALAC)$(am__cd) $(srcdir) && $(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C test-shared-query.vala test-bus-query.vala
 	$(AM_V_at)mv -f $@-t $@
 
 mostlyclean-libtool:

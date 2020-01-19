@@ -35,14 +35,7 @@
 static void
 test_string_to_date_failures_subprocess ()
 {
-	GError *error = NULL;
-
-	tracker_string_to_date (NULL, NULL, &error);
-
-	if (error) {
-		g_warning ("%s", error->message);
-		g_error_free (error);
-	}
+	tracker_string_to_date (NULL, NULL, NULL);
 }
 
 static void
@@ -50,7 +43,7 @@ test_string_to_date_failures ()
 {
 	g_test_trap_subprocess ("/libtracker-common/date-time/string_to_date_failures/subprocess", 0, 0);
 	g_test_trap_assert_failed ();
-	g_test_trap_assert_stderr ("*Empty date string*");
+	g_test_trap_assert_stderr ("*'date_string' failed*");
 }
 
 static void

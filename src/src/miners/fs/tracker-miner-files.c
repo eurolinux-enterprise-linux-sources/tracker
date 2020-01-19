@@ -34,17 +34,22 @@
 #include <gio/gunixfdlist.h>
 #include <gio/gunixinputstream.h>
 
-#include <libtracker-common/tracker-common.h>
-#include <libtracker-sparql/tracker-ontologies.h>
-#include <libtracker-extract/tracker-extract.h>
+#include <libtracker-common/tracker-dbus.h>
+#include <libtracker-common/tracker-date-time.h>
+#include <libtracker-common/tracker-ontologies.h>
+#include <libtracker-common/tracker-type-utils.h>
+#include <libtracker-common/tracker-utils.h>
+#include <libtracker-common/tracker-file-utils.h>
+#include <libtracker-common/tracker-storage.h>
 
 #include <libtracker-data/tracker-db-manager.h>
+
+#include <libtracker-extract/tracker-module-manager.h>
+#include <libtracker-extract/tracker-extract-client.h>
 
 #include "tracker-power.h"
 #include "tracker-miner-files.h"
 #include "tracker-config.h"
-#include "tracker-storage.h"
-#include "tracker-extract-watchdog.h"
 
 #define DISK_SPACE_CHECK_FREQUENCY 10
 #define SECONDS_PER_DAY 86400
@@ -66,7 +71,6 @@ struct ProcessFileData {
 struct TrackerMinerFilesPrivate {
 	TrackerConfig *config;
 	TrackerStorage *storage;
-	TrackerExtractWatchdog *extract_watchdog;
 
 	GVolumeMonitor *volume_monitor;
 
@@ -525,9 +529,6 @@ miner_files_initable_init (GInitable     *initable,
 	g_signal_connect (mf->private->config, "notify::ignored-files",
 	                  G_CALLBACK (trigger_recheck_cb),
 	                  mf);
-	g_signal_connect (mf->private->config, "notify::enable-monitors",
-	                  G_CALLBACK (trigger_recheck_cb),
-	                  mf);
 	g_signal_connect (mf->private->config, "notify::index-removable-devices",
 	                  G_CALLBACK (index_volumes_changed_cb),
 	                  mf);
@@ -553,8 +554,6 @@ miner_files_initable_init (GInitable     *initable,
 	g_slist_free (mounts);
 
 	disk_space_check_start (mf);
-
-	mf->private->extract_watchdog = tracker_extract_watchdog_new ();
 
 	return TRUE;
 }
@@ -607,8 +606,6 @@ miner_files_finalize (GObject *object)
 
 	mf = TRACKER_MINER_FILES (object);
 	priv = mf->private;
-
-	g_clear_object (&priv->extract_watchdog);
 
 	if (priv->config) {
 		g_signal_handlers_disconnect_by_func (priv->config,
@@ -687,7 +684,7 @@ ensure_mount_point_exists (TrackerMinerFiles *miner,
 
 		/* Create a nfo:Folder for the mount point */
 		g_string_append_printf (accumulator,
-		                        "INSERT SILENT INTO <" TRACKER_OWN_GRAPH_URN "> {"
+		                        "INSERT SILENT INTO <" TRACKER_MINER_FS_GRAPH_URN "> {"
 		                        " _:file a nfo:FileDataObject, nie:InformationElement, nfo:Folder ; "
 		                        "        nie:isStoredAs _:file ; "
 		                        "        nie:url \"%s\" ; "
@@ -927,7 +924,7 @@ init_mount_points (TrackerMinerFiles *miner_files)
 	/* Make sure the root partition is always set to mounted, as GIO won't
 	 * report it as a proper mount */
 	g_hash_table_insert (volumes,
-	                     g_strdup (TRACKER_DATASOURCE_URN_NON_REMOVABLE_MEDIA),
+	                     g_strdup (TRACKER_NON_REMOVABLE_MEDIA_DATASOURCE_URN),
 	                     GINT_TO_POINTER (VOLUME_MOUNTED));
 
 	while (tracker_sparql_cursor_next (cursor, NULL, NULL)) {
@@ -938,10 +935,7 @@ init_mount_points (TrackerMinerFiles *miner_files)
 
 		urn = tracker_sparql_cursor_get_string (cursor, 0, NULL);
 
-		if (!urn)
-			continue;
-
-		if (strcmp (urn, TRACKER_DATASOURCE_URN_NON_REMOVABLE_MEDIA) == 0) {
+		if (strcmp (urn, TRACKER_NON_REMOVABLE_MEDIA_DATASOURCE_URN) == 0) {
 			/* Report non-removable media to be mounted by HAL as well */
 			state |= VOLUME_MOUNTED;
 		}
@@ -959,7 +953,7 @@ init_mount_points (TrackerMinerFiles *miner_files)
 		gint state;
 
 		uuid = u->data;
-		non_removable_device_urn = g_strdup_printf (TRACKER_PREFIX_DATASOURCE_URN "%s", uuid);
+		non_removable_device_urn = g_strdup_printf (TRACKER_DATASOURCE_URN_PREFIX "%s", uuid);
 
 		state = GPOINTER_TO_INT (g_hash_table_lookup (volumes, non_removable_device_urn));
 		state |= VOLUME_MOUNTED;
@@ -979,7 +973,7 @@ init_mount_points (TrackerMinerFiles *miner_files)
 			gint state;
 
 			uuid = u->data;
-			removable_device_urn = g_strdup_printf (TRACKER_PREFIX_DATASOURCE_URN "%s", uuid);
+			removable_device_urn = g_strdup_printf (TRACKER_DATASOURCE_URN_PREFIX "%s", uuid);
 
 			state = GPOINTER_TO_INT (g_hash_table_lookup (volumes, removable_device_urn));
 			state |= VOLUME_MOUNTED;
@@ -1006,10 +1000,10 @@ init_mount_points (TrackerMinerFiles *miner_files)
 
 			/* Note: is there any case where the urn doesn't have our
 			 *  datasource prefix? */
-			if (g_str_has_prefix (urn, TRACKER_PREFIX_DATASOURCE_URN)) {
+			if (g_str_has_prefix (urn, TRACKER_DATASOURCE_URN_PREFIX)) {
 				const gchar *uuid;
 
-				uuid = urn + strlen (TRACKER_PREFIX_DATASOURCE_URN);
+				uuid = urn + strlen (TRACKER_DATASOURCE_URN_PREFIX);
 				mount_point = tracker_storage_get_mount_point_for_uuid (priv->storage, uuid);
 				type = tracker_storage_get_type_for_uuid (priv->storage, uuid);
 			}
@@ -1160,10 +1154,13 @@ mount_point_removed_cb (TrackerStorage *storage,
 	gchar *urn;
 	GFile *mount_point_file;
 
-	urn = g_strdup_printf (TRACKER_PREFIX_DATASOURCE_URN "%s", uuid);
+	urn = g_strdup_printf (TRACKER_DATASOURCE_URN_PREFIX "%s", uuid);
 	g_debug ("Mount point removed for URN '%s'", urn);
 
 	mount_point_file = g_file_new_for_path (mount_point);
+
+	/* Notify extractor about cancellation of all tasks under the mount point */
+	tracker_extract_client_cancel_for_prefix (mount_point_file);
 
 	/* Tell TrackerMinerFS to skip monitoring everything under the mount
 	 *  point (in case there was no pre-unmount notification) */
@@ -1193,7 +1190,7 @@ mount_point_added_cb (TrackerStorage *storage,
 
 	priv = TRACKER_MINER_FILES_GET_PRIVATE (miner);
 
-	urn = g_strdup_printf (TRACKER_PREFIX_DATASOURCE_URN "%s", uuid);
+	urn = g_strdup_printf (TRACKER_DATASOURCE_URN_PREFIX "%s", uuid);
 	g_message ("Mount point added for URN '%s'", urn);
 
 	if (removable && !priv->index_removable_devices) {
@@ -1745,7 +1742,7 @@ miner_files_force_recheck_idle (gpointer user_data)
 	for (l = roots; l; l = l->next)	{
 		GFile *root = l->data;
 
-		tracker_indexing_tree_notify_update (indexing_tree, root, FALSE);
+		g_signal_emit_by_name (indexing_tree, "directory-updated", root);
 	}
 
 	miner_files->private->force_recheck_id = 0;
@@ -1955,10 +1952,10 @@ miner_files_add_to_datasource (TrackerMinerFiles    *mf,
 	removable_device_uuid = tracker_storage_get_uuid_for_file (priv->storage, file);
 
 	if (removable_device_uuid) {
-		removable_device_urn = g_strdup_printf (TRACKER_PREFIX_DATASOURCE_URN "%s",
+		removable_device_urn = g_strdup_printf (TRACKER_DATASOURCE_URN_PREFIX "%s",
 		                                        removable_device_uuid);
 	} else {
-		removable_device_urn = g_strdup (TRACKER_DATASOURCE_URN_NON_REMOVABLE_MEDIA);
+		removable_device_urn = g_strdup (TRACKER_NON_REMOVABLE_MEDIA_DATASOURCE_URN);
 	}
 
 	urn = miner_files_get_file_urn (mf, file, &is_iri);
@@ -2073,7 +2070,7 @@ sparql_builder_finish (ProcessFileData *data,
 		GString *queries;
 		gchar *removable_device_urn, *uri;
 
-		removable_device_urn = g_strdup_printf (TRACKER_PREFIX_DATASOURCE_URN "%s", uuid);
+		removable_device_urn = g_strdup_printf (TRACKER_DATASOURCE_URN_PREFIX "%s", uuid);
 		uri = g_file_get_uri (G_FILE (data->file));
 		queries = g_string_new ("");
 
@@ -2142,43 +2139,8 @@ process_file_cb (GObject      *object,
 
 	data->mime_type = g_strdup (mime_type);
 
-	if (is_iri) {
-		gchar *delete_properties_sparql;
-
-		/* Update: delete all statements inserted by miner except:
-		 *  - rdf:type statements as they could cause implicit deletion of user data
-		 *  - nie:contentCreated so it persists across updates
-		 *
-		 * Additionally, delete also nie:url as it might have been set by 3rd parties,
-		 * and it's used to know whether a file is known to tracker or not.
-		 */
-		delete_properties_sparql =
-			g_strdup_printf ("DELETE {"
-			                 "  GRAPH <%s> {"
-			                 "    <%s> ?p ?o"
-			                 "  } "
-			                 "} "
-			                 "WHERE {"
-			                 "  GRAPH <%s> {"
-			                 "    <%s> ?p ?o"
-			                 "    FILTER (?p != rdf:type && ?p != nie:contentCreated)"
-			                 "  } "
-			                 "} "
-			                 "DELETE {"
-			                 "  <%s> nie:url ?o"
-			                 "} WHERE {"
-			                 "  <%s> nie:url ?o"
-			                 "}",
-			                 TRACKER_OWN_GRAPH_URN, urn,
-			                 TRACKER_OWN_GRAPH_URN, urn,
-			                 urn, urn);
-
-		tracker_sparql_builder_prepend (sparql, delete_properties_sparql);
-		g_free (delete_properties_sparql);
-	}
-
 	tracker_sparql_builder_insert_silent_open (sparql, NULL);
-	tracker_sparql_builder_graph_open (sparql, TRACKER_OWN_GRAPH_URN);
+	tracker_sparql_builder_graph_open (sparql, TRACKER_MINER_FS_GRAPH_URN);
 
 	if (is_iri) {
 		tracker_sparql_builder_subject_iri (sparql, urn);
@@ -2338,7 +2300,7 @@ process_file_attributes_cb (GObject      *object,
 	tracker_sparql_builder_object_variable (sparql, "lastmodified");
 	tracker_sparql_builder_where_close (sparql);
 	tracker_sparql_builder_insert_open (sparql, NULL);
-	tracker_sparql_builder_graph_open (sparql, TRACKER_OWN_GRAPH_URN);
+	tracker_sparql_builder_graph_open (sparql, TRACKER_MINER_FS_GRAPH_URN);
 	tracker_sparql_builder_subject_iri (sparql, urn);
 	time_ = g_file_info_get_attribute_uint64 (file_info, G_FILE_ATTRIBUTE_TIME_MODIFIED);
 	tracker_sparql_builder_predicate (sparql, "nfo:fileLastModified");
@@ -2358,25 +2320,13 @@ process_file_attributes_cb (GObject      *object,
 	tracker_sparql_builder_object_variable (sparql, "lastaccessed");
 	tracker_sparql_builder_where_close (sparql);
 	tracker_sparql_builder_insert_open (sparql, NULL);
-	tracker_sparql_builder_graph_open (sparql, TRACKER_OWN_GRAPH_URN);
+	tracker_sparql_builder_graph_open (sparql, TRACKER_MINER_FS_GRAPH_URN);
 	tracker_sparql_builder_subject_iri (sparql, urn);
 	time_ = g_file_info_get_attribute_uint64 (file_info, G_FILE_ATTRIBUTE_TIME_ACCESS);
 	tracker_sparql_builder_predicate (sparql, "nfo:fileLastAccessed");
 	tracker_sparql_builder_object_date (sparql, (time_t *) &time_);
 	tracker_sparql_builder_graph_close (sparql);
 	tracker_sparql_builder_insert_close (sparql);
-
-	/* Delete data sources from other miners/decorators */
-	tracker_sparql_builder_delete_open (sparql, NULL);
-	tracker_sparql_builder_subject_iri (sparql, urn);
-	tracker_sparql_builder_predicate (sparql, "nie:dataSource");
-	tracker_sparql_builder_object_variable (sparql, "datasource");
-	tracker_sparql_builder_delete_close (sparql);
-	tracker_sparql_builder_where_open (sparql);
-	tracker_sparql_builder_subject_iri (sparql, urn);
-	tracker_sparql_builder_predicate (sparql, "nie:dataSource");
-	tracker_sparql_builder_object_variable (sparql, "datasource");
-	tracker_sparql_builder_where_close (sparql);
 
 	g_object_unref (file_info);
 	g_free (uri);
@@ -2454,7 +2404,7 @@ miner_files_ignore_next_update_file (TrackerMinerFS       *fs,
 	 * should NEVER be marked as tracker:writeback in the ontology! (else you break
 	 * the tracker-writeback feature) */
 
-	tracker_sparql_builder_insert_silent_open (sparql, TRACKER_OWN_GRAPH_URN);
+	tracker_sparql_builder_insert_silent_open (sparql, TRACKER_MINER_FS_GRAPH_URN);
 
 	tracker_sparql_builder_subject_variable (sparql, "urn");
 	tracker_sparql_builder_predicate (sparql, "a");

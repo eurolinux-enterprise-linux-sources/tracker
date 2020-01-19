@@ -77,7 +77,7 @@ License which can be viewed at:
 
 	static bool in_loop = false;
 
-	static bool signal_handler (int signo) {
+	static void signal_handler (int signo) {
 		/* Die if we get re-entrant signals handler calls */
 		if (in_loop) {
 			Process.exit (1);
@@ -101,13 +101,20 @@ License which can be viewed at:
 			}
 			break;
 		}
-
-		return true;
 	}
 
 	static void initialize_signal_handler () {
-		Unix.signal_add (Posix.SIGTERM, () => signal_handler (Posix.SIGTERM));
-		Unix.signal_add (Posix.SIGINT, () => signal_handler (Posix.SIGINT));
+		var empty_mask = Posix.sigset_t ();
+		Posix.sigemptyset (empty_mask);
+
+		var act = Posix.sigaction_t ();
+		act.sa_handler = signal_handler;
+		act.sa_mask = empty_mask;
+		act.sa_flags = 0;
+
+		Posix.sigaction (Posix.SIGTERM, act, null);
+		Posix.sigaction (Posix.SIGINT, act, null);
+		Posix.sigaction (Posix.SIGHUP, act, null);
 	}
 
 	static void initialize_priority () {
@@ -278,6 +285,9 @@ License which can be viewed at:
 		notifier = null;
 
 		if (!shutdown) {
+			/* Setup subscription to get notified of locale changes */
+			Tracker.locale_change_initialize_subscription ();
+
 			Tracker.DBus.register_prepare_class_signal ();
 
 			Tracker.Events.init ();
@@ -291,10 +301,9 @@ License which can be viewed at:
 		 * doing what they do and shutdown.
 		 */
 		if (!shutdown) {
-			main_loop = new MainLoop ();
-
 			initialize_signal_handler ();
 
+			main_loop = new MainLoop ();
 			main_loop.run ();
 		}
 
@@ -312,6 +321,8 @@ License which can be viewed at:
 		/* Shutdown major subsystems */
 		Tracker.Writeback.shutdown ();
 		Tracker.Events.shutdown ();
+
+		Tracker.locale_change_shutdown_subscription ();
 
 		Tracker.DBus.shutdown ();
 		Tracker.Data.Manager.shutdown ();

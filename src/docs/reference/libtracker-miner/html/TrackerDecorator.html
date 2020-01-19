@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>TrackerDecorator: Tracker Miner Library Reference Manual</title>
-<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<title>Tracker Miner Library Reference Manual: TrackerDecorator</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.78.1">
 <link rel="home" href="index.html" title="Tracker Miner Library Reference Manual">
 <link rel="up" href="ch03.html" title="Base abstract miner classes">
 <link rel="prev" href="libtracker-miner-TrackerEnumerator.html" title="TrackerEnumerator">
 <link rel="next" href="TrackerIndexingTree.html" title="TrackerIndexingTree">
-<meta name="generator" content="GTK-Doc V1.25 (XML mode)">
+<meta name="generator" content="GTK-Doc V1.21 (XML mode)">
 <link rel="stylesheet" href="style.css" type="text/css">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
@@ -37,7 +37,7 @@
 </tr></table></div>
 <div class="refsect1">
 <a name="TrackerDecorator.functions"></a><h2>Functions</h2>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="functions_return">
 <col class="functions_name">
@@ -160,7 +160,7 @@
 </tr>
 <tr>
 <td class="function_type">
-<a href="../html/TrackerSparqlBuilder.html#TrackerSparqlBuilder-struct"><span class="returnvalue">TrackerSparqlBuilder</span></a> *
+<a href="http://library.gnome.org/devel/libtracker-sparql/unstable/TrackerSparqlBuilder.html"><span class="returnvalue">TrackerSparqlBuilder</span></a> *
 </td>
 <td class="function_name">
 <a class="link" href="TrackerDecorator.html#tracker-decorator-info-get-sparql" title="tracker_decorator_info_get_sparql ()">tracker_decorator_info_get_sparql</a> <span class="c_punctuation">()</span>
@@ -171,7 +171,7 @@
 </div>
 <div class="refsect1">
 <a name="TrackerDecorator.properties"></a><h2>Properties</h2>
-<div class="informaltable"><table class="informaltable" border="0">
+<div class="informaltable"><table border="0">
 <colgroup>
 <col width="150px" class="properties_type">
 <col width="300px" class="properties_name">
@@ -204,7 +204,7 @@
 </div>
 <div class="refsect1">
 <a name="TrackerDecorator.signals"></a><h2>Signals</h2>
-<div class="informaltable"><table class="informaltable" border="0">
+<div class="informaltable"><table border="0">
 <colgroup>
 <col width="150px" class="signals_return">
 <col width="300px" class="signals_name">
@@ -226,7 +226,7 @@
 </div>
 <div class="refsect1">
 <a name="TrackerDecorator.other"></a><h2>Types and Values</h2>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="name">
 <col class="description">
@@ -268,12 +268,6 @@ TrackerDecorator implements
 </div>
 <div class="refsect1">
 <a name="TrackerDecorator.description"></a><h2>Description</h2>
-<p><a class="link" href="TrackerDecorator.html" title="TrackerDecorator"><span class="type">TrackerDecorator</span></a> watches for signal updates based on content changes
-in the database. When new files are added initially, only simple
-metadata exists, for example, name, size, mtime, etc. The
-<a class="link" href="TrackerDecorator.html" title="TrackerDecorator"><span class="type">TrackerDecorator</span></a> queues files for extended metadata extraction
-(i.e. for tracker-extract to fetch metadata specific to the file
-type) for example 'nmm:whiteBalance' for a picture.</p>
 </div>
 <div class="refsect1">
 <a name="TrackerDecorator.functions_details"></a><h2>Functions</h2>
@@ -281,13 +275,12 @@ type) for example 'nmm:whiteBalance' for a picture.</p>
 <a name="tracker-decorator-error-quark"></a><h3>tracker_decorator_error_quark ()</h3>
 <pre class="programlisting"><span class="returnvalue">GQuark</span>
 tracker_decorator_error_quark (<em class="parameter"><code><span class="type">void</span></code></em>);</pre>
-<p>Gives the caller the <span class="type">GQuark</span> used to identify <a class="link" href="TrackerDecorator.html" title="TrackerDecorator"><span class="type">TrackerDecorator</span></a> errors
-in <span class="type">GError</span> structures. The <span class="type">GQuark</span> is used as the domain for the error.</p>
+<p>
+</p>
 <div class="refsect3">
-<a name="tracker-decorator-error-quark.returns"></a><h4>Returns</h4>
-<p> the <span class="type">GQuark</span> used for the domain of a <span class="type">GError</span>.</p>
+<a name="id-1.3.4.6.11.2.5"></a><h4>Returns</h4>
+<p></p>
 </div>
-<p class="since">Since: 0.18.</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -298,8 +291,8 @@ tracker_decorator_get_data_source (<em class="parameter"><code><a class="link" h
 extracted the extended metadata. This is essentially an identifier
 so it's clear WHO has extracted this extended metadata.</p>
 <div class="refsect3">
-<a name="tracker-decorator-get-data-source.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.11.3.5"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -313,10 +306,11 @@ so it's clear WHO has extracted this extended metadata.</p>
 </table></div>
 </div>
 <div class="refsect3">
-<a name="tracker-decorator-get-data-source.returns"></a><h4>Returns</h4>
+<a name="id-1.3.4.6.11.3.6"></a><h4>Returns</h4>
 <p> a const gchar* or <span class="type">NULL</span> if an error happened.</p>
+<p></p>
 </div>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -326,8 +320,8 @@ tracker_decorator_get_class_names (<em class="parameter"><code><a class="link" h
 <p>This function returns a string list of class names which are being
 updated with extended metadata. An example would be 'nfo:Document'.</p>
 <div class="refsect3">
-<a name="tracker-decorator-get-class-names.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.11.4.5"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -341,24 +335,20 @@ updated with extended metadata. An example would be 'nfo:Document'.</p>
 </table></div>
 </div>
 <div class="refsect3">
-<a name="tracker-decorator-get-class-names.returns"></a><h4>Returns</h4>
+<a name="id-1.3.4.6.11.4.6"></a><h4>Returns</h4>
 <p> a const gchar** or <span class="type">NULL</span>. </p>
 <p><span class="annotation">[<acronym title="Don't free data after the code is done."><span class="acronym">transfer none</span></acronym>]</span></p>
 </div>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 <hr>
 <div class="refsect2">
 <a name="tracker-decorator-get-n-items"></a><h3>tracker_decorator_get_n_items ()</h3>
 <pre class="programlisting"><span class="returnvalue">guint</span>
 tracker_decorator_get_n_items (<em class="parameter"><code><a class="link" href="TrackerDecorator.html" title="TrackerDecorator"><span class="type">TrackerDecorator</span></a> *decorator</code></em>);</pre>
-<p>Get the number of items left in the queue to be processed. This
-indicates content that may already exist in Tracker but is waiting
-to be further flurished with metadata with a 2nd pass extraction or
-index.</p>
 <div class="refsect3">
-<a name="tracker-decorator-get-n-items.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.11.5.4"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -366,16 +356,17 @@ index.</p>
 </colgroup>
 <tbody><tr>
 <td class="parameter_name"><p>decorator</p></td>
-<td class="parameter_description"><p>a <a class="link" href="TrackerDecorator.html" title="TrackerDecorator"><span class="type">TrackerDecorator</span></a></p></td>
+<td class="parameter_description"><p>a <a class="link" href="TrackerDecorator.html" title="TrackerDecorator"><span class="type">TrackerDecorator</span></a>.</p></td>
 <td class="parameter_annotations"> </td>
 </tr></tbody>
 </table></div>
 </div>
 <div class="refsect3">
-<a name="tracker-decorator-get-n-items.returns"></a><h4>Returns</h4>
+<a name="id-1.3.4.6.11.5.5"></a><h4>Returns</h4>
 <p> the number of items queued to be processed, always &gt;= 0.</p>
+<p></p>
 </div>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -389,8 +380,8 @@ tracker_decorator_prepend_id (<em class="parameter"><code><a class="link" href="
  is the same IDs emitted by tracker-store when the database is updated for
 consistency. For details, see the GraphUpdated signal.</p>
 <div class="refsect3">
-<a name="tracker-decorator-prepend-id.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.11.6.5"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -415,7 +406,7 @@ consistency. For details, see the GraphUpdated signal.</p>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -428,8 +419,8 @@ queue. <em class="parameter"><code>id</code></em>
  is the same IDs emitted by tracker-store when the database is
 updated for consistency. For details, see the GraphUpdated signal.</p>
 <div class="refsect3">
-<a name="tracker-decorator-delete-id.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.11.7.5"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -449,7 +440,7 @@ updated for consistency. For details, see the GraphUpdated signal.</p>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -465,8 +456,8 @@ signals it's completion instead.</p>
 <p>This function will give a <span class="type">GError</span> if the miner is paused at the
 time it is called.</p>
 <div class="refsect3">
-<a name="tracker-decorator-next.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.11.8.6"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -497,7 +488,7 @@ time it is called.</p>
 </tbody>
 </table></div>
 </div>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -510,8 +501,8 @@ tracker_decorator_next_finish (<em class="parameter"><code><a class="link" href=
 <a class="link" href="TrackerDecorator.html#tracker-decorator-next" title="tracker_decorator_next ()"><code class="function">tracker_decorator_next()</code></a> to return the result of the task be it an
 error or not.</p>
 <div class="refsect3">
-<a name="tracker-decorator-next-finish.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.11.9.5"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -537,12 +528,12 @@ error or not.</p>
 </table></div>
 </div>
 <div class="refsect3">
-<a name="tracker-decorator-next-finish.returns"></a><h4>Returns</h4>
+<a name="id-1.3.4.6.11.9.6"></a><h4>Returns</h4>
 <p> a <span class="type">TrackerDecoratorInfo</span> on success or
 <span class="type">NULL</span> on error. Free with <a class="link" href="TrackerDecorator.html#tracker-decorator-info-unref" title="tracker_decorator_info_unref ()"><code class="function">tracker_decorator_info_unref()</code></a>. </p>
 <p><span class="annotation">[<acronym title="Free data after the code is done."><span class="acronym">transfer full</span></acronym>]</span></p>
 </div>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -551,88 +542,28 @@ error or not.</p>
 tracker_decorator_set_priority_rdf_types
                                (<em class="parameter"><code><a class="link" href="TrackerDecorator.html" title="TrackerDecorator"><span class="type">TrackerDecorator</span></a> *decorator</code></em>,
                                 <em class="parameter"><code>const <span class="type">gchar</span> * const *rdf_types</code></em>);</pre>
-<p>Re-evaluate the priority queues internally to ensure that
-<em class="parameter"><code>rdf_types</code></em>
- are handled before all other content. This is useful for
-applications that need their content available sooner than the
-standard time it would take to index content.</p>
-<div class="refsect3">
-<a name="tracker-decorator-set-priority-rdf-types.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
-<colgroup>
-<col width="150px" class="parameters_name">
-<col class="parameters_description">
-<col width="200px" class="parameters_annotations">
-</colgroup>
-<tbody>
-<tr>
-<td class="parameter_name"><p>decorator</p></td>
-<td class="parameter_description"><p>a <a class="link" href="TrackerDecorator.html" title="TrackerDecorator"><span class="type">TrackerDecorator</span></a></p></td>
-<td class="parameter_annotations"> </td>
-</tr>
-<tr>
-<td class="parameter_name"><p>rdf_types</p></td>
-<td class="parameter_description"><p>a string array of rdf types</p></td>
-<td class="parameter_annotations"> </td>
-</tr>
-</tbody>
-</table></div>
-</div>
-<p class="since">Since: 0.18.</p>
+<p>
+</p>
 </div>
 <hr>
 <div class="refsect2">
 <a name="tracker-decorator-info-ref"></a><h3>tracker_decorator_info_ref ()</h3>
 <pre class="programlisting"><span class="returnvalue">TrackerDecoratorInfo</span> *
 tracker_decorator_info_ref (<em class="parameter"><code><span class="type">TrackerDecoratorInfo</span> *info</code></em>);</pre>
-<p>Increases the reference count of <em class="parameter"><code>info</code></em>
- by 1.</p>
+<p>
+</p>
 <div class="refsect3">
-<a name="tracker-decorator-info-ref.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
-<colgroup>
-<col width="150px" class="parameters_name">
-<col class="parameters_description">
-<col width="200px" class="parameters_annotations">
-</colgroup>
-<tbody><tr>
-<td class="parameter_name"><p>info</p></td>
-<td class="parameter_description"><p>a <span class="type">TrackerDecoratorInfo</span></p></td>
-<td class="parameter_annotations"> </td>
-</tr></tbody>
-</table></div>
+<a name="id-1.3.4.6.11.11.5"></a><h4>Returns</h4>
+<p></p>
 </div>
-<div class="refsect3">
-<a name="tracker-decorator-info-ref.returns"></a><h4>Returns</h4>
-<p> the same <em class="parameter"><code>info</code></em>
-passed in, or <code class="literal">NULL</code> on error.</p>
-</div>
-<p class="since">Since: 0.18.</p>
 </div>
 <hr>
 <div class="refsect2">
 <a name="tracker-decorator-info-unref"></a><h3>tracker_decorator_info_unref ()</h3>
 <pre class="programlisting"><span class="returnvalue">void</span>
 tracker_decorator_info_unref (<em class="parameter"><code><span class="type">TrackerDecoratorInfo</span> *info</code></em>);</pre>
-<p>Decreases the reference count of <em class="parameter"><code>info</code></em>
- by 1 and frees it when the
-reference count reaches 0.</p>
-<div class="refsect3">
-<a name="tracker-decorator-info-unref.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
-<colgroup>
-<col width="150px" class="parameters_name">
-<col class="parameters_description">
-<col width="200px" class="parameters_annotations">
-</colgroup>
-<tbody><tr>
-<td class="parameter_name"><p>info</p></td>
-<td class="parameter_description"><p>a <span class="type">TrackerDecoratorInfo</span></p></td>
-<td class="parameter_annotations"> </td>
-</tr></tbody>
-</table></div>
-</div>
-<p class="since">Since: 0.18.</p>
+<p>
+</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -642,8 +573,8 @@ tracker_decorator_info_get_urn (<em class="parameter"><code><span class="type">T
 <p>A URN is a Uniform Resource Name and should be a unique identifier
 for a resource in the database.</p>
 <div class="refsect3">
-<a name="tracker-decorator-info-get-urn.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.11.13.5"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -657,10 +588,11 @@ for a resource in the database.</p>
 </table></div>
 </div>
 <div class="refsect3">
-<a name="tracker-decorator-info-get-urn.returns"></a><h4>Returns</h4>
+<a name="id-1.3.4.6.11.13.6"></a><h4>Returns</h4>
 <p> the URN for <span class="type">TrackerDecoratorInfo</span> on success or <span class="type">NULL</span> on error.</p>
+<p></p>
 </div>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -670,8 +602,8 @@ tracker_decorator_info_get_url (<em class="parameter"><code><span class="type">T
 <p>A URL is a Uniform Resource Locator and should be a location associated
 with a resource in the database. For example, 'file:///tmp/foo.txt'.</p>
 <div class="refsect3">
-<a name="tracker-decorator-info-get-url.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.11.14.5"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -685,10 +617,11 @@ with a resource in the database. For example, 'file:///tmp/foo.txt'.</p>
 </table></div>
 </div>
 <div class="refsect3">
-<a name="tracker-decorator-info-get-url.returns"></a><h4>Returns</h4>
+<a name="id-1.3.4.6.11.14.6"></a><h4>Returns</h4>
 <p> the URL for <span class="type">TrackerDecoratorInfo</span> on success or <span class="type">NULL</span> on error.</p>
+<p></p>
 </div>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -700,8 +633,8 @@ set of data. An example would be 'text/plain' for a clear text
 document or file.</p>
 <p>¹: http://en.wikipedia.org/wiki/MIME</p>
 <div class="refsect3">
-<a name="tracker-decorator-info-get-mimetype.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.11.15.6"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -715,25 +648,24 @@ document or file.</p>
 </table></div>
 </div>
 <div class="refsect3">
-<a name="tracker-decorator-info-get-mimetype.returns"></a><h4>Returns</h4>
+<a name="id-1.3.4.6.11.15.7"></a><h4>Returns</h4>
 <p> the MIME type for <span class="type">TrackerDecoratorInfo</span> on success or <span class="type">NULL</span> on error.</p>
+<p></p>
 </div>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 <hr>
 <div class="refsect2">
 <a name="tracker-decorator-info-get-task"></a><h3>tracker_decorator_info_get_task ()</h3>
 <pre class="programlisting"><span class="returnvalue">GTask</span> *
 tracker_decorator_info_get_task (<em class="parameter"><code><span class="type">TrackerDecoratorInfo</span> *info</code></em>);</pre>
-<p>Get the <span class="type">GTask</span> associated with retrieving extended metadata and
-information for a URN in Tracker.</p>
-<p>The task object's data (accessible with <code class="function">g_task_get_task_data()</code>) is the
-<a href="../html/TrackerSparqlBuilder.html#TrackerSparqlBuilder-struct"><span class="type">TrackerSparqlBuilder</span></a> that you must populate with the results of the
-metadata extraction. This can also be accessed with
-<a class="link" href="TrackerDecorator.html#tracker-decorator-info-get-sparql" title="tracker_decorator_info_get_sparql ()"><code class="function">tracker_decorator_info_get_sparql()</code></a>.</p>
+<p>When processing resource updates in the database, the <span class="type">GTask</span> APIs
+are used. This function returns the particular <span class="type">GTask</span> used for
+<em class="parameter"><code>info</code></em>
+.</p>
 <div class="refsect3">
-<a name="tracker-decorator-info-get-task.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.11.16.5"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -747,26 +679,25 @@ metadata extraction. This can also be accessed with
 </table></div>
 </div>
 <div class="refsect3">
-<a name="tracker-decorator-info-get-task.returns"></a><h4>Returns</h4>
-<p> the <span class="type">GTask</span> for <span class="type">TrackerDecoratorInfo</span> on
-success or <span class="type">NULL</span> if there is no existing <span class="type">GTask</span>. </p>
+<a name="id-1.3.4.6.11.16.6"></a><h4>Returns</h4>
+<p> the <span class="type">GTask</span> on success or <span class="type">NULL</span> on error. </p>
 <p><span class="annotation">[<acronym title="Don't free data after the code is done."><span class="acronym">transfer none</span></acronym>]</span></p>
 </div>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 <hr>
 <div class="refsect2">
 <a name="tracker-decorator-info-get-sparql"></a><h3>tracker_decorator_info_get_sparql ()</h3>
-<pre class="programlisting"><a href="../html/TrackerSparqlBuilder.html#TrackerSparqlBuilder-struct"><span class="returnvalue">TrackerSparqlBuilder</span></a> *
+<pre class="programlisting"><a href="http://library.gnome.org/devel/libtracker-sparql/unstable/TrackerSparqlBuilder.html"><span class="returnvalue">TrackerSparqlBuilder</span></a> *
 tracker_decorator_info_get_sparql (<em class="parameter"><code><span class="type">TrackerDecoratorInfo</span> *info</code></em>);</pre>
-<p>A <a href="../html/TrackerSparqlBuilder.html#TrackerSparqlBuilder-struct"><span class="type">TrackerSparqlBuilder</span></a> allows the caller to extract the final
+<p>A <a href="http://library.gnome.org/devel/libtracker-sparql/unstable/TrackerSparqlBuilder.html"><span class="type">TrackerSparqlBuilder</span></a> allows the caller to extract the final
 SPARQL used to insert the extracted metadata into the database for
 the resource being processed.</p>
 <p>This function calls <code class="function">g_task_get_task_data()</code> on the return value of
 <a class="link" href="TrackerDecorator.html#tracker-decorator-info-get-task" title="tracker_decorator_info_get_task ()"><code class="function">tracker_decorator_info_get_task()</code></a>.</p>
 <div class="refsect3">
-<a name="tracker-decorator-info-get-sparql.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.11.17.6"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -780,11 +711,11 @@ the resource being processed.</p>
 </table></div>
 </div>
 <div class="refsect3">
-<a name="tracker-decorator-info-get-sparql.returns"></a><h4>Returns</h4>
-<p> a <a href="../html/TrackerSparqlBuilder.html#TrackerSparqlBuilder-struct"><span class="type">TrackerSparqlBuilder</span></a> on success or <span class="type">NULL</span> on error. </p>
+<a name="id-1.3.4.6.11.17.7"></a><h4>Returns</h4>
+<p> a <a href="http://library.gnome.org/devel/libtracker-sparql/unstable/TrackerSparqlBuilder.html"><span class="type">TrackerSparqlBuilder</span></a> on success or <span class="type">NULL</span> on error. </p>
 <p><span class="annotation">[<acronym title="Don't free data after the code is done."><span class="acronym">transfer none</span></acronym>]</span></p>
 </div>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 </div>
 <div class="refsect1">
@@ -792,8 +723,7 @@ the resource being processed.</p>
 <div class="refsect2">
 <a name="TrackerDecorator-struct"></a><h3>struct TrackerDecorator</h3>
 <pre class="programlisting">struct TrackerDecorator;</pre>
-<p>Abstract miner object for passive extended metadata indexing, i.e.
-data past the basic information such as file name, size, etc.</p>
+<p>Abstract miner object.</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -812,14 +742,19 @@ data past the basic information such as file name, size, etc.</p>
 specific to file types by talking to tracker-extract.</p>
 <p>Based on <a class="link" href="TrackerMiner.html#TrackerMinerClass" title="TrackerMinerClass"><span class="type">TrackerMinerClass</span></a>.</p>
 <div class="refsect3">
-<a name="TrackerDecoratorClass.members"></a><h4>Members</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.12.3.6"></a><h4>Members</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="300px" class="struct_members_name">
 <col class="struct_members_description">
 <col width="200px" class="struct_members_annotations">
 </colgroup>
 <tbody>
+<tr>
+<td class="struct_member_name"><p><a class="link" href="TrackerMiner.html#TrackerMinerClass" title="TrackerMinerClass"><span class="type">TrackerMinerClass</span></a> <em class="structfield"><code><a name="TrackerDecoratorClass.parent-class"></a>parent_class</code></em>;</p></td>
+<td class="struct_member_description"><p>parent object class.</p></td>
+<td class="struct_member_annotations"> </td>
+</tr>
 <tr>
 <td class="struct_member_name"><p><em class="structfield"><code><a name="TrackerDecoratorClass.items-available"></a>items_available</code></em> ()</p></td>
 <td class="struct_member_description"><p>Called when there are resources to be processed.</p></td>
@@ -844,8 +779,8 @@ specific to file types by talking to tracker-extract.</p>
 <a name="TrackerDecoratorError"></a><h3>enum TrackerDecoratorError</h3>
 <p>Possible errors returned when calling <a class="link" href="TrackerDecorator.html#tracker-decorator-next-finish" title="tracker_decorator_next_finish ()"><code class="function">tracker_decorator_next_finish()</code></a>.</p>
 <div class="refsect3">
-<a name="TrackerDecoratorError.members"></a><h4>Members</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.12.4.4"></a><h4>Members</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="300px" class="enum_members_name">
 <col class="enum_members_description">
@@ -893,7 +828,7 @@ because the miner is currently paused.</p>
 <p>Number of items per update batch.</p>
 <p>Flags: Read / Write</p>
 <p>Allowed values: &gt;= 0</p>
-<p>Default value: 200</p>
+<p>Default value: 100</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -922,8 +857,8 @@ user_function (<a class="link" href="TrackerDecorator.html" title="TrackerDecora
 <a class="link" href="TrackerDecorator.html" title="TrackerDecorator"><span class="type">TrackerDecorator</span></a> has finished extracted extended metadata
 for resources in the database.</p>
 <div class="refsect3">
-<a name="TrackerDecorator-finished.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.14.2.5"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -944,7 +879,7 @@ for resources in the database.</p>
 </table></div>
 </div>
 <p>Flags: Run Last</p>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 <hr>
 <div class="refsect2">
@@ -956,8 +891,8 @@ user_function (<a class="link" href="TrackerDecorator.html" title="TrackerDecora
 <a class="link" href="TrackerDecorator.html" title="TrackerDecorator"><span class="type">TrackerDecorator</span></a> sees resources that are available for
 extended metadata extraction.</p>
 <div class="refsect3">
-<a name="TrackerDecorator-items-available.parameters"></a><h4>Parameters</h4>
-<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<a name="id-1.3.4.6.14.3.5"></a><h4>Parameters</h4>
+<div class="informaltable"><table width="100%" border="0">
 <colgroup>
 <col width="150px" class="parameters_name">
 <col class="parameters_description">
@@ -978,15 +913,22 @@ extended metadata extraction.</p>
 </table></div>
 </div>
 <p>Flags: Run Last</p>
-<p class="since">Since: 0.18.</p>
+<p class="since">Since 0.18</p>
 </div>
 </div>
 <div class="refsect1">
 <a name="TrackerDecorator.see-also"></a><h2>See Also</h2>
-<p><a class="link" href="TrackerDecoratorFS.html" title="TrackerDecoratorFS"><span class="type">TrackerDecoratorFS</span></a></p>
+<p><a class="link" href="TrackerDecoratorFS.html" title="TrackerDecoratorFS"><span class="type">TrackerDecoratorFS</span></a>
+<a class="link" href="TrackerDecorator.html" title="TrackerDecorator"><span class="type">TrackerDecorator</span></a> watches for signal updates based on file changes
+in the database. When new files are added initially, only simple
+metadata exists, for example, name, size, mtime, etc. The
+<a class="link" href="TrackerDecorator.html" title="TrackerDecorator"><span class="type">TrackerDecorator</span></a> queues files for extended metadata extraction
+(i.e. for tracker-extract to fetch metadata specific to the file
+type) for example 'nmm:whiteBalance' for a picture.</p>
 </div>
 </div>
 <div class="footer">
-<hr>Generated by GTK-Doc V1.25</div>
+<hr>
+          Generated by GTK-Doc V1.21</div>
 </body>
 </html>

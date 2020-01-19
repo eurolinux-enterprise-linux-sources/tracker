@@ -36,11 +36,9 @@ typedef enum {
 } tag_type;
 
 typedef struct {
-	TrackerResource *metadata;
+	TrackerSparqlBuilder *metadata;
 	tag_type current;
 	guint in_body : 1;
-	guint has_license : 1;
-	guint has_description : 1;
 	GString *title;
 	GString *plain_text;
 	guint n_bytes_remaining;
@@ -111,9 +109,9 @@ parser_start_element (void           *data,
 
 			href = lookup_attribute (attrs, "href");
 
-			if (href && !pd->has_license) {
-				tracker_resource_add_string (pd->metadata, "nie:license", href);
-				pd->has_license = TRUE;
+			if (href) {
+				tracker_sparql_builder_predicate (pd->metadata, "nie:license");
+				tracker_sparql_builder_object_unvalidated (pd->metadata, href);
 			}
 		}
 	} else if (g_ascii_strcasecmp (name, "title") == 0) {
@@ -125,11 +123,13 @@ parser_start_element (void           *data,
 			author = lookup_attribute (attrs, "content");
 
 			if (author) {
-				TrackerResource *creator = tracker_extract_new_contact (author);
-
-				tracker_resource_add_relation (pd->metadata, "nco:creator", creator);
-
-				g_object_unref (creator);
+				tracker_sparql_builder_predicate (pd->metadata, "nco:creator");
+				tracker_sparql_builder_object_blank_open (pd->metadata);
+				tracker_sparql_builder_predicate (pd->metadata, "a");
+				tracker_sparql_builder_object (pd->metadata, "nco:Contact");
+				tracker_sparql_builder_predicate (pd->metadata, "nco:fullname");
+				tracker_sparql_builder_object_unvalidated (pd->metadata, author);
+				tracker_sparql_builder_object_blank_close (pd->metadata);
 			}
 		}
 
@@ -138,9 +138,9 @@ parser_start_element (void           *data,
 
 			desc = lookup_attribute (attrs,"content");
 
-			if (desc && !pd->has_description) {
-				tracker_resource_set_string (pd->metadata, "nie:description", desc);
-				pd->has_description = TRUE;
+			if (desc) {
+				tracker_sparql_builder_predicate (pd->metadata, "nie:description");
+				tracker_sparql_builder_object_unvalidated (pd->metadata, desc);
 			}
 		}
 
@@ -158,7 +158,8 @@ parser_start_element (void           *data,
 							continue;
 						}
 
-						tracker_resource_add_string (pd->metadata, "nie:keyword", g_strstrip (keywords[i]));
+						tracker_sparql_builder_predicate (pd->metadata, "nie:keyword");
+						tracker_sparql_builder_object_unvalidated (pd->metadata, g_strstrip (keywords[i]));
 					}
 
 					g_strfreev (keywords);
@@ -231,7 +232,7 @@ parser_characters (void          *data,
 G_MODULE_EXPORT gboolean
 tracker_extract_get_metadata (TrackerExtractInfo *info)
 {
-	TrackerResource *metadata;
+	TrackerSparqlBuilder *metadata;
 	GFile *file;
 	TrackerConfig *config;
 	htmlDocPtr doc;
@@ -272,10 +273,11 @@ tracker_extract_get_metadata (TrackerExtractInfo *info)
 		NULL  /* xmlStructuredErrorFunc */
 	};
 
+	metadata = tracker_extract_info_get_metadata_builder (info);
 	file = tracker_extract_info_get_file (info);
 
-	metadata = tracker_resource_new (NULL);
-	tracker_resource_add_uri (metadata, "rdf:type", "nfo:HtmlDocument");
+	tracker_sparql_builder_predicate (metadata, "a");
+	tracker_sparql_builder_object (metadata, "nfo:HtmlDocument");
 
 	pd.metadata = metadata;
 	pd.current = -1;
@@ -299,19 +301,18 @@ tracker_extract_get_metadata (TrackerExtractInfo *info)
 
 	if (pd.title->str &&
 	    *pd.title->str != '\0') {
-		tracker_resource_set_string (metadata, "nie:title", pd.title->str);
+		tracker_sparql_builder_predicate (metadata, "nie:title");
+		tracker_sparql_builder_object_unvalidated (metadata, pd.title->str);
 	}
 
 	if (pd.plain_text->str &&
 	    *pd.plain_text->str != '\0') {
-		tracker_resource_set_string (metadata, "nie:plainTextContent", pd.plain_text->str);
+		tracker_sparql_builder_predicate (metadata, "nie:plainTextContent");
+		tracker_sparql_builder_object_unvalidated (metadata, pd.plain_text->str);
 	}
 
 	g_string_free (pd.plain_text, TRUE);
 	g_string_free (pd.title, TRUE);
-
-	tracker_extract_info_set_resource (info, metadata);
-	g_object_unref (metadata);
 
 	return TRUE;
 }

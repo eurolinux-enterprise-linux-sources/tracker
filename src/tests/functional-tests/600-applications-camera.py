@@ -22,109 +22,23 @@
 Tests trying to simulate the behaviour of applications working with tracker
 """
 
-import os
+import sys,os,dbus
+import unittest
+import time
 import random
+import string
+import datetime
+import shutil
+import fcntl
 
+from common.utils import configuration as cfg
 import unittest2 as ut
 from common.utils.applicationstest import CommonTrackerApplicationTest as CommonTrackerApplicationTest
 from common.utils.helpers import log
 
+MINER_FS_IDLE_TIMEOUT = 30
 
-class TrackerCameraTestSuite (CommonTrackerApplicationTest):
-    """
-    Common functionality for camera tests.
-    """
-
-    def insert_photo_resource_info (self, urn, file_url):
-        """
-        Insert new photo resource in the store, including nie:mimeType and nie:url
-        """
-        insert = """
-        INSERT { <%(urn)s>
-            a nie:InformationElement,
-            nie:DataObject,
-            nfo:Image,
-            nfo:Media,
-            nfo:Visual,
-            nmm:Photo
-        }
-
-        DELETE { <%(urn)s> nie:mimeType ?_1 }
-        WHERE { <%(urn)s> nie:mimeType ?_1 }
-
-        INSERT { <%(urn)s>
-            a rdfs:Resource ;
-            nie:mimeType \"image/jpeg\"
-        }
-
-        DELETE { <%(urn)s> nie:url ?_2 }
-        WHERE { <%(urn)s> nie:url ?_2 }
-
-        INSERT { <%(urn)s>
-            a rdfs:Resource ;
-            nie:url \"%(file_url)s\" ;
-            nie:isStoredAs <%(urn)s>
-        }
-        """ % locals()
-        self.tracker.update (insert)
-        self.assertEquals (self.get_urn_count_by_url (file_url), 1)
-
-    def insert_video_resource_info (self, urn, file_url):
-        """
-        Insert new video resource in the store, including nie:mimeType and nie:url
-        """
-        insert = """
-        INSERT { <%(urn)s>
-            a nie:InformationElement,
-            nie:DataObject,
-            nfo:Video,
-            nfo:Media,
-            nfo:Visual,
-            nmm:Video
-        }
-
-        DELETE { <%(urn)s> nie:mimeType ?_1 }
-        WHERE { <%(urn)s> nie:mimeType ?_1 }
-
-        INSERT { <%(urn)s>
-            a rdfs:Resource ;
-            nie:mimeType \"video/mp4\"
-        }
-
-        DELETE { <%(urn)s> nie:url ?_2 }
-        WHERE { <%(urn)s> nie:url ?_2 }
-
-        INSERT { <%(urn)s>
-            a rdfs:Resource ;
-            nie:url \"%(file_url)s\" ;
-            nie:isStoredAs <%(urn)s>
-        }
-        """ % locals()
-        self.tracker.update (insert)
-        self.assertEquals (self.get_urn_count_by_url (file_url), 1)
-
-    def insert_dummy_location_info (self, fileurn, geolocationurn, postaladdressurn):
-        """
-        Insert placeholder location info for a file
-        """
-        location_insert = """
-        INSERT { <%s> a             nco:PostalAddress ;
-                      nco:country  \"SPAIN\" ;
-                      nco:locality \"Tres Cantos\"
-        }
-
-        INSERT { <%s> a                 slo:GeoLocation ;
-                      slo:postalAddress <%s>
-        }
-
-        INSERT { <%s> a            rdfs:Resource ;
-                      slo:location <%s>
-        }
-        """ % (postaladdressurn, geolocationurn, postaladdressurn, fileurn, geolocationurn)
-        self.tracker.update (location_insert)
-
-
-class TrackerCameraPicturesApplicationTests (TrackerCameraTestSuite):
+class TrackerCameraPicturesApplicationTests (CommonTrackerApplicationTest):
 
     def test_01_camera_picture (self):
         """
@@ -141,7 +55,32 @@ class TrackerCameraPicturesApplicationTests (TrackerCameraTestSuite):
         dest_filepath = os.path.join (self.get_dest_dir (), self.get_test_image ())
         dest_fileuri = "file://" + dest_filepath
 
-        self.insert_photo_resource_info (fileurn, dest_fileuri)
+        # Insert new resource in the store, including nie:mimeType and nie:url
+        insert = """
+        INSERT { <%s> a nie:InformationElement,
+                        nie:DataObject,
+                        nfo:Image,
+                        nfo:Media,
+                        nfo:Visual,
+                        nmm:Photo
+        }
+
+        DELETE { <%s> nie:mimeType ?_1 }
+        WHERE { <%s> nie:mimeType ?_1 }
+
+        INSERT { <%s> a            rdfs:Resource ;
+                      nie:mimeType \"image/jpeg\"
+        }
+
+        DELETE { <%s> nie:url ?_2 }
+        WHERE { <%s> nie:url ?_2 }
+
+        INSERT { <%s> a       rdfs:Resource ;
+                      nie:url \"%s\"
+        }
+        """ % (fileurn, fileurn, fileurn, fileurn, fileurn, fileurn, fileurn, dest_fileuri)
+        self.tracker.update (insert)
+        self.assertEquals (self.get_urn_count_by_url (dest_fileuri), 1)
 
         # Copy the image to the dest path
         self.slowcopy_file (origin_filepath, dest_filepath)
@@ -154,6 +93,7 @@ class TrackerCameraPicturesApplicationTests (TrackerCameraTestSuite):
         os.remove (dest_filepath)
         self.system.store.await_resource_deleted (dest_id)
         self.assertEquals (self.get_urn_count_by_url (dest_fileuri), 0)
+
 
     def test_02_camera_picture_geolocation (self):
         """
@@ -173,7 +113,32 @@ class TrackerCameraPicturesApplicationTests (TrackerCameraTestSuite):
         geolocationurn = "tracker://test_camera_picture_02_geolocation/" + str(random.randint (0,100))
         postaladdressurn = "tracker://test_camera_picture_02_postaladdress/" + str(random.randint (0,100))
 
-        self.insert_photo_resource_info (fileurn, dest_fileuri)
+        # Insert new resource in the store, including nie:mimeType and nie:url
+        insert = """
+        INSERT { <%s> a nie:InformationElement,
+                        nie:DataObject,
+                        nfo:Image,
+                        nfo:Media,
+                        nfo:Visual,
+                        nmm:Photo
+        }
+
+        DELETE { <%s> nie:mimeType ?_1 }
+        WHERE { <%s> nie:mimeType ?_1 }
+
+        INSERT { <%s> a            rdfs:Resource ;
+                      nie:mimeType \"image/jpeg\"
+        }
+
+        DELETE { <%s> nie:url ?_2 }
+        WHERE { <%s> nie:url ?_2 }
+
+        INSERT { <%s> a       rdfs:Resource ;
+                      nie:url \"%s\"
+        }
+        """ % (fileurn, fileurn, fileurn, fileurn, fileurn, fileurn, fileurn, dest_fileuri)
+        self.tracker.update (insert)
+        self.assertEquals (self.get_urn_count_by_url (dest_fileuri), 1)
 
         # FIRST, open the file for writing, and just write some garbage, to simulate that
         # we already started recording the video...
@@ -183,7 +148,21 @@ class TrackerCameraPicturesApplicationTests (TrackerCameraTestSuite):
         fdest.seek (0)
 
         # SECOND, set slo:location
-        self.insert_dummy_location_info (fileurn, geolocationurn, postaladdressurn)
+        location_insert = """
+        INSERT { <%s> a             nco:PostalAddress ;
+                      nco:country  \"SPAIN\" ;
+                      nco:locality \"Tres Cantos\"
+        }
+
+        INSERT { <%s> a                 slo:GeoLocation ;
+                      slo:postalAddress <%s>
+        }
+
+        INSERT { <%s> a            rdfs:Resource ;
+                      slo:location <%s>
+        }
+        """ % (postaladdressurn, geolocationurn, postaladdressurn, fileurn, geolocationurn)
+        self.tracker.update (location_insert)
 
         #THIRD, start copying the image to the dest path
         original_file = os.path.join (self.get_data_dir (),self.get_test_image ())
@@ -202,7 +181,7 @@ class TrackerCameraPicturesApplicationTests (TrackerCameraTestSuite):
         self.assertEquals (self.get_urn_count_by_url (dest_fileuri), 0)
 
 
-class TrackerCameraVideosApplicationTests (TrackerCameraTestSuite):
+class TrackerCameraVideosApplicationTests (CommonTrackerApplicationTest):
 
     def test_01_camera_video (self):
         """
@@ -219,7 +198,32 @@ class TrackerCameraVideosApplicationTests (TrackerCameraTestSuite):
         dest_filepath = os.path.join (self.get_dest_dir (), self.get_test_video ())
         dest_fileuri = "file://" + dest_filepath
 
-        self.insert_video_resource_info(fileurn, dest_fileuri)
+        # Insert new resource in the store, including nie:mimeType and nie:url
+        insert = """
+        INSERT { <%s> a nie:InformationElement,
+                        nie:DataObject,
+                        nfo:Video,
+                        nfo:Media,
+                        nfo:Visual,
+                        nmm:Video
+        }
+
+        DELETE { <%s> nie:mimeType ?_1 }
+        WHERE { <%s> nie:mimeType ?_1 }
+
+        INSERT { <%s> a            rdfs:Resource ;
+                      nie:mimeType \"video/mp4\"
+        }
+
+        DELETE { <%s> nie:url ?_2 }
+        WHERE { <%s> nie:url ?_2 }
+
+        INSERT { <%s> a       rdfs:Resource ;
+                      nie:url \"%s\"
+        }
+        """ % (fileurn, fileurn, fileurn, fileurn, fileurn, fileurn, fileurn, dest_fileuri)
+        self.tracker.update (insert)
+        self.assertEquals (self.get_urn_count_by_url (dest_fileuri), 1)
 
         # Copy the image to the dest path
         self.slowcopy_file (origin_filepath, dest_filepath)
@@ -253,7 +257,32 @@ class TrackerCameraVideosApplicationTests (TrackerCameraTestSuite):
         geolocationurn = "tracker://test_camera_video_02_geolocation/" + str(random.randint (0,100))
         postaladdressurn = "tracker://test_camera_video_02_postaladdress/" + str(random.randint (0,100))
 
-        self.insert_video_resource_info (fileurn, dest_fileuri)
+        # Insert new resource in the store, including nie:mimeType and nie:url
+        insert = """
+        INSERT { <%s> a nie:InformationElement,
+                        nie:DataObject,
+                        nfo:Video,
+                        nfo:Media,
+                        nfo:Visual,
+                        nmm:Video
+        }
+
+        DELETE { <%s> nie:mimeType ?_1 }
+        WHERE { <%s> nie:mimeType ?_1 }
+
+        INSERT { <%s> a            rdfs:Resource ;
+                      nie:mimeType \"video/mp4\"
+        }
+
+        DELETE { <%s> nie:url ?_2 }
+        WHERE { <%s> nie:url ?_2 }
+
+        INSERT { <%s> a       rdfs:Resource ;
+                      nie:url \"%s\"
+        }
+        """ % (fileurn, fileurn, fileurn, fileurn, fileurn, fileurn, fileurn, dest_fileuri)
+        self.tracker.update (insert)
+        self.assertEquals (self.get_urn_count_by_url (dest_fileuri), 1)
 
         # FIRST, open the file for writing, and just write some garbage, to simulate that
         # we already started recording the video...
@@ -263,7 +292,21 @@ class TrackerCameraVideosApplicationTests (TrackerCameraTestSuite):
         fdest.seek (0)
 
         # SECOND, set slo:location
-        self.insert_dummy_location_info (fileurn, geolocationurn, postaladdressurn)
+        location_insert = """
+        INSERT { <%s> a             nco:PostalAddress ;
+                      nco:country  \"SPAIN\" ;
+                      nco:locality \"Tres Cantos\"
+        }
+
+        INSERT { <%s> a                 slo:GeoLocation ;
+                      slo:postalAddress <%s>
+        }
+
+        INSERT { <%s> a            rdfs:Resource ;
+                      slo:location <%s>
+        }
+        """ % (postaladdressurn, geolocationurn, postaladdressurn, fileurn, geolocationurn)
+        self.tracker.update (location_insert)
 
         #THIRD, start copying the image to the dest path
         self.slowcopy_file_fd (origin_filepath, fdest)

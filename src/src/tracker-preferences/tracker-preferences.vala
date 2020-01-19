@@ -21,7 +21,6 @@
 using Gtk;
 using GLib;
 using Tracker;
-using Posix;
 
 [CCode (cname = "TRACKER_UI_DIR")]
 extern static const string UIDIR;
@@ -34,6 +33,7 @@ public class Tracker.Preferences {
 	private GLib.Settings settings_miner_fs = null;
 	private GLib.Settings settings_extract = null;
 
+	private bool suggest_reindex = false;
 	private bool suggest_restart = false;
 
 	private const string UI_FILE = "tracker-preferences.ui";
@@ -45,6 +45,7 @@ public class Tracker.Preferences {
 	private Window window;
 	private CheckButton checkbutton_enable_index_on_battery_first_time;
 	private CheckButton checkbutton_enable_index_on_battery;
+	private SpinButton spinbutton_delay;
 	private CheckButton checkbutton_enable_monitoring;
 	private CheckButton checkbutton_index_removable_media;
 	private CheckButton checkbutton_index_optical_discs;
@@ -73,6 +74,7 @@ public class Tracker.Preferences {
 	private CheckButton checkbutton_index_file_content;
 	private CheckButton checkbutton_index_numbers;
 	private Box hbox_duplicate_warning;
+	private Button button_reindex;
 	private Notebook notebook;
 
 	public Preferences () {
@@ -133,6 +135,7 @@ public class Tracker.Preferences {
 		checkbutton_enable_monitoring = builder.get_object ("checkbutton_enable_monitoring") as CheckButton;
 		checkbutton_enable_index_on_battery = builder.get_object ("checkbutton_enable_index_on_battery") as CheckButton;
 		checkbutton_enable_index_on_battery_first_time = builder.get_object ("checkbutton_enable_index_on_battery_first_time") as CheckButton;
+		spinbutton_delay = builder.get_object ("spinbutton_delay") as SpinButton;
 		checkbutton_index_removable_media = builder.get_object ("checkbutton_index_removable_media") as CheckButton;
 		checkbutton_index_optical_discs = builder.get_object ("checkbutton_index_optical_discs") as CheckButton;
 		checkbutton_index_optical_discs.set_sensitive (checkbutton_index_removable_media.active);
@@ -151,6 +154,8 @@ public class Tracker.Preferences {
 		checkbutton_index_file_content = builder.get_object ("checkbutton_index_file_content") as CheckButton;
 		checkbutton_index_numbers = builder.get_object ("checkbutton_index_numbers") as CheckButton;
 		hbox_duplicate_warning = builder.get_object ("hbox_duplicate_warning") as Box;
+
+		button_reindex = builder.get_object ("button_reindex") as Button;
 
 		treeview_index = builder.get_object ("treeview_index") as TreeView;
 		treeviewcolumn_index1 = builder.get_object ("treeviewcolumn_index1") as TreeViewColumn;
@@ -174,6 +179,8 @@ public class Tracker.Preferences {
 		checkbutton_enable_index_on_battery.active = settings_miner_fs.get_boolean ("index-on-battery");
 		checkbutton_enable_index_on_battery_first_time.set_sensitive (!checkbutton_enable_index_on_battery.active);
 		checkbutton_enable_index_on_battery_first_time.active = settings_miner_fs.get_boolean ("index-on-battery-first-time");
+		spinbutton_delay.set_increments (1, 1);
+		spinbutton_delay.value = (double) settings_miner_fs.get_int ("initial-sleep");
 		checkbutton_enable_monitoring.active = settings_miner_fs.get_boolean ("enable-monitors");
 		checkbutton_index_removable_media.active = settings_miner_fs.get_boolean ("index-removable-devices");
 		checkbutton_index_optical_discs.set_sensitive (checkbutton_index_removable_media.active);
@@ -236,6 +243,50 @@ public class Tracker.Preferences {
 		window.show ();
 	}
 
+	void reindex () {
+		stdout.printf ("Reindexing...\n");
+
+		string output, errors;
+		int status;
+
+		try {
+			Process.spawn_sync (null, /* working dir */
+			                    {"tracker-control", "--hard-reset", "--start" },
+			                    null, /* env */
+			                    SpawnFlags.SEARCH_PATH,
+			                    null,
+			                    out output,
+			                    out errors,
+			                    out status);
+		} catch (GLib.Error e) {
+			stderr.printf ("Could not reindex: %s", e.message);
+		}
+		stdout.printf ("%s\n", output);
+		stdout.printf ("Finishing...\n");
+	}
+
+	void restart () {
+		stdout.printf ("Restarting...\n");
+
+		string output, errors;
+		int status;
+
+		try {
+			Process.spawn_sync (null, /* working dir */
+			                    {"tracker-control", "--terminate=miners", "--terminate=store", "--start" },
+			                    null, /* env */
+			                    SpawnFlags.SEARCH_PATH,
+			                    null,
+			                    out output,
+			                    out errors,
+			                    out status);
+		} catch (GLib.Error e) {
+			stderr.printf ("Could not restart: %s", e.message);
+		}
+		stdout.printf ("%s\n", output);
+		stdout.printf ("Finishing...\n");
+	}
+
 	// This function is used to fix up the parameter ordering for callbacks
 	// from the .ui file which has the callback names.
 	[CCode (instance_pos = -1)]
@@ -247,7 +298,7 @@ public class Tracker.Preferences {
 		void* sym;
 
 		if (!module.symbol (handler_name, out sym)) {
-			warning ("Symbol not found! %s\n", handler_name);
+			stdout.printf ("Symbol not found! %s\n", handler_name);
 		} else {
 			Signal.connect (object, signal_name, (GLib.Callback) sym, this);
 		}
@@ -297,16 +348,52 @@ public class Tracker.Preferences {
 			settings_extract.apply ();
 			debug ("  tracker-extract: Done");
 
-			if (suggest_restart) {
+			if (suggest_reindex) {
 				Dialog dialog = new MessageDialog (window,
 				                                   DialogFlags.DESTROY_WITH_PARENT,
-				                                   MessageType.INFO,
-				                                   ButtonsType.CLOSE,
-				                                   _("Some of the requested changes will take effect on the next session restart."),
+				                                   MessageType.QUESTION,
+				                                   ButtonsType.NONE,
+				                                   "%s\n\n%s\n\n%s",
+				                                   _("The changes you have made to your preferences here require a reindex to ensure all your data is correctly indexed as you have requested."),
+				                                   _("This will close this dialog!"),
+				                                   _("Would you like to reindex now?"),
 				                                   null);
-				/* Reset this suggestion */
-				suggest_restart = false;
-				dialog.run ();
+				dialog.add_buttons (_("Reindex"), ResponseType.YES,
+				                    _("Do nothing"), ResponseType.NO,
+				                    null);
+
+				dialog.set_default_response(ResponseType.NO);
+
+				if (dialog.run () == ResponseType.YES) {
+					reindex ();
+				} else {
+					/* Reset this suggestion */
+					suggest_reindex = false;
+				}
+
+				dialog.destroy ();
+			} else if (suggest_restart) {
+				Dialog dialog = new MessageDialog (window,
+				                                   DialogFlags.DESTROY_WITH_PARENT,
+				                                   MessageType.QUESTION,
+				                                   ButtonsType.NONE,
+				                                   "%s\n\n%s",
+				                                   _("The changes you have made to your preferences require restarting tracker processes."),
+				                                   _("Would you like to restart now?"),
+				                                   null);
+				dialog.add_buttons (_("Restart Tracker"), ResponseType.YES,
+				                    _("Do nothing"), ResponseType.NO,
+				                    null);
+
+				dialog.set_default_response(ResponseType.NO);
+
+				if (dialog.run () == ResponseType.YES) {
+					restart ();
+				} else {
+					/* Reset this suggestion */
+					suggest_restart = false;
+				}
+
 				dialog.destroy ();
 			}
 
@@ -320,19 +407,27 @@ public class Tracker.Preferences {
 	}
 
 	[CCode (instance_pos = -1)]
+	public void spinbutton_delay_value_changed_cb (SpinButton source) {
+		settings_miner_fs.set_int ("initial-sleep", source.get_value_as_int ());
+	}
+
+	[CCode (instance_pos = -1)]
 	public void checkbutton_enable_monitoring_toggled_cb (CheckButton source) {
 		settings_miner_fs.set_boolean ("enable-monitors", source.active);
+		suggest_restart = true;
 	}
 
 	[CCode (instance_pos = -1)]
 	public void checkbutton_enable_index_on_battery_toggled_cb (CheckButton source) {
 		settings_miner_fs.set_boolean ("index-on-battery", source.active);
 		checkbutton_enable_index_on_battery_first_time.set_sensitive (!source.active);
+		suggest_restart = true;
 	}
 
 	[CCode (instance_pos = -1)]
 	public void checkbutton_enable_index_on_battery_first_time_toggled_cb (CheckButton source) {
 		settings_miner_fs.set_boolean ("index-on-battery-first-time", source.active);
+		suggest_restart = true;
 	}
 
 	[CCode (instance_pos = -1)]
@@ -384,36 +479,43 @@ public class Tracker.Preferences {
 	[CCode (instance_pos = -1)]
 	public void button_ignored_directories_globs_add_clicked_cb (Button source) {
 		store_add_value_dialog (liststore_ignored_directories);
+		suggest_reindex = true;
 	}
 
 	[CCode (instance_pos = -1)]
 	public void button_ignored_directories_add_clicked_cb (Button source) {
 		store_add_dir (liststore_ignored_directories);
+		suggest_reindex = true;
 	}
 
 	[CCode (instance_pos = -1)]
 	public void button_ignored_directories_remove_clicked_cb (Button source) {
 		store_del_dir (treeview_ignored_directories);
+		suggest_reindex = true;
 	}
 
 	[CCode (instance_pos = -1)]
 	public void button_ignored_directories_with_content_add_clicked_cb (Button source) {
 		store_add_value_dialog (liststore_ignored_directories_with_content);
+		suggest_reindex = true;
 	}
 
 	[CCode (instance_pos = -1)]
 	public void button_ignored_directories_with_content_remove_clicked_cb (Button source) {
 		store_del_dir (treeview_ignored_directories_with_content);
+		suggest_reindex = true;
 	}
 
 	[CCode (instance_pos = -1)]
 	public void button_ignored_files_add_clicked_cb (Button source) {
 		store_add_value_dialog (liststore_ignored_files);
+		suggest_reindex = true;
 	}
 
 	[CCode (instance_pos = -1)]
 	public void button_ignored_files_remove_clicked_cb (Button source) {
 		store_del_dir (treeview_ignored_files);
+		suggest_reindex = true;
 	}
 
 	private void togglebutton_directory_update_model (ToggleButton source, Gtk.ListStore store, string to_check) {
@@ -481,11 +583,6 @@ public class Tracker.Preferences {
 		togglebutton_directory_update_model (source, liststore_index, Environment.get_user_special_dir (UserDirectory.DOWNLOAD));
 	}
 
-	private void reset_parser () {
-		string path = Path.build_filename (Environment.get_user_cache_dir (), "tracker", "parser-sha1.txt", null);
-		FileUtils.unlink (path);
-	}
-
 	[CCode (instance_pos = -1)]
 	public void checkbutton_index_file_content_toggled_cb (CheckButton source) {
 		// FIXME: Should make number configurable, 10000 is the default.
@@ -495,15 +592,18 @@ public class Tracker.Preferences {
 			settings_fts.set_int ("max-words-to-index", 0);
 		}
 
-		reset_parser ();
-		suggest_restart = true;
+		suggest_reindex = true;
 	}
 
 	[CCode (instance_pos = -1)]
 	public void checkbutton_index_numbers_toggled_cb (CheckButton source) {
 		settings_fts.set_boolean ("ignore-numbers", !source.active);
-		reset_parser ();
-		suggest_restart = true;
+		suggest_reindex = true;
+	}
+
+	[CCode (instance_pos = -1)]
+	public void button_reindex_clicked_cb (Button source) {
+		reindex ();
 	}
 
 	private void toggles_update (UserDirectory[] matches, bool active) {

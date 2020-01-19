@@ -21,12 +21,14 @@ GType tracker_verbosity_get_type (void) G_GNUC_CONST;
 #define TRACKER_TYPE_VERBOSITY (tracker_verbosity_get_type ())
 GType tracker_sched_idle_get_type (void) G_GNUC_CONST;
 #define TRACKER_TYPE_SCHED_IDLE (tracker_sched_idle_get_type ())
-GType tracker_serialization_format_get_type (void) G_GNUC_CONST;
-#define TRACKER_TYPE_SERIALIZATION_FORMAT (tracker_serialization_format_get_type ())
 
 /* enumerations from "tracker-date-time.h" */
 GType tracker_date_error_get_type (void) G_GNUC_CONST;
 #define TRACKER_TYPE_DATE_ERROR (tracker_date_error_get_type ())
+
+/* enumerations from "tracker-storage.h" */
+GType tracker_storage_type_get_type (void) G_GNUC_CONST;
+#define TRACKER_TYPE_STORAGE_TYPE (tracker_storage_type_get_type ())
 
 /* enumerations from "tracker-locale.h" */
 GType tracker_locale_id_get_type (void) G_GNUC_CONST;

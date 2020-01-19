@@ -4,50 +4,44 @@
 tracker-sparql \- Use SparQL to query the Tracker databases.
 
 .SH SYNOPSIS
-.nf
-\fBtracker sparql\fR \-q <\fIsparql\fR> [\-u] | \-f <\fIfile\fR>
-\fBtracker sparql\fR \-t [\fIclass\fR] [-s <\fIneedle\fR>] [\-p]
-\fBtracker sparql\fR [\-c] [\-p] [\-x] [-n [\fIclass\fR]] [\-i [\fIproperty\fR]] [\-s <\fIneedle\fR>]
-\fBtracker sparql\fR [\-\-get\-longhand <\fIclass\fR>] [\-\-get\-shorthand <\fIclass\fR>]
-.fi
+\fBtracker-sparql\fR [\fIOPTION\fR...] [-q \fIQUERY\fR] | [-f \fIFILE\fR]
 
 .SH DESCRIPTION
-This command allows probing of the current database schema (also
-known as ontology) and running low level queries or updates on the
-data set. In terms of the database ontology, it's easy to find out what
-properties are indexed for speed, or notified on changes, what classes are
-available and the properties belonging to those classes. There are
-also visual tools to display an ascii tree layout of the classes and
-their relationships to each other.
+.B tracker-sparql
+allows the caller to run an RDF query on the database. This can be
+done two ways. Either by providing a \fIFILE\fR with the query or by
+providing a string with the \fIQUERY\fR string.
 
-When the caller runs a query, the query is in RDF and SPARQL. This can be
-done two ways. Either by providing a \fIfile\fR with the query or by
-providing a string with the \fIsparql\fR query.
-
-The \fIfile\fR argument can be either a local path or a URI. It also
+The \fIFILE\fR argument can be either a local path or a URI. It also
 does not have to be an absolute path.
 
 .SH OPTIONS
 .TP
-.B \-f, \-\-file\fR=<\fIfile\fR>
-Use a \fIfile\fR with SPARQL content to query or update.
+.B \-?, \-\-help
+Show summary of options.
 .TP
-.B \-q, \-\-query\fR=<\fIsparql\fR>
-Use a \fIsparql\fR string to query the database with.
+.B \-f, \-\-file=FILE
+Use a \fIFILE\fR with SPARQL content to query or update.
+.TP
+.B \-q, \-\-query=SPARQL
+Use a \fISPARQL\fR string to query the database with.
 .TP
 .B \-u, \-\-update
-This has to be used with \fB\-\-query\fR. This tells
-"tracker sparql" to use the SPARQL update extensions so it knows
-it isn't a regular data lookup request. So if your query is intended
-to change data in the database, this option is needed.
+This has to be used with
+.B \-\-query.
+This tells
+.B tracker-sparql
+to use the SPARQL update extensions so it knows it isn't a regular
+data lookup request. So if your query is intended to change data in
+the database, this option is needed.
 .TP
-.B \-c, \-\-list\-classes
+.B \-c, \-\-list-classes
 Returns a list of classes which describe the ontology used for storing
 data. These classes are also used in queries. For example,
 \fIhttp://www.w3.org/2000/01/rdf-schema#Resource\fR is one of many
 classes which should be returned here.
 .TP
-.B \-x, \-\-list\-class\-prefixes
+.B \-x, \-\-list-class-prefixes
 Returns a list of classes and their related prefixes. Prefixes are
 used to make querying a lot simpler and are much like an alias. For
 example, \fIhttp://www.w3.org/2000/01/rdf-schema#Resource\fR has the
@@ -56,16 +50,16 @@ prefix \fIrdfs\fR so queries can be cut down to:
 "SELECT ?u WHERE { ?u a rdfs:Resource }"
 
 .TP
-.B \-p, \-\-list\-properties\fR=[\fIclass\fR]
-Returns a list of properties which pertain to a \fIclass\fR. You can
-use both formats here for the \fIclass\fR, either the full name
+.B \-p, \-\-list-properties=CLASS
+Returns a list of properties which pertain to a class. You can use
+both formats here for the class, either the full name
 \fIhttp://www.semanticdesktop.org/ontologies/2007/03/22/nfo#Video\fR
 or the shortened prefix name \fInfo:Video\fR.
 
 This gives the following result:
 
 .nf
-$ tracker sparql -p nfo:Video
+$ tracker-sparql -p nfo:Video
 
 Properties: 2
   http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#frameRate
@@ -73,34 +67,39 @@ Properties: 2
 .fi
 
 These properties \fInfo:frameRate\fR and \fInfo:frameCount\fR can then
-be used in queries.
+be used in queries (see also
+.B \-\-query
+).
 
-See also \fB\-\-tree\fR and \fB\-\-query\fR.
+See also
+.B \-\-tree
 
 .TP
-.B \-n, \-\-list\-notifies\fR=[\fIclass\fR]
+.B \-n, \-\-list-notifies=CLASS
 Returns a list of classes which are notified over D-Bus about any
-changes that occur in the database. The \fIclass\fR does not have to be
+changes that occur in the database. \fICLASS\fR does not have to be
 supplied here. This is optional and filters the results according to
-any argument supplied. With no \fIclass\fR, all classes are listed.
+any argument supplied. With no \fICLASS\fR, all classes are listed.
 
 .TP
-.B \-i, \-\-list\-indexes\fR=[\fIproperty\fR]
+.B \-i, \-\-list-indexes=PROPERTY
 Returns a list of properties which are indexed in the database.
-Indexes improves query speed but also add an indexing penalty. The
-\fIproperty\fR does not have to be supplied here. This is optional and
+Indexes improves query speed but also add an indexing penalty.
+\fIPROPERTY\fR does not have to be supplied here. This is optional and
 filters the results according to any argument supplied. With no
-\fIproperty\fR, all properties are listed.
+\fIPROPERTY\fR, all properties are listed.
 
 .TP
-.B \-t, \-\-tree\fR=[\fIclass\fR]
-Prints a tree showing all parent classes of \fIclass\fR in the
-ontology. The \fIclass\fR can be provided in shorthand or longhand (see
-\fB\-\-get\-shorthand\fR and \fB\-\-get\-longhand\fR for details). For
-example:
+.B \-t, \-\-tree [<CLASS>]
+Prints a tree showing all parent classes of \fICLASS\fR in the
+ontology. \fICLASS\fR can be provided in shorthand or longhand (see
+.B \-\-get\-shorthand
+and
+.B \-\-get\-longhand
+for details). For example:
 
 .nf
-$ tracker sparql -t nmo:MMSMessage
+$ tracker-sparql -t nmo:MMSMessage
 ROOT
   +-- rdfs:Resource (C)
   |  +-- nie:InformationElement (C)
@@ -111,18 +110,20 @@ ROOT
   |  |  |  |  |  |  `-- nmo:MMSMessage (C)
 .fi
 
-If no \fIclass\fR is given, the entire tree is shown.
+If no \fICLASS\fR is given, the entire tree is shown.
 
 The
 .B \-\-search
 command line option can be used to highlight parts of the tree you're
 looking for. The search is case insensitive.
 
-The \fB\-\-properties\fR command line option can be used to show
-properties for each class displayed, for example:
+The
+.B \-\-properties
+command line option can be used to show properties for each class
+displayed, for example:
 
 .nf
-$ tracker sparql -t nfo:FileDataObject -p
+$ tracker-sparql -t nfo:FileDataObject -p
 ROOT
   +-- rdfs:Resource (C)
   |  --> http://purl.org/dc/elements/1.1/contributor (P)
@@ -174,13 +175,13 @@ ROOT
 .fi
 
 .TP
-.B \-s, \-\-search\fR=<\fIneedle\fR>
+.B \-s, \-\-search=TERM
 Returns a list of classes and properties which partially match
-\fIneedle\fR in the ontology. This is a case insensitive match, for
+\fITERM\fR in the ontology. This is a case insensitive match, for
 example:
 
 .nf
-$ tracker sparql -s text
+$ tracker-sparql -s text
 
 Classes: 4
   http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#TextDocument
@@ -195,27 +196,33 @@ Properties: 4
   http://www.tracker-project.org/temp/scal#textLocation
 .fi
 
-See also \fB\-\-tree\fR.
+See also
+.B \-\-tree
+
 
 .TP
-.B \-\-get\-shorthand\fR=<\fIclass\fR>
+.B \-\-get\-shorthand <CLASS>
 Returns the shorthand for a class given by a URL.
 For example:
 
 .nf
-$ tracker sparql --get-shorthand http://www.semanticdesktop.org/ontologies/2007/03/22/nmo#plainTextMessageContent
+$ tracker-sparql --get-shorthand http://www.semanticdesktop.org/ontologies/2007/03/22/nmo#plainTextMessageContent
 nmo:plainTextMessageContent
 .fi
 
 .TP
-.B \-\-get\-longhand\fR=<\fIclass\fR>
+.B \-\-get\-longhand <CLASS>
 Returns the longhand for a class given in the form of CLASS:PROPERTY.
 For example:
 
 .nf
-$ tracker sparql --get-longhand nmm:MusicPiece
+$ tracker-sparql --get-longhand nmm:MusicPiece
 http://www.tracker-project.org/temp/nmm#MusicPiece
 .fi
+
+.TP
+.B \-V, \-\-version
+Print version.
 
 .SH ENVIRONMENT
 .TP
@@ -241,7 +248,7 @@ be if this environment variable was undefined.
 Tracker has a fixed set of PRAGMA settings for creating its SQLite connection.
 With this environment variable pointing to a text file you can override these
 settings. The file is a \\n separated list of SQLite queries to execute on any
-newly created SQLite connection in \fBtracker-store\fR.
+newly created SQLite connection in tracker-store.
 
 .SH EXAMPLES
 .TP
@@ -249,7 +256,7 @@ List all classes
 
 .BR
 .nf
-$ tracker sparql -q "SELECT ?cl WHERE { ?cl a rdfs:Class }"
+$ tracker-sparql -q "SELECT ?cl WHERE { ?cl a rdfs:Class }"
 .fi
 
 .TP
@@ -257,7 +264,7 @@ List all properties for the Resources class (see \-\-list-properties)
 
 .BR
 .nf
-$ tracker sparql -q "SELECT ?prop WHERE {
+$ tracker-sparql -q "SELECT ?prop WHERE {
       ?prop a rdf:Property ;
       rdfs:domain <http://www.w3.org/2000/01/rdf-schema#Resource>
  }"
@@ -268,7 +275,7 @@ List all class namespace prefixes
 
 .BR
 .nf
-$ tracker sparql -q "SELECT ?prefix ?ns WHERE {
+$ tracker-sparql -q "SELECT ?prefix ?ns WHERE {
       ?ns a tracker:Namespace ;
       tracker:prefix ?prefix
   }"
@@ -279,15 +286,15 @@ List all music files
 
 .BR
 .nf
-$ tracker sparql -q "SELECT ?song WHERE { ?song a nmm:MusicPiece }"
+$ tracker-sparql -q "SELECT ?song WHERE { ?song a nmm:MusicPiece }"
 .fi
 
 .TP
-List all music albums, showing title, track count, and length in seconds.
+List all music albums
 
 .BR
 .nf
-$ tracker sparql -q "SELECT ?title COUNT(?song)
+$ tracker-sparql -q "SELECT ?album ?title COUNT(?song)
                      AS songs
                      SUM(?length) AS totallength
                      WHERE {
@@ -303,7 +310,7 @@ List all music from a particular artist
 
 .BR
 .nf
-$ tracker sparql -q "SELECT ?song ?title WHERE {
+$ tracker-sparql -q "SELECT ?song ?title WHERE {
       ?song nmm:performer [ nmm:artistName 'Artist Name' ] ;
       nie:title ?title
   }"
@@ -314,7 +321,7 @@ Set the played count for a song
 
 .BR
 .nf
-$ tracker sparql -u -q "DELETE {
+$ tracker-sparql -u -q "DELETE {
       <file:///home/user/Music/song.mp3> nie:usageCounter ?count
   } WHERE {
       <file:///home/user/Music/song.mp3> nie:usageCounter ?count
@@ -328,7 +335,7 @@ List all image files
 
 .BR
 .nf
-$ tracker sparql -q "SELECT ?image WHERE { ?image a nfo:Image }"
+$ tracker-sparql -q "SELECT ?image WHERE { ?image a nfo:Image }"
 .fi
 
 .TP
@@ -336,7 +343,7 @@ List all image files with a specific tag
 
 .BR
 .nf
-$ tracker sparql -q "SELECT ?image WHERE {
+$ tracker-sparql -q "SELECT ?image WHERE {
       ?image a nfo:Image ;
       nao:hasTag [ nao:prefLabel 'tag' ]
   }"
@@ -347,7 +354,7 @@ List all image files created on a specific month and order by date
 
 .BR
 .nf
-$ tracker sparql -q "SELECT ?image ?date WHERE {
+$ tracker-sparql -q "SELECT ?image ?date WHERE {
       ?image a nfo:Image ;
       nie:contentCreated ?date .
       FILTER (?date >= '2008-07-01T00:00:00' &&
@@ -356,7 +363,6 @@ $ tracker sparql -q "SELECT ?image ?date WHERE {
 .fi
 
 .SH SEE ALSO
-.BR tracker-sql (1),
 .BR tracker-store (1),
 .BR tracker-info (1).
 .TP

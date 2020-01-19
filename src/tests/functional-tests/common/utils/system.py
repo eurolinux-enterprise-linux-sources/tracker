@@ -6,6 +6,8 @@ import configuration as cfg
 
 from gi.repository import GObject
 from gi.repository import GLib
+import dbus
+from dbus.mainloop.glib import DBusGMainLoop
 import time
 
 import options
@@ -27,17 +29,15 @@ TEST_ENV_VARS = {  "TRACKER_DISABLE_MEEGOTOUCH_LOCALE": "",
 EXTRA_DIRS = [os.path.join (cfg.TEST_TMP_DIR, "data", "tracker"),
               os.path.join (cfg.TEST_TMP_DIR, "cache", "tracker")]
 
-REASONABLE_TIMEOUT = 5
+REASONABLE_TIMEOUT = 30
 
 class UnableToBootException (Exception):
     pass
 
 
-class TrackerSystemAbstraction (object):
-    def __init__(self, settings=None, ontodir=None):
-        self.set_up_environment (settings=settings, ontodir=ontodir)
+class TrackerSystemAbstraction:
 
-    def set_up_environment (self, settings=None, ontodir=None):
+    def set_up_environment (self, settings, ontodir):
         """
         Sets up the XDG_*_HOME variables and make sure the directories exist
 
@@ -78,11 +78,28 @@ class TrackerSystemAbstraction (object):
             for key, value in contents.iteritems():
                 dconf.write(key, value)
 
+    def unset_up_environment (self):
+        """
+        Unset the XDG_*_HOME variables from the environment
+        """
+        for var, directory in TEST_ENV_VARS.iteritems ():
+            if os.environ.has_key (var):
+                del os.environ [var]
+
+        for var, directory in TEST_ENV_DIRS.iteritems ():
+            if os.environ.has_key (var):
+                del os.environ [var]
+
+        if (os.environ.has_key ("TRACKER_DB_ONTOLOGIES_DIR")):
+            del os.environ ["TRACKER_DB_ONTOLOGIES_DIR"]
+
+
     def tracker_store_testing_start (self, confdir=None, ontodir=None):
         """
         Stops any previous instance of the store, calls set_up_environment,
         and starts a new instances of the store
         """
+        self.__stop_tracker_processes ()
         self.set_up_environment (confdir, ontodir)
 
         self.store = helpers.StoreHelper ()
@@ -104,7 +121,7 @@ class TrackerSystemAbstraction (object):
             os.environ ["TRACKER_DB_ONTOLOGIES_DIR"] = ontodir
         try:
             self.store.start ()
-        except GLib.Error:
+        except dbus.DBusException, e:
             raise UnableToBootException ("Unable to boot the store \n(" + str(e) + ")")
 
     def tracker_store_prepare_journal_replay (self):
@@ -136,10 +153,11 @@ class TrackerSystemAbstraction (object):
 
     def tracker_store_testing_stop (self):
         """
-        Stops a running tracker-store
+        Stops a running tracker-store and unset all the XDG_*_HOME vars
         """
         assert self.store
         self.store.stop ()
+        self.unset_up_environment ()
 
 
     def tracker_miner_fs_testing_start (self, confdir=None):
@@ -147,6 +165,7 @@ class TrackerSystemAbstraction (object):
         Stops any previous instance of the store and miner, calls set_up_environment,
         and starts a new instance of the store and miner-fs
         """
+        self.__stop_tracker_processes ()
         self.set_up_environment (confdir, None)
 
         # Start also the store. DBus autoactivation ignores the env variables.
@@ -161,11 +180,14 @@ class TrackerSystemAbstraction (object):
 
     def tracker_miner_fs_testing_stop (self):
         """
-        Stops the extractor, miner-fs and store running
+        Stops the miner-fs and store running and unset all the XDG_*_HOME vars
         """
-        self.extractor.stop ()
         self.miner_fs.stop ()
         self.store.stop ()
+
+        self.__stop_tracker_processes ()
+        self.unset_up_environment ()
+
 
     def tracker_writeback_testing_start (self, confdir=None):
         # Start the miner-fs (and store) and then the writeback process
@@ -185,6 +207,15 @@ class TrackerSystemAbstraction (object):
     def tracker_all_testing_stop (self):
         # This will stop all miner-fs, store and writeback
         self.tracker_writeback_testing_stop ()
+
+    #
+    # Private API
+    #
+    def __stop_tracker_processes (self):
+        control_binary = os.path.join (cfg.BINDIR, "tracker-control")
+        FNULL = open('/dev/null', 'w')
+        subprocess.call ([control_binary, "-t"], stdout=FNULL)
+        time.sleep (1)
 
     def __recreate_directory (self, directory):
         if (os.path.exists (directory)):

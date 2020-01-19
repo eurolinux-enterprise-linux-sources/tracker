@@ -183,11 +183,14 @@ raw_profile_new (const gchar *input,
 #endif /* defined(PNG_iTXt_SUPPORTED) && (defined(HAVE_EXEMPI) || defined(HAVE_LIBEXIF)) */
 
 static void
-read_metadata (TrackerResource      *metadata,
+read_metadata (TrackerSparqlBuilder *preupdate,
+               TrackerSparqlBuilder *metadata,
+               GString              *where,
                png_structp           png_ptr,
                png_infop             info_ptr,
                png_infop             end_ptr,
-               const gchar          *uri)
+               const gchar          *uri,
+               const gchar          *graph)
 {
 	MergeData md = { 0 };
 	PngData pd = { 0 };
@@ -358,108 +361,164 @@ read_metadata (TrackerResource      *metadata,
 	md.make = tracker_coalesce_strip (2, xd->make, ed->make);
 	md.model = tracker_coalesce_strip (2, xd->model, ed->model);
 
-	keywords = g_ptr_array_new_with_free_func ((GDestroyNotify) g_free);
+	keywords = g_ptr_array_new ();
 
 	if (md.comment) {
-		tracker_resource_set_string (metadata, "nie:comment", md.comment);
+		tracker_sparql_builder_predicate (metadata, "nie:comment");
+		tracker_sparql_builder_object_unvalidated (metadata, md.comment);
 	}
 
 	if (md.license) {
-		tracker_resource_set_string (metadata, "nie:license", md.license);
+		tracker_sparql_builder_predicate (metadata, "nie:license");
+		tracker_sparql_builder_object_unvalidated (metadata, md.license);
 	}
 
 	/* TODO: add ontology and store this ed->software */
 
 	if (md.creator) {
-		TrackerResource *creator = tracker_extract_new_contact (md.creator);
+		gchar *uri = tracker_sparql_escape_uri_printf ("urn:contact:%s", md.creator);
 
-		tracker_resource_set_relation (metadata, "nco:creator", creator);
+		tracker_sparql_builder_insert_open (preupdate, NULL);
+		if (graph) {
+			tracker_sparql_builder_graph_open (preupdate, graph);
+		}
 
-		g_object_unref (creator);
+		tracker_sparql_builder_subject_iri (preupdate, uri);
+		tracker_sparql_builder_predicate (preupdate, "a");
+		tracker_sparql_builder_object (preupdate, "nco:Contact");
+		tracker_sparql_builder_predicate (preupdate, "nco:fullname");
+		tracker_sparql_builder_object_unvalidated (preupdate, md.creator);
+
+		if (graph) {
+			tracker_sparql_builder_graph_close (preupdate);
+		}
+		tracker_sparql_builder_insert_close (preupdate);
+
+		tracker_sparql_builder_predicate (metadata, "nco:creator");
+		tracker_sparql_builder_object_iri (metadata, uri);
+		g_free (uri);
 	}
 
-	tracker_guarantee_resource_date_from_file_mtime (metadata,
-	                                                 "nie:contentCreated",
-	                                                 md.date,
-	                                                 uri);
+	tracker_guarantee_date_from_file_mtime (metadata,
+	                                        "nie:contentCreated",
+	                                        md.date,
+	                                        uri);
 
 	if (md.description) {
-		tracker_resource_set_string (metadata, "nie:description", md.description);
+		tracker_sparql_builder_predicate (metadata, "nie:description");
+		tracker_sparql_builder_object_unvalidated (metadata, md.description);
 	}
 
 	if (md.copyright) {
-		tracker_resource_set_string (metadata, "nie:copyright", md.copyright);
+		tracker_sparql_builder_predicate (metadata, "nie:copyright");
+		tracker_sparql_builder_object_unvalidated (metadata, md.copyright);
 	}
 
-	tracker_guarantee_resource_title_from_file (metadata,
-	                                            "nie:title",
-	                                            md.title,
-	                                            uri,
-	                                            NULL);
+	tracker_guarantee_title_from_file (metadata,
+	                                   "nie:title",
+	                                   md.title,
+	                                   uri,
+	                                   NULL);
 
 	if (md.make || md.model) {
-		TrackerResource *equipment = tracker_extract_new_equipment (md.make, md.model);
+		gchar *equip_uri;
 
-		tracker_resource_set_relation (metadata, "nfo:equipment", equipment);
+		equip_uri = tracker_sparql_escape_uri_printf ("urn:equipment:%s:%s:",
+		                                              md.make ? md.make : "",
+		                                              md.model ? md.model : "");
 
-		g_object_unref (equipment);
+		tracker_sparql_builder_insert_open (preupdate, NULL);
+		if (graph) {
+			tracker_sparql_builder_graph_open (preupdate, graph);
+		}
+
+		tracker_sparql_builder_subject_iri (preupdate, equip_uri);
+		tracker_sparql_builder_predicate (preupdate, "a");
+		tracker_sparql_builder_object (preupdate, "nfo:Equipment");
+
+		if (md.make) {
+			tracker_sparql_builder_predicate (preupdate, "nfo:manufacturer");
+			tracker_sparql_builder_object_unvalidated (preupdate, md.make);
+		}
+		if (md.model) {
+			tracker_sparql_builder_predicate (preupdate, "nfo:model");
+			tracker_sparql_builder_object_unvalidated (preupdate, md.model);
+		}
+
+		if (graph) {
+			tracker_sparql_builder_graph_close (preupdate);
+		}
+		tracker_sparql_builder_insert_close (preupdate);
+
+		tracker_sparql_builder_predicate (metadata, "nfo:equipment");
+		tracker_sparql_builder_object_iri (metadata, equip_uri);
+		g_free (equip_uri);
 	}
 
 	if (md.artist) {
-		TrackerResource *artist = tracker_extract_new_contact (md.artist);
+		gchar *uri = tracker_sparql_escape_uri_printf ("urn:contact:%s", md.artist);
 
-		tracker_resource_set_relation (metadata, "nco:contributor", artist);
+		tracker_sparql_builder_insert_open (preupdate, NULL);
+		if (graph) {
+			tracker_sparql_builder_graph_open (preupdate, graph);
+		}
 
-		g_object_unref (artist);
+		tracker_sparql_builder_subject_iri (preupdate, uri);
+		tracker_sparql_builder_predicate (preupdate, "a");
+		tracker_sparql_builder_object (preupdate, "nco:Contact");
+		tracker_sparql_builder_predicate (preupdate, "nco:fullname");
+		tracker_sparql_builder_object_unvalidated (preupdate, md.artist);
+
+		if (graph) {
+			tracker_sparql_builder_graph_close (preupdate);
+		}
+		tracker_sparql_builder_insert_close (preupdate);
+
+		tracker_sparql_builder_predicate (metadata, "nco:contributor");
+		tracker_sparql_builder_object_iri (metadata, uri);
+		g_free (uri);
 	}
 
 	if (md.orientation) {
-		TrackerResource *orientation;
-
-		orientation = tracker_resource_new (md.orientation);
-		tracker_resource_set_relation (metadata, "nfo:orientation", orientation);
-		g_object_unref (orientation);
+		tracker_sparql_builder_predicate (metadata, "nfo:orientation");
+		tracker_sparql_builder_object_unvalidated (metadata, md.orientation);
 	}
 
 	if (md.exposure_time) {
-		tracker_resource_set_string (metadata, "nmm:exposureTime", md.exposure_time);
+		tracker_sparql_builder_predicate (metadata, "nmm:exposureTime");
+		tracker_sparql_builder_object_unvalidated (metadata, md.exposure_time);
 	}
 
 	if (md.iso_speed_ratings) {
-		tracker_resource_set_string (metadata, "nmm:isoSpeed", md.iso_speed_ratings);
+		tracker_sparql_builder_predicate (metadata, "nmm:isoSpeed");
+		tracker_sparql_builder_object_unvalidated (metadata, md.iso_speed_ratings);
 	}
 
 	if (md.white_balance) {
-		TrackerResource *white_balance;
-
-		white_balance = tracker_resource_new (md.white_balance);
-		tracker_resource_set_relation (metadata, "nmm:meteringMode", white_balance);
-		g_object_unref (white_balance);
+		tracker_sparql_builder_predicate (metadata, "nmm:whiteBalance");
+		tracker_sparql_builder_object_unvalidated (metadata, md.white_balance);
 	}
 
 	if (md.fnumber) {
-		tracker_resource_set_string (metadata, "nmm:fnumber", md.fnumber);
+		tracker_sparql_builder_predicate (metadata, "nmm:fnumber");
+		tracker_sparql_builder_object_unvalidated (metadata, md.fnumber);
 	}
 
 	if (md.flash) {
-		TrackerResource *flash;
-
-		flash = tracker_resource_new (md.flash);
-		tracker_resource_set_relation (metadata, "nmm:flash", flash);
-		g_object_unref (flash);
+		tracker_sparql_builder_predicate (metadata, "nmm:flash");
+		tracker_sparql_builder_object_unvalidated (metadata, md.flash);
 	}
 
 	if (md.focal_length) {
-		tracker_resource_set_string (metadata, "nmm:focalLength", md.focal_length);
+		tracker_sparql_builder_predicate (metadata, "nmm:focalLength");
+		tracker_sparql_builder_object_unvalidated (metadata, md.focal_length);
 	}
 
 	if (md.metering_mode) {
-		TrackerResource *metering;
-
-		metering = tracker_resource_new (md.metering_mode);
-		tracker_resource_set_relation (metadata, "nmm:meteringMode", metering);
-		g_object_unref (metering);
+		tracker_sparql_builder_predicate (metadata, "nmm:meteringMode");
+		tracker_sparql_builder_object_unvalidated (metadata, md.metering_mode);
 	}
+
 
 	if (xd->keywords) {
 		tracker_keywords_parse (keywords, xd->keywords);
@@ -470,7 +529,8 @@ read_metadata (TrackerResource      *metadata,
 	}
 
 	if (xd->rating) {
-		tracker_resource_set_string (metadata, "nao:numericRating", xd->rating);
+		tracker_sparql_builder_predicate (metadata, "nao:numericRating");
+		tracker_sparql_builder_object_unvalidated (metadata, xd->rating);
 	}
 
 	if (xd->subject) {
@@ -478,91 +538,210 @@ read_metadata (TrackerResource      *metadata,
 	}
 
 	if (xd->publisher) {
-		TrackerResource *publisher = tracker_extract_new_contact (xd->publisher);
+		gchar *uri = tracker_sparql_escape_uri_printf ("urn:contact:%s", xd->publisher);
 
-		tracker_resource_set_relation (metadata, "nco:creator", publisher);
+		tracker_sparql_builder_insert_open (preupdate, NULL);
+		if (graph) {
+			tracker_sparql_builder_graph_open (preupdate, graph);
+		}
 
-		g_object_unref (publisher);
+		tracker_sparql_builder_subject_iri (preupdate, uri);
+		tracker_sparql_builder_predicate (preupdate, "a");
+		tracker_sparql_builder_object (preupdate, "nco:Contact");
+		tracker_sparql_builder_predicate (preupdate, "nco:fullname");
+		tracker_sparql_builder_object_unvalidated (preupdate, xd->publisher);
+
+		if (graph) {
+			tracker_sparql_builder_graph_close (preupdate);
+		}
+		tracker_sparql_builder_insert_close (preupdate);
+
+		tracker_sparql_builder_predicate (metadata, "nco:creator");
+		tracker_sparql_builder_object_iri (metadata, uri);
+		g_free (uri);
 	}
 
 	if (xd->type) {
-		tracker_resource_set_string (metadata, "dc:type", xd->type);
+		tracker_sparql_builder_predicate (metadata, "dc:type");
+		tracker_sparql_builder_object_unvalidated (metadata, xd->type);
 	}
 
 	if (xd->format) {
-		tracker_resource_set_string (metadata, "dc:format", xd->format);
+		tracker_sparql_builder_predicate (metadata, "dc:format");
+		tracker_sparql_builder_object_unvalidated (metadata, xd->format);
 	}
 
 	if (xd->identifier) {
-		tracker_resource_set_string (metadata, "dc:identifier", xd->identifier);
+		tracker_sparql_builder_predicate (metadata, "dc:identifier");
+		tracker_sparql_builder_object_unvalidated (metadata, xd->identifier);
 	}
 
 	if (xd->source) {
-		tracker_resource_set_string (metadata, "dc:source", xd->source);
+		tracker_sparql_builder_predicate (metadata, "dc:source");
+		tracker_sparql_builder_object_unvalidated (metadata, xd->source);
 	}
 
 	if (xd->language) {
-		tracker_resource_set_string (metadata, "dc:language", xd->language);
+		tracker_sparql_builder_predicate (metadata, "dc:language");
+		tracker_sparql_builder_object_unvalidated (metadata, xd->language);
 	}
 
 	if (xd->relation) {
-		tracker_resource_set_string (metadata, "dc:relation", xd->relation);
+		tracker_sparql_builder_predicate (metadata, "dc:relation");
+		tracker_sparql_builder_object_unvalidated (metadata, xd->relation);
 	}
 
 	if (xd->coverage) {
-		tracker_resource_set_string (metadata, "dc:coverage", xd->coverage);
+		tracker_sparql_builder_predicate (metadata, "dc:coverage");
+		tracker_sparql_builder_object_unvalidated (metadata, xd->coverage);
 	}
 
 	if (xd->address || xd->state || xd->country || xd->city ||
 	    xd->gps_altitude || xd->gps_latitude || xd-> gps_longitude) {
 
-		TrackerResource *location = tracker_extract_new_location (xd->address,
-		        xd->state, xd->city, xd->country, xd->gps_altitude,
-		        xd->gps_latitude, xd-> gps_longitude);
-		
-		tracker_resource_set_relation (metadata, "slo:location", location);
+		tracker_sparql_builder_predicate (metadata, "slo:location");
 
-		g_object_unref (location);
+		tracker_sparql_builder_object_blank_open (metadata); /* GeoLocation */
+		tracker_sparql_builder_predicate (metadata, "a");
+		tracker_sparql_builder_object (metadata, "slo:GeoLocation");
+
+		if (xd->address || xd->state || xd->country || xd->city)  {
+			gchar *addruri;
+
+			addruri = tracker_sparql_get_uuid_urn ();
+
+			tracker_sparql_builder_predicate (metadata, "slo:postalAddress");
+			tracker_sparql_builder_object_iri (metadata, addruri);
+
+			tracker_sparql_builder_insert_open (preupdate, NULL);
+			if (graph) {
+				tracker_sparql_builder_graph_open (preupdate, graph);
+			}
+
+			tracker_sparql_builder_subject_iri (preupdate, addruri);
+
+			g_free (addruri);
+
+			tracker_sparql_builder_predicate (preupdate, "a");
+			tracker_sparql_builder_object (preupdate, "nco:PostalAddress");
+
+			if (xd->address) {
+			  tracker_sparql_builder_predicate (preupdate, "nco:streetAddress");
+			  tracker_sparql_builder_object_unvalidated (preupdate, xd->address);
+			}
+
+			if (xd->state) {
+			  tracker_sparql_builder_predicate (preupdate, "nco:region");
+			  tracker_sparql_builder_object_unvalidated (preupdate, xd->state);
+			}
+
+			if (xd->city) {
+			  tracker_sparql_builder_predicate (preupdate, "nco:locality");
+			  tracker_sparql_builder_object_unvalidated (preupdate, xd->city);
+			}
+
+			if (xd->country) {
+			  tracker_sparql_builder_predicate (preupdate, "nco:country");
+			  tracker_sparql_builder_object_unvalidated (preupdate, xd->country);
+			}
+
+			if (graph) {
+				tracker_sparql_builder_graph_close (preupdate);
+			}
+			tracker_sparql_builder_insert_close (preupdate);
+		}
+
+		if (xd->gps_altitude) {
+			tracker_sparql_builder_predicate (metadata, "slo:altitude");
+			tracker_sparql_builder_object_unvalidated (metadata, xd->gps_altitude);
+		}
+
+		if (xd->gps_latitude) {
+			tracker_sparql_builder_predicate (metadata, "slo:latitude");
+			tracker_sparql_builder_object_unvalidated (metadata, xd->gps_latitude);
+		}
+
+		if (xd->gps_longitude) {
+			tracker_sparql_builder_predicate (metadata, "slo:longitude");
+			tracker_sparql_builder_object_unvalidated (metadata, xd->gps_longitude);
+		}
+
+		tracker_sparql_builder_object_blank_close (metadata); /* GeoLocation */
 	}
 
 	if (xd->gps_direction) {
-		tracker_resource_set_string(metadata, "nfo:heading", xd->gps_direction);
+		tracker_sparql_builder_predicate (metadata, "nfo:heading");
+		tracker_sparql_builder_object_unvalidated (metadata, xd->gps_direction);
 	}
 
 	if (ed->x_resolution) {
 		gdouble value;
 
 		value = ed->resolution_unit != 3 ? g_strtod (ed->x_resolution, NULL) : g_strtod (ed->x_resolution, NULL) * CM_TO_INCH;
-		tracker_resource_set_double (metadata, "nfo:horizontalResolution", value);
+		tracker_sparql_builder_predicate (metadata, "nfo:horizontalResolution");
+		tracker_sparql_builder_object_double (metadata, value);
 	}
 
 	if (ed->y_resolution) {
 		gdouble value;
 
 		value = ed->resolution_unit != 3 ? g_strtod (ed->y_resolution, NULL) : g_strtod (ed->y_resolution, NULL) * CM_TO_INCH;
-		tracker_resource_set_double (metadata, "nfo:verticalResolution", value);
+		tracker_sparql_builder_predicate (metadata, "nfo:verticalResolution");
+		tracker_sparql_builder_object_double (metadata, value);
 	}
 
 	if (xd->regions) {
-		tracker_xmp_apply_regions_to_resource (metadata, xd);
+		tracker_xmp_apply_regions (preupdate, metadata, graph, xd);
 	}
 
 	for (i = 0; i < keywords->len; i++) {
-		TrackerResource *tag;
-		const gchar *p;
+		gchar *p, *escaped, *var;
 
 		p = g_ptr_array_index (keywords, i);
+		escaped = tracker_sparql_escape_string (p);
+		var = g_strdup_printf ("tag%d", i + 1);
 
-		tag = tracker_extract_new_tag (p);
+		/* ensure tag with specified label exists */
+		tracker_sparql_builder_append (preupdate, "INSERT { ");
 
-		tracker_resource_set_relation (metadata, "nao:hasTag", tag);
+		if (graph) {
+			tracker_sparql_builder_append (preupdate, "GRAPH <");
+			tracker_sparql_builder_append (preupdate, graph);
+			tracker_sparql_builder_append (preupdate, "> { ");
+		}
 
-		g_object_unref (tag);
+		tracker_sparql_builder_append (preupdate,
+		                               "_:tag a nao:Tag ; nao:prefLabel \"");
+		tracker_sparql_builder_append (preupdate, escaped);
+		tracker_sparql_builder_append (preupdate, "\"");
+
+		if (graph) {
+			tracker_sparql_builder_append (preupdate, " } ");
+		}
+
+		tracker_sparql_builder_append (preupdate, " }\n");
+		tracker_sparql_builder_append (preupdate,
+		                               "WHERE { FILTER (NOT EXISTS { "
+		                               "?tag a nao:Tag ; nao:prefLabel \"");
+		tracker_sparql_builder_append (preupdate, escaped);
+		tracker_sparql_builder_append (preupdate,
+		                               "\" }) }\n");
+
+		/* associate file with tag */
+		tracker_sparql_builder_predicate (metadata, "nao:hasTag");
+		tracker_sparql_builder_object_variable (metadata, var);
+
+		g_string_append_printf (where, "?%s a nao:Tag ; nao:prefLabel \"%s\" .\n", var, escaped);
+
+		g_free (var);
+		g_free (escaped);
+		g_free (p);
 	}
 	g_ptr_array_free (keywords, TRUE);
 
 	if (g_strcmp0(pd.software, "gnome-screenshot") == 0) {
-		tracker_resource_add_uri (metadata, "nie:isPartOf", "nfo:image-category-screenshot");
+		tracker_sparql_builder_predicate (metadata, "nie:isPartOf");
+		tracker_sparql_builder_object (metadata, "nfo:image-category-screenshot");
 	}
 
 	tracker_exif_free (ed);
@@ -607,7 +786,6 @@ guess_dlna_profile (gint          depth,
 G_MODULE_EXPORT gboolean
 tracker_extract_get_metadata (TrackerExtractInfo *info)
 {
-	TrackerResource *metadata;
 	goffset size;
 	FILE *f;
 	png_structp png_ptr;
@@ -618,13 +796,19 @@ tracker_extract_get_metadata (TrackerExtractInfo *info)
 	png_uint_32 width, height;
 	gint bit_depth, color_type;
 	gint interlace_type, compression_type, filter_type;
-	const gchar *dlna_profile, *dlna_mimetype;
+	const gchar *dlna_profile, *dlna_mimetype, *graph;
+	TrackerSparqlBuilder *preupdate, *metadata;
 	gchar *filename, *uri;
+	GString *where;
 	GFile *file;
 
 	file = tracker_extract_info_get_file (info);
 	filename = g_file_get_path (file);
 	size = tracker_file_get_size (filename);
+
+	preupdate = tracker_extract_info_get_preupdate_builder (info);
+	metadata = tracker_extract_info_get_metadata_builder (info);
+	graph = tracker_extract_info_get_graph (info);
 
 	if (size < 64) {
 		return FALSE;
@@ -703,29 +887,33 @@ tracker_extract_get_metadata (TrackerExtractInfo *info)
 
 	png_read_end (png_ptr, end_ptr);
 
-	metadata = tracker_resource_new (NULL);
-
-	tracker_resource_add_uri (metadata, "rdf:type", "nfo:Image");
-	tracker_resource_add_uri (metadata, "rdf:type", "nmm:Photo");
+	tracker_sparql_builder_predicate (metadata, "a");
+	tracker_sparql_builder_object (metadata, "nfo:Image");
+	tracker_sparql_builder_object (metadata, "nmm:Photo");
 
 	uri = g_file_get_uri (file);
+	where = g_string_new ("");
 
-	read_metadata (metadata, png_ptr, info_ptr, end_ptr, uri);
+	read_metadata (preupdate, metadata, where, png_ptr, info_ptr, end_ptr, uri, graph);
+	tracker_extract_info_set_where_clause (info, where->str);
+	g_string_free (where, TRUE);
 	g_free (uri);
 
-	tracker_resource_set_int64 (metadata, "nfo:width", width);
-	tracker_resource_set_int64 (metadata, "nfo:height", height);
+	tracker_sparql_builder_predicate (metadata, "nfo:width");
+	tracker_sparql_builder_object_int64 (metadata, width);
+
+	tracker_sparql_builder_predicate (metadata, "nfo:height");
+	tracker_sparql_builder_object_int64 (metadata, height);
 
 	if (guess_dlna_profile (bit_depth, width, height, &dlna_profile, &dlna_mimetype)) {
-		tracker_resource_set_string (metadata, "nmm:dlnaProfile", dlna_profile);
-		tracker_resource_set_string (metadata, "nmm:dlnaMime", dlna_mimetype);
+		tracker_sparql_builder_predicate (metadata, "nmm:dlnaProfile");
+		tracker_sparql_builder_object_string (metadata, dlna_profile);
+		tracker_sparql_builder_predicate (metadata, "nmm:dlnaMime");
+		tracker_sparql_builder_object_string (metadata, dlna_mimetype);
 	}
 
 	png_destroy_read_struct (&png_ptr, &info_ptr, &end_ptr);
 	tracker_file_close (f, FALSE);
-
-	tracker_extract_info_set_resource (info, metadata);
-	g_object_unref (metadata);
 
 	return TRUE;
 }

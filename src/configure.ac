@@ -12,9 +12,9 @@ AC_PREREQ([2.64])
 # if backwards compatibility has been broken,
 # set TRACKER_BINARY_AGE and TRACKER_INTERFACE_AGE to 0.
 m4_define([tracker_major_version], [1])
-m4_define([tracker_minor_version], [10])
-m4_define([tracker_micro_version], [5])
-m4_define([tracker_interface_age], [0])
+m4_define([tracker_minor_version], [2])
+m4_define([tracker_micro_version], [6])
+m4_define([tracker_interface_age], [3])
 m4_define([tracker_binary_age],
           [m4_eval(100 * tracker_minor_version + tracker_micro_version)])
 m4_define([tracker_version],
@@ -42,7 +42,7 @@ m4_define([tracker_binary_version], [1.0.0])
 
 AC_INIT([tracker],
         [tracker_version],
-        [http://bugzilla.gnome.org/enter_bug.cgi?product=tracker],
+        [http://bugzilla.gnome.org/],
         [tracker],
         [https://wiki.gnome.org/Projects/Tracker])
 
@@ -55,13 +55,7 @@ AC_CONFIG_HEADERS([config.h])
 # See: https://www.gnu.org/software/autoconf/manual/autoconf-2.64/html_node/Posix-Variants.html
 AC_USE_SYSTEM_EXTENSIONS
 
-# Adding the 'subdir-objects' Automake option here will fix some Automake
-# warnings, but it will also break the build. I believe that it triggers
-# <http://debbugs.gnu.org/cgi/bugreport.cgi?bug=13928>. That bug will
-# be fixed in Automake 1.16, so we should be eventually able to use
-# 'subdir-objects' (which is apparently will be on by default in Automake 2.0),
-# but we'll need to require Automake 1.16 before we can do so.
-AM_INIT_AUTOMAKE([1.11 no-define tar-ustar -Wno-portability no-dist-gzip dist-xz])
+AM_INIT_AUTOMAKE([1.11 no-define tar-ustar -Wno-portability])
 
 AC_PROG_LIBTOOL
 
@@ -125,6 +119,7 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
+AC_PROG_RANLIB
 
 # Checks for libraries.
 # FIXME: Replace `main' with a function in `-lm':
@@ -202,14 +197,18 @@ PYTHON_REQUIRED=2.6
 
 # Library required versions
 DBUS_REQUIRED=1.3.1
-GLIB_REQUIRED=2.44.0
+GLIB_REQUIRED=2.40.0
+PANGO_REQUIRED=1.0.0
 GTK_REQUIRED=3.0.0
 LIBXML2_REQUIRED=2.6
+LIBNOTIFY_REQUIRED=0.4.3
 HAL_REQUIRED=0.5
 UPOWER_REQUIRED=0.9.0
+GDKPIXBUF_REQUIRED=2.12.0
 MEEGOTOUCH_REQUIRED=0.20
 POPPLER_REQUIRED=0.16.0
 CAIRO_REQUIRED=1.0
+GDK_REQUIRED=1.0
 LIBICU_REQUIRED=4.8.1.1
 LIBJPEG_REQUIRED="any version"
 LIBGIF_REQUIRED="any version"
@@ -226,20 +225,20 @@ EDS_REQUIRED=2.32.0
 CAMEL_REQUIRED=2.32.0
 GEE_REQUIRED=0.3
 TAGLIB_REQUIRED=1.6
-LIBGRSS_REQUIRED=0.7
+LIBGRSS_REQUIRED=0.5
+REST_REQUIRED=0.6
 NETWORK_MANAGER_REQUIRED=0.8
 GSTREAMER_REQUIRED=0.10.31
 GUPNP_DLNA_REQUIRED=0.9.4
-LIBPNG_REQUIRED=1.2
-LIBMEDIAART_REQUIRED=1.9.0
+LIBPNG_REQUIRED=0.89
+LIBMEDIAART_REQUIRED=0.5.0
 
 # 3.6.11 for sqlite_backup API
 # 3.6.16 to fix test failures
 # 3.6.17 for shared cache mode with virtual tables
 # 3.7.0 for WAL
 # 3.7.9 for FTS4 content= support
-# 3.7.15 for sqlite3_errstr() support
-SQLITE_REQUIRED=3.7.15
+SQLITE_REQUIRED=3.7.9
 
 # Needed to generate .gir files,
 # see http://live.gnome.org/GnomeGoals/AddGObjectIntrospectionSupport
@@ -247,6 +246,11 @@ GOBJECT_INTROSPECTION_CHECK([0.9.5])
 
 GLIB_PREFIX="`$PKG_CONFIG --variable=prefix glib-2.0`"
 AC_SUBST(GLIB_PREFIX)
+
+# Check for libpng 1.2 or higher
+PKG_CHECK_MODULES(LIBPNG, [libpng >= 1.2])
+AC_SUBST(LIBPNG_CFLAGS)
+AC_SUBST(LIBPNG_LIBS)
 
 # Check requirements for gvdb
 GVDB_REQUIRED="glib-2.0 >= $GLIB_REQUIRED"
@@ -319,13 +323,12 @@ LIBTRACKER_SPARQL_REQUIRED="glib-2.0     >= $GLIB_REQUIRED
 PKG_CHECK_MODULES(LIBTRACKER_SPARQL, [$LIBTRACKER_SPARQL_REQUIRED])
 
 # Check requirements for tracker-control
-TRACKER_REQUIRED="glib-2.0     >= $GLIB_REQUIRED
-                  gio-unix-2.0 >= $GLIB_REQUIRED
-                  uuid"
+TRACKER_CONTROL_REQUIRED="glib-2.0     >= $GLIB_REQUIRED
+                          gio-unix-2.0 >= $GLIB_REQUIRED
+                          uuid"
 
-PKG_CHECK_MODULES(TRACKER, [$TRACKER_REQUIRED])
+PKG_CHECK_MODULES(TRACKER_CONTROL, [$TRACKER_CONTROL_REQUIRED])
 
-# Check requirements for tracker-resdump
 TRACKER_RESDUMP_REQUIRED="glib-2.0     >= $GLIB_REQUIRED
                           gee-0.8      >= $GEE_REQUIRED"
 
@@ -494,12 +497,18 @@ if test -n $FIREFOX; then
 fi
 
 # Check requirements for tracker-miner-rss
-TRACKER_MINER_RSS_REQUIRED="glib-2.0 >= $GLIB_REQUIRED
-                            libgrss  >= $LIBGRSS_REQUIRED"
+TRACKER_MINER_RSS_REQUIRED="glib-2.0     >= $GLIB_REQUIRED
+                            libgrss-0.5  >= $LIBGRSS_REQUIRED"
 
 PKG_CHECK_MODULES(TRACKER_MINER_RSS, [$TRACKER_MINER_RSS_REQUIRED],
                   [have_tracker_miner_rss=yes],
                   [have_tracker_miner_rss=no])
+
+# Check requirements for tracker-utils
+TRACKER_UTILS_REQUIRED="glib-2.0     >= $GLIB_REQUIRED
+                        gio-unix-2.0 >= $GLIB_REQUIRED"
+
+PKG_CHECK_MODULES(TRACKER_UTILS, [$TRACKER_UTILS_REQUIRED])
 
 # Check requirements for tracker-needle
 TRACKER_NEEDLE_REQUIRED="glib-2.0     >= $GLIB_REQUIRED
@@ -643,7 +652,7 @@ if test x$enable_functional_tests != "xno"; then
          [AM_PYTHON_CHECK_VERSION([$PYTHON],[$PYTHON_REQUIRED],[:],[PYTHON=":"])])
 
    if test "$PYTHON" = ":"; then
-      AC_MSG_ERROR([Could not find Python >= $PYTHON_REQUIRED (for functional-tests, try --disable-functional-tests).])
+      AC_MSG_ERROR([Couldn't find Python >= $PYTHON_REQUIRED (for functional-tests, try --disable-functional-tests).])
    fi
 
    AC_DEFINE(DIST_FUNCTIONAL_TESTS, 1, [Include functional tests in the installation])
@@ -667,6 +676,18 @@ AM_CONDITIONAL([ENABLE_GTK_DOC], test "x$enable_gtk_doc" = xyes)
 [
 AM_CONDITIONAL([ENABLE_GTK_DOC], false)
 ])
+
+if test "x$enable_gtk_doc" != xno; then
+   # Check for graphviz if we are building gtk_doc
+   AC_PATH_PROG(GRAPHVIZ_FDP, fdp)
+   AC_SUBST(GRAPHVIZ_FDP)
+
+   if test -z "$GRAPHVIZ_FDP"; then
+      AC_MSG_ERROR([Couldn't find Graphviz's fdp tool (graphviz).])
+   fi
+fi
+
+AM_CONDITIONAL(HAVE_GRAPHVIZ_FDP, test -n "$GRAPHVIZ_FDP")
 
 ####################################################################
 # Check if we should install Windows specific binaries
@@ -769,35 +790,6 @@ else
 fi
 
 ##################################################################
-# Check for libtracker-common, make sure libstemmer exists
-##################################################################
-
-AC_ARG_ENABLE([libstemmer],
-              AS_HELP_STRING([--enable-libstemmer],
-                             [enable the stemming while indexing [[default=auto]]]),
-              [enable_libstemmer=$enableval],
-              [enable_libstemmer=auto])
-
-if test "x$enable_libstemmer" != "xno" ; then
-   AC_CHECK_LIB([stemmer], [sb_stemmer_new], [have_libstemmer=yes], [have_libstemmer=no])
-
-   if test "x$have_libstemmer" = "xyes"; then
-      AC_DEFINE(HAVE_LIBSTEMMER, [], [Define if we have libstemmer])
-      LIBTRACKER_COMMON_LIBS="$LIBTRACKER_COMMON_LIBS -lstemmer"
-   fi
-else
-   have_libstemmer="no  (disabled)"
-fi
-
-if test "x$enable_libstemmer" = "xyes"; then
-   if test "x$have_libstemmer" != "xyes"; then
-      AC_MSG_ERROR([Could not find libstemmer.])
-   fi
-fi
-
-AM_CONDITIONAL(HAVE_LIBSTEMMER, test "x$have_libstemmer" = "xyes")
-
-##################################################################
 # Check for tracker-fts, allow disabling FTS support
 ##################################################################
 
@@ -807,58 +799,29 @@ AC_ARG_ENABLE([tracker-fts],
               [enable_tracker_fts=$enableval],
               [enable_tracker_fts=auto])
 
-if test "x$enable_tracker_fts" = "xno" ; then
-   have_tracker_fts="no  (disabled)"
-else
+if test "x$enable_tracker_fts" != "xno" ; then
    have_tracker_fts="yes"
+else
+   have_tracker_fts="no  (disabled)"
 fi
 
 if test "x$have_tracker_fts" = "xyes"; then
    AC_DEFINE(HAVE_TRACKER_FTS, [1], [Define to 1 if tracker FTS is compiled])
 
-   AX_SQLITE_BUILTIN_FTS5
-   if test "x$ax_cv_sqlite_builtin_fts5" = "xyes" ; then
-      have_builtin_fts5="yes"
-      AC_DEFINE(HAVE_BUILTIN_FTS, [], [Defined if Sqlite has FTS5 compiled in])
+   AX_SQLITE_BUILTIN_FTS4
+   if test "x$ax_cv_sqlite_builtin_fts4" = "xyes" ; then
+      have_builtin_fts4="yes"
+      AC_DEFINE(HAVE_BUILTIN_FTS, [], [Defined if Sqlite has FTS4 compiled in])
    else
-      have_builtin_fts5="no"
-
-      # Make sure SQLite has extension loading enabled
-      AX_SQLITE_AUTO_EXTENSION
-      if test "x$ax_cv_sqlite_auto_extension" != "xyes"; then
-        AC_MSG_ERROR([sqlite3 cannot load extensions])
-      fi
+      have_builtin_fts4="no"
    fi
 else
    AC_DEFINE(HAVE_TRACKER_FTS, [0], [Define to 0 if tracker FTS is not compiled])
-   have_builtin_fts5="disabled"
+   have_builtin_fts4="disabled"
 fi
 
-AM_CONDITIONAL(HAVE_BUILTIN_FTS, test "$have_builtin_fts5" = "yes")
+AM_CONDITIONAL(HAVE_BUILTIN_FTS, test "$have_builtin_fts4" = "yes")
 AM_CONDITIONAL(HAVE_TRACKER_FTS, test "$have_tracker_fts" = "yes")
-
-####################################################################
-# bash-completion
-####################################################################
-
-AC_ARG_WITH([bash-completion-dir],
-    AS_HELP_STRING([--with-bash-completion-dir[=PATH]],
-        [Install the bash auto-completion script in this directory. @<:@default=yes@:>@]),
-    [],
-    [with_bash_completion_dir=yes])
-
-if test "x$with_bash_completion_dir" = "xyes"; then
-   PKG_CHECK_MODULES([BASH_COMPLETION], [bash-completion >= 2.0],
-       [BASH_COMPLETION_DIR=$($PKG_CONFIG --variable=completionsdir bash-completion)],
-       [BASH_COMPLETION_DIR="${datadir}/bash-completion/completions"])
-elif test "x$with_bash_completion_dir" != "xno"; then
-   # Set with_bash_completions_dir to avoid printing path twice below
-   BASH_COMPLETION_DIR="$with_bash_completion_dir"
-   with_bash_completion_dir="yes"
-fi
-
-AC_SUBST([BASH_COMPLETION_DIR])
-AM_CONDITIONAL([WITH_BASH_COMPLETION],[test "x$with_bash_completion_dir" != "xno"])
 
 ####################################################################
 # Check for D-Bus requirements
@@ -941,7 +904,7 @@ AS_IF([test "x$enable_upower" != "xno"], [
 
 if test "x$enable_upower" = "xyes"; then
    if test "x$have_upower" != "xyes"; then
-      AC_MSG_ERROR([Could not find upower >= $UPOWER_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find upower >= $UPOWER_REQUIRED.])
    fi
 fi
 
@@ -978,7 +941,7 @@ if test "x$enable_hal" = "xyes"; then
    if test "x$have_upower" = "xyes"; then
       AC_MSG_ERROR([Only one of UPower and HAL can be used.])
    elif test "x$have_hal" != "xyes"; then
-      AC_MSG_ERROR([Could not find hal >= $HAL_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find hal >= $HAL_REQUIRED.])
    fi
 fi
 
@@ -1022,7 +985,7 @@ if test "x$with_unicode_support" = "xauto"; then
       if test "x$have_libunistring" = "xyes"; then
          with_unicode_support=libunistring
       else
-         AC_MSG_ERROR([Could not find either libunistring or libicu])
+         AC_MSG_ERROR([Couldn't find either libunistring or libicu])
       fi
    fi
 fi
@@ -1038,7 +1001,7 @@ case "x$with_unicode_support" in
         if test "x$have_libunistring" = "xyes"; then
            AC_DEFINE(HAVE_LIBUNISTRING, [1], [libunistring Unicode support library])
         else
-           AC_MSG_ERROR([Could not find libunistring])
+           AC_MSG_ERROR([Couldn't find libunistring])
         fi
      ;;
      # Use libicu
@@ -1048,7 +1011,7 @@ case "x$with_unicode_support" in
         if test "x$have_libicu" = "xyes"; then
           AC_DEFINE(HAVE_LIBICU, [1], [libicu Unicode support library])
         else
-          AC_MSG_ERROR([Could not find libicu])
+          AC_MSG_ERROR([Couldn't find libicu])
         fi
      ;;
      # Invalid option value
@@ -1056,10 +1019,6 @@ case "x$with_unicode_support" in
 esac
 
 AM_CONDITIONAL(HAVE_LIBICU, test "x$have_libicu" = "xyes")
-
-# Add to libtracker-common
-LIBTRACKER_COMMON_CFLAGS="$LIBTRACKER_COMMON_CFLAGS $UNICODE_SUPPORT_CFLAGS"
-LIBTRACKER_COMMON_LIBS="$LIBTRACKER_COMMON_LIBS $UNICODE_SUPPORT_LIBS"
 
 # Add to libtracker-fts
 LIBTRACKER_FTS_CFLAGS="$LIBTRACKER_FTS_CFLAGS $UNICODE_SUPPORT_CFLAGS"
@@ -1102,7 +1061,7 @@ fi
 
 if test "x$enable_network_manager" = "xyes"; then
    if test "x$have_network_manager" != "xyes"; then
-      AC_MSG_ERROR([Could not find libnm-glib >= $NETWORK_MANAGER_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find libnm-glib >= $NETWORK_MANAGER_REQUIRED.])
    fi
 fi
 
@@ -1120,7 +1079,7 @@ AC_ARG_ENABLE(libmediaart,
 
 if test "x$enable_libmediaart" != "xno" ; then
    PKG_CHECK_MODULES(LIBMEDIAART,
-                     [libmediaart-2.0 >= $LIBMEDIAART_REQUIRED],
+                     [libmediaart-1.0 >= $LIBMEDIAART_REQUIRED],
                      [have_libmediaart=yes],
                      [have_libmediaart=no])
 
@@ -1137,7 +1096,7 @@ if test "x$enable_libmediaart" != "xno" ; then
    TRACKER_MINER_FS_LIBS="$TRACKER_MINER_FS_LIBS $LIBMEDIAART_LIBS"
 
    # Used for .pc file...
-   LIBTRACKER_MINER_PC_REQUIRES="libmediaart-2.0"
+   LIBTRACKER_MINER_PC_REQUIRES="libmediaart-1.0"
    AC_SUBST(LIBTRACKER_MINER_PC_REQUIRES)
 
    if test "x$have_libmediaart" = "xyes"; then
@@ -1149,7 +1108,7 @@ fi
 
 if test "x$enable_libmediaart" = "xyes"; then
    if test "x$have_libmediaart" != "xyes"; then
-      AC_MSG_ERROR([Could not find libmediaart >= $LIBMEDIAART_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find libmediaart >= $LIBMEDIAART_REQUIRED.])
    fi
 fi
 
@@ -1183,7 +1142,7 @@ fi
 
 if test "x$enable_libexif" = "xyes"; then
    if test "x$have_libexif" != "xyes"; then
-      AC_MSG_ERROR([Could not find libexif >= $LIBEXIF_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find libexif >= $LIBEXIF_REQUIRED.])
    fi
 fi
 
@@ -1217,7 +1176,7 @@ fi
 
 if test "x$enable_libiptcdata" = "xyes"; then
    if test "x$have_libiptcdata" != "xyes"; then
-      AC_MSG_ERROR([Could not find libiptcdata.])
+      AC_MSG_ERROR([Couldn't find libiptcdata.])
    fi
 fi
 
@@ -1254,7 +1213,7 @@ fi
 
 if test "x$enable_exempi" = "xyes"; then
    if test "x$have_exempi" != "xyes"; then
-      AC_MSG_ERROR([Could not find exempi >= $EXEMPI_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find exempi >= $EXEMPI_REQUIRED.])
    fi
 fi
 
@@ -1310,7 +1269,7 @@ enable_tracker_miner_fs=$enable_miner_fs
 
 if test "x$enable_tracker_miner_fs" = "xyes"; then
    if test "x$have_tracker_miner_fs" != "xyes"; then
-      AC_MSG_ERROR([Could not find tracker-miner-fs dependencies ($TRACKER_MINER_FS_REQUIRED).])
+      AC_MSG_ERROR([Couldn't find tracker-miner-fs dependencies ($TRACKER_MINER_FS_REQUIRED).])
    fi
 else
    if test "x$enable_tracker_miner_fs" = "xno"; then
@@ -1334,7 +1293,7 @@ AC_ARG_ENABLE(tracker-extract,
 
 if test "x$enable_tracker_extract" = "xyes"; then
    if test "x$have_tracker_extract" != "xyes"; then
-      AC_MSG_ERROR([Could not find tracker-extract dependencies ($TRACKER_EXTRACT_REQUIRED).])
+      AC_MSG_ERROR([Couldn't find tracker-extract dependencies ($TRACKER_EXTRACT_REQUIRED).])
    fi
 else
    if test "x$enable_tracker_extract" = "xno"; then
@@ -1358,7 +1317,7 @@ AC_ARG_ENABLE(tracker-writeback,
 
 if test "x$enable_tracker_writeback" = "xyes"; then
    if test "x$have_tracker_writeback" != "xyes"; then
-      AC_MSG_ERROR([Could not find tracker-writeback dependencies ($TRACKER_WRITEBACK_REQUIRED).])
+      AC_MSG_ERROR([Couldn't find tracker-writeback dependencies ($TRACKER_WRITEBACK_REQUIRED).])
    fi
 else
    if test "x$enable_tracker_writeback" = "xno"; then
@@ -1384,7 +1343,7 @@ enable_tracker_miner_apps=$enable_miner_apps
 
 if test "x$enable_tracker_miner_apps" = "xyes"; then
    if test "x$have_tracker_miner_apps" != "xyes"; then
-      AC_MSG_ERROR([Could not find tracker-miner-apps dependencies ($TRACKER_MINER_APPS_REQUIRED).])
+      AC_MSG_ERROR([Couldn't find tracker-miner-apps dependencies ($TRACKER_MINER_APPS_REQUIRED).])
    fi
 else
    if test "x$enable_tracker_miner_apps" = "xno"; then
@@ -1410,7 +1369,7 @@ enable_tracker_miner_user_guides=$enable_miner_user_guides
 
 if test "x$enable_tracker_miner_user_guides" = "xyes"; then
    if test "x$have_tracker_miner_user_guides" != "xyes"; then
-      AC_MSG_ERROR([Could not find tracker-miner-user-guides dependencies ($TRACKER_MINER_USER_GUIDES_REQUIRED).])
+      AC_MSG_ERROR([Couldn't find tracker-miner-user-guides dependencies ($TRACKER_MINER_USER_GUIDES_REQUIRED).])
    fi
 else
    if test "x$enable_tracker_miner_user_guides" = "xno"; then
@@ -1434,7 +1393,7 @@ enable_tracker_miner_rss=$enable_miner_rss
 
 if test "x$enable_tracker_miner_rss" = "xyes" ; then
    if test "x$have_tracker_miner_rss" != "xyes"; then
-      AC_MSG_ERROR([Could not find tracker-miner-rss dependencies ($TRACKER_MINER_RSS_REQUIRED).])
+      AC_MSG_ERROR([Couldn't find tracker-miner-rss dependencies ($TRACKER_MINER_RSS_REQUIRED).])
    fi
 else
    if test "x$enable_tracker_miner_rss" = "xno" ; then
@@ -1460,7 +1419,7 @@ enable_tracker_miner_evolution=$enable_miner_evolution
 
 if test "x$enable_tracker_miner_evolution" = "xyes"; then
    if test "x$have_tracker_miner_evolution" != "xyes"; then
-      AC_MSG_ERROR([Could not find Tracker Evolution plugin ($TRACKER_MINER_EVOLUTION_REQUIRED).])
+      AC_MSG_ERROR([Couldn't find Tracker Evolution plugin ($TRACKER_MINER_EVOLUTION_REQUIRED).])
    fi
 else
    if test "x$enable_tracker_miner_evolution" = "xno"; then
@@ -1476,7 +1435,7 @@ if test "x$have_tracker_miner_evolution" = "xyes"; then
                [tracker_miner_evolution_install_dir=`$PKG_CONFIG $evolution_plugin_name --variable=plugindir`],
 
    if test -z $tracker_miner_evolution_install_dir; then
-      AC_MSG_ERROR([Could not find evolution plugin dir, consider using --with-evolution-plugin-dir.])
+      AC_MSG_ERROR([Couldn't find evolution plugin dir, consider using --with-evolution-plugin-dir.])
    fi
 fi
 
@@ -1501,7 +1460,7 @@ enable_tracker_miner_thunderbird=$enable_miner_thunderbird
 
 if test "x$enable_tracker_miner_thunderbird" = "xyes"; then
    if test "x$have_tracker_miner_thunderbird" != "xyes"; then
-      AC_MSG_ERROR([Could not find Thunderbird ($TRACKER_MINER_THUNDERBIRD_REQUIRED).])
+      AC_MSG_ERROR([Couldn't find Thunderbird ($TRACKER_MINER_THUNDERBIRD_REQUIRED).])
    fi
 else
    if test "x$enable_tracker_miner_thunderbird" = "xno"; then
@@ -1519,7 +1478,7 @@ if test "x$have_tracker_miner_thunderbird" = "xyes"; then
                [tracker_miner_thunderbird_install_dir=${prefix}/lib/thunderbird-addons/extensions])
 
    if test -z $tracker_miner_thunderbird_install_dir; then
-      AC_MSG_ERROR([Could not find thunderbird plugin dir, consider using --with-thunderbird-plugin-dir.])
+      AC_MSG_ERROR([Couldn't find thunderbird plugin dir, consider using --with-thunderbird-plugin-dir.])
    fi
 fi
 
@@ -1544,7 +1503,7 @@ enable_tracker_miner_firefox=$enable_miner_firefox
 
 if test "x$enable_tracker_miner_firefox" = "xyes"; then
    if test "x$have_tracker_miner_firefox" != "xyes"; then
-      AC_MSG_ERROR([Could not find Firefox ($TRACKER_MINER_FIREFOX_REQUIRED).])
+      AC_MSG_ERROR([Couldn't find Firefox ($TRACKER_MINER_FIREFOX_REQUIRED).])
    fi
 else
    if test "x$enable_tracker_miner_firefox" = "xno"; then
@@ -1562,7 +1521,7 @@ if test "x$have_tracker_miner_firefox" = "xyes"; then
                [tracker_miner_firefox_install_dir=${prefix}/lib/firefox-addons/extensions])
 
    if test -z $tracker_miner_firefox_install_dir; then
-      AC_MSG_ERROR([Could not find firefox plugin dir, consider using --with-firefox-plugin-dir.])
+      AC_MSG_ERROR([Couldn't find firefox plugin dir, consider using --with-firefox-plugin-dir.])
    fi
 fi
 
@@ -1585,7 +1544,7 @@ enable_tracker_nautilus_extension=$enable_nautilus_extension
 
 if test "x$enable_tracker_nautilus_extension" = "xyes"; then
    if test "x$have_tracker_nautilus_extension" != "xyes"; then
-      AC_MSG_ERROR([Could not find Tracker Nautilus extension dependencies ($TRACKER_NAUTILUS_EXTENSION_REQUIRED).])
+      AC_MSG_ERROR([Couldn't find Tracker Nautilus extension dependencies ($TRACKER_NAUTILUS_EXTENSION_REQUIRED).])
    fi
 else
    if test "x$enable_tracker_nautilus_extension" = "xno"; then
@@ -1645,7 +1604,7 @@ AC_ARG_ENABLE([tracker-needle],
 
 if test "x$enable_tracker_needle" = "xyes" ; then
    if test "x$have_tracker_needle" != "xyes"; then
-      AC_MSG_ERROR([Could not find tracker-needle dependencies ($TRACKER_NEEDLE_REQUIRED).])
+      AC_MSG_ERROR([Couldn't find tracker-needle dependencies ($TRACKER_NEEDLE_REQUIRED).])
    fi
 else
    if test "x$enable_tracker_needle" = "xno"; then
@@ -1679,7 +1638,7 @@ fi
 
 if test "x$enable_tracker_preferences" = "xyes" ; then
    if test "x$have_tracker_preferences" != "xyes"; then
-      AC_MSG_ERROR([Could not find tracker-preferences dependencies ($TRACKER_PREFERENCES_REQUIRED).])
+      AC_MSG_ERROR([Couldn't find tracker-preferences dependencies ($TRACKER_PREFERENCES_REQUIRED).])
    fi
 else
    if test "x$enable_tracker_preferences" = "xno"; then
@@ -1777,14 +1736,14 @@ fi
 
 if test "x$enable_libxml2" = "xyes"; then
    if test "x$have_libxml2" != "xyes"; then
-      AC_MSG_ERROR([Could not find libxml2 >= $LIBXML2_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find libxml2 >= $LIBXML2_REQUIRED.])
    fi
 fi
 
 AM_CONDITIONAL(HAVE_LIBXML2, test "x$have_libxml2" = "xyes")
 
 ####################################################################
-# Check for tracker-extract: gstreamer/etc
+# Check for tracker-extract: gstreamer/mplayer/etc
 ####################################################################
 
 AC_ARG_ENABLE(generic-media-extractor,
@@ -1842,14 +1801,14 @@ elif test "x$enable_generic_media_extractor" = "xgstreamer"; then
       have_generic_media_handler_app="GStreamer"
       have_generic_media_handler="yes"
    else
-      AC_MSG_ERROR([Could not find GStreamer >= $GSTREAMER_REQUIRED])
+      AC_MSG_ERROR([Couldn't find GStreamer >= $GSTREAMER_REQUIRED])
    fi
 elif test "x$enable_generic_media_extractor" = "xlibav"; then
    if test "$have_libavformat" = "yes" && test "$have_libavcodec" = "yes" && test "$have_libavutil" = "yes"; then
       have_generic_media_handler_app="libav"
       have_generic_media_handler="yes"
    else
-      AC_MSG_ERROR([Could not find libav])
+      AC_MSG_ERROR([Couldn't find libav])
    fi
 else
    have_generic_media_handler="?"
@@ -1860,13 +1819,17 @@ if test "$have_generic_media_handler_app" = "GStreamer"; then
    AC_DEFINE(HAVE_GSTREAMER, [], [Define if we have GStreamer])
    AM_CONDITIONAL(HAVE_GSTREAMER, true)
    AM_CONDITIONAL(HAVE_LIBAV, false)
+   AM_CONDITIONAL(USING_EXTERNAL_GENERIC_MEDIA_PLAYER, false)
 elif test "$have_generic_media_handler_app" = "libav"; then
-   AC_DEFINE(HAVE_LIBAV, [], [Define if we have libav])
-   AM_CONDITIONAL(HAVE_LIBAV, true)
-   AM_CONDITIONAL(HAVE_GSTREAMER, false)
+    AC_DEFINE(HAVE_GSTREAMER, [], [Define if we have libav])
+    AM_CONDITIONAL(HAVE_LIBAV, true)
+    AM_CONDITIONAL(HAVE_GSTREAMER, false)
+    AM_CONDITIONAL(USING_EXTERNAL_GENERIC_MEDIA_PLAYER, false)
 else
-   AM_CONDITIONAL(HAVE_LIBAV, false)
+   AC_DEFINE(USING_EXTERNAL_GENERIC_MEDIA_PLAYER, [], [Define that Tracker will try to use external generic media players])
+   AM_CONDITIONAL(USING_EXTERNAL_GENERIC_MEDIA_PLAYER, true)
    AM_CONDITIONAL(HAVE_GSTREAMER, false)
+   AM_CONDITIONAL(HAVE_LIBAV, false)
 fi
 
 ###########################################################################
@@ -1893,7 +1856,7 @@ else
            AC_SUBST(GSTREAMER_PBUTILS_LIBS)
 
            if test "x$have_gstreamer_pbutils" != "xyes"; then
-              AC_MSG_ERROR([Could not find GStreamer pbutils])
+              AC_MSG_ERROR([Couldn't find GStreamer pbutils])
            fi
 
            gstreamer_backend="Discoverer"
@@ -1911,7 +1874,7 @@ else
               gstreamer_backend="GUPnP-DLNA"
               AC_DEFINE(GSTREAMER_BACKEND_GUPNP_DLNA, [], [Define that GUPnP-DLNA should be used])
            else
-              AC_MSG_ERROR([Could not find GUPnP-DLNA >= $GUPNP_DLNA_REQUIRED])
+              AC_MSG_ERROR([Couldn't find GUPnP-DLNA >= $GUPNP_DLNA_REQUIRED])
            fi
         ;;
         # Invalid option value
@@ -1964,7 +1927,7 @@ fi
 
 if test "x$enable_poppler" = "xyes"; then
    if test "x$have_poppler" != "xyes"; then
-      AC_MSG_ERROR([Could not find poppler-glib >= $POPPLER_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find poppler-glib >= $POPPLER_REQUIRED.])
    fi
 fi
 
@@ -1998,7 +1961,7 @@ fi
 
 if test "x$enable_libgxps" = "xyes"; then
    if test "x$have_libgxps" != "xyes"; then
-      AC_MSG_ERROR([Could not find libgxps.])
+      AC_MSG_ERROR([Couldn't find libgxps.])
    fi
 fi
 
@@ -2032,7 +1995,7 @@ fi
 
 if test "x$enable_libgsf" = "xyes"; then
    if test "x$have_libgsf" != "xyes"; then
-      AC_MSG_ERROR([Could not find libgsf >= $LIBGSF_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find libgsf >= $LIBGSF_REQUIRED.])
    fi
 fi
 
@@ -2066,7 +2029,7 @@ fi
 
 if test "x$enable_libosinfo" = "xyes"; then
    if test "x$have_libosinfo" != "xyes"; then
-      AC_MSG_ERROR([Could not find libosinfo >= $LIBOSINFO_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find libosinfo >= $LIBOSINFO_REQUIRED.])
    fi
 fi
 
@@ -2080,10 +2043,8 @@ AM_CONDITIONAL(HAVE_LIBOSINFO, test "x$have_libosinfo" = "xyes")
 # distros, it is not.
 
 OLD_CFLAGS="$CFLAGS"
-OLD_LDFLAGS="$LDFLAGS"
 OLD_LIBS="$LIBS"
 CFLAGS=""
-LDFLAGS=""
 LIBS=""
 
 AC_ARG_ENABLE(libgif,
@@ -2113,14 +2074,13 @@ fi
 
 if test "x$enable_libgif" = "xyes"; then
    if test "x$have_libgif" != "xyes"; then
-      AC_MSG_ERROR([Could not find libgif >= $LIBGIF_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find libgif >= $LIBGIF_REQUIRED.])
    fi
 fi
 
 AM_CONDITIONAL(HAVE_LIBGIF, test "x$have_libgif" = "xyes")
 
 CFLAGS="$OLD_CFLAGS"
-LDFLAGS="$OLD_LDFLAGS"
 LIBS="$OLD_LIBS"
 
 ##################################################################
@@ -2131,10 +2091,8 @@ LIBS="$OLD_LIBS"
 # distros, it is not.
 
 OLD_CFLAGS="$CFLAGS"
-OLD_LDFLAGS="$LDFLAGS"
 OLD_LIBS="$LIBS"
 CFLAGS=""
-LDFLAGS=""
 LIBS=""
 
 AC_ARG_ENABLE(libjpeg,
@@ -2164,14 +2122,13 @@ fi
 
 if test "x$enable_libjpeg" = "xyes"; then
    if test "x$have_libjpeg" != "xyes"; then
-      AC_MSG_ERROR([Could not find libjpeg >= $LIBJPEG_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find libjpeg >= $LIBJPEG_REQUIRED.])
    fi
 fi
 
 AM_CONDITIONAL(HAVE_LIBJPEG, test "x$have_libjpeg" = "xyes")
 
 CFLAGS="$OLD_CFLAGS"
-LDFLAGS="$OLD_LDFLAGS"
 LIBS="$OLD_LIBS"
 
 ##################################################################
@@ -2182,10 +2139,8 @@ LIBS="$OLD_LIBS"
 # distros, it is not.
 
 OLD_CFLAGS="$CFLAGS"
-OLD_LDFLAGS="$LDFLAGS"
 OLD_LIBS="$LIBS"
 CFLAGS=""
-LDFLAGS=""
 LIBS=""
 
 AC_ARG_ENABLE(libtiff,
@@ -2215,14 +2170,13 @@ fi
 
 if test "x$enable_libtiff" = "xyes"; then
    if test "x$have_libtiff" != "xyes"; then
-      AC_MSG_ERROR([Could not find libtiff >= $LIBTIFF_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find libtiff >= $LIBTIFF_REQUIRED.])
    fi
 fi
 
 AM_CONDITIONAL(HAVE_LIBTIFF, test "x$have_libtiff" = "xyes")
 
 CFLAGS="$OLD_CFLAGS"
-LDFLAGS="$OLD_LDFLAGS"
 LIBS="$OLD_LIBS"
 
 ##################################################################
@@ -2233,10 +2187,8 @@ LIBS="$OLD_LIBS"
 # distros, it is not.
 
 OLD_CFLAGS="$CFLAGS"
-OLD_LDFLAGS="$LDFLAGS"
 OLD_LIBS="$LIBS"
 CFLAGS=""
-LDFLAGS=""
 LIBS=""
 
 AC_ARG_ENABLE(libpng,
@@ -2266,14 +2218,13 @@ fi
 
 if test "x$enable_libpng" = "xyes"; then
    if test "x$have_libpng" != "xyes"; then
-      AC_MSG_ERROR([Could not find libpng >= $LIBPNG_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find libpng >= $LIBPNG_REQUIRED.])
    fi
 fi
 
 AM_CONDITIONAL(HAVE_LIBPNG, test "x$have_libpng" = "xyes")
 
 CFLAGS="$OLD_CFLAGS"
-LDFLAGS="$OLD_LDFLAGS"
 LIBS="$OLD_LIBS"
 
 ##################################################################
@@ -2304,7 +2255,7 @@ fi
 
 if test "x$enable_libvorbis" = "xyes"; then
    if test "x$have_libvorbis" != "xyes"; then
-      AC_MSG_ERROR([Could not find libvorbis >= $LIBVORBIS_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find libvorbis >= $LIBVORBIS_REQUIRED.])
    fi
 fi
 
@@ -2337,7 +2288,7 @@ fi
 
 if test "x$enable_libflac" = "xyes"; then
    if test "x$have_libflac" != "xyes"; then
-      AC_MSG_ERROR([Could not find libflac >= $LIBFLAC_REQUIRED.])
+      AC_MSG_ERROR([Couldn't find libflac >= $LIBFLAC_REQUIRED.])
    fi
 fi
 
@@ -2364,11 +2315,6 @@ if test "x$enable_libcue" != "xno" ; then
 
    if test "x$have_libcue" = "xyes"; then
       AC_DEFINE(HAVE_LIBCUE, [], [Define if we have libcue])
-
-      PKG_CHECK_EXISTS([libcue >= 2.0.0], have_libcue2=yes, have_libcue2=no)
-      if test "x$have_libcue2" = "xyes"; then
-        AC_DEFINE(HAVE_LIBCUE2, [], [Define if we have libcue 2 or up])
-      fi
    fi
 else
    have_libcue="no  (disabled)"
@@ -2376,9 +2322,11 @@ fi
 
 if test "x$enable_libcue" = "xyes"; then
    if test "x$have_libcue" != "xyes"; then
-      AC_MSG_ERROR([Could not find libcue.])
+      AC_MSG_ERROR([Couldn't find libcue.])
    fi
 fi
+
+AM_CONDITIONAL(HAVE_LIBCUE, test "x$have_libcue" = "xyes")
 
 ####################################################################
 # Check for tracker-extract: AbiWord
@@ -2539,7 +2487,7 @@ fi
 
 if test "x$enable_playlist" = "xyes"; then
    if test "x$have_playlist" != "xyes"; then
-      AC_MSG_ERROR([Could not find Totem PL parser.])
+      AC_MSG_ERROR([Couldn't find Totem PL parser.])
    fi
 fi
 
@@ -2591,26 +2539,28 @@ fi
 
 AM_CONDITIONAL(HAVE_ARTWORK, test "x$have_artwork" = "xyes")
 
-##################################################################
-# Check for libseccomp
-##################################################################
-
-PKG_CHECK_MODULES(LIBSECCOMP,
-                  [libseccomp >= 2.0],
-                  [have_libseccomp=yes],
-                  [have_libseccomp=no])
-
-if test "$have_libseccomp" = "yes"; then
-   LIBTRACKER_COMMON_LIBS="$LIBTRACKER_COMMON_LIBS $LIBSECCOMP_LIBS"
-   LIBTRACKER_COMMON_CFLAGS="$LIBTRACKER_COMMON_CFLAGS $LIBSECCOMP_CFLAGS"
-   AC_DEFINE(HAVE_LIBSECCOMP, [], [Define if we have libseccomp])
-fi
 
 ##################################################################
 # Write generated files
 ##################################################################
 
 AC_CONFIG_FILES([
+	data/dbus/Makefile
+	data/gschemas/Makefile
+	data/icons/16x16/Makefile
+	data/icons/22x22/Makefile
+	data/icons/24x24/Makefile
+	data/icons/32x32/Makefile
+	data/icons/48x48/Makefile
+	data/icons/Makefile
+	data/icons/scalable/Makefile
+	data/languages/Makefile
+	data/Makefile
+	data/miners/Makefile
+	data/ontologies/Makefile
+	data/tracker-control.pc
+	data/tracker-sparql.pc
+	data/tracker-miner.pc
 	docs/Makefile
 	docs/design/Makefile
 	docs/manpages/Makefile
@@ -2627,39 +2577,31 @@ AC_CONFIG_FILES([
 	Makefile
 	po/Makefile.in
 	src/gvdb/Makefile
+	src/libstemmer/Makefile
 	src/libtracker-common/Makefile
-	src/libtracker-common/stop-words/Makefile
 	src/libtracker-sparql/Makefile
-	src/libtracker-sparql/tracker-sparql.pc
 	src/libtracker-bus/Makefile
 	src/libtracker-control/Makefile
-	src/libtracker-control/tracker-control.pc
 	src/libtracker-data/Makefile
 	src/libtracker-direct/Makefile
 	src/libtracker-sparql-backend/Makefile
 	src/libtracker-fts/Makefile
 	src/libtracker-extract/Makefile
 	src/libtracker-miner/Makefile
-	src/libtracker-miner/tracker-miner.pc
 	src/Makefile
 	src/miners/Makefile
 	src/miners/fs/Makefile
 	src/miners/apps/Makefile
 	src/miners/rss/Makefile
 	src/miners/user-guides/Makefile
-	src/ontologies/Makefile
 	src/tracker-store/Makefile
-	src/tracker/Makefile
+	src/tracker-control/Makefile
 	src/tracker-extract/Makefile
 	src/tracker-preferences/Makefile
+	src/tracker-preferences/tracker-preferences.desktop.in
 	src/tracker-needle/Makefile
-	src/tracker-needle/icons/Makefile
-	src/tracker-needle/icons/16x16/Makefile
-	src/tracker-needle/icons/22x22/Makefile
-	src/tracker-needle/icons/24x24/Makefile
-	src/tracker-needle/icons/32x32/Makefile
-	src/tracker-needle/icons/48x48/Makefile
-	src/tracker-needle/icons/scalable/Makefile
+	src/tracker-needle/tracker-needle.desktop.in
+	src/tracker-utils/Makefile
 	src/tracker-writeback/Makefile
 	src/plugins/Makefile
 	src/plugins/evolution/Makefile
@@ -2690,7 +2632,6 @@ AC_CONFIG_FILES([
 	tests/libtracker-data/anon/Makefile
 	tests/libtracker-data/ask/Makefile
 	tests/libtracker-data/basic/Makefile
-	tests/libtracker-data/bind/Makefile
 	tests/libtracker-data/bnode-coreference/Makefile
 	tests/libtracker-data/bound/Makefile
 	tests/libtracker-data/datetime/Makefile
@@ -2699,7 +2640,6 @@ AC_CONFIG_FILES([
 	tests/libtracker-data/graph/Makefile
 	tests/libtracker-data/nie/Makefile
 	tests/libtracker-data/nmo/Makefile
-	tests/libtracker-data/mixed-cardinality/Makefile
 	tests/libtracker-data/optional/Makefile
 	tests/libtracker-data/regex/Makefile
 	tests/libtracker-data/sort/Makefile
@@ -2707,7 +2647,6 @@ AC_CONFIG_FILES([
 	tests/libtracker-data/error/Makefile
 	tests/libtracker-data/backup/Makefile
 	tests/libtracker-data/turtle/Makefile
-	tests/libtracker-data/update/Makefile
 	tests/libtracker-miner/Makefile
 	tests/libtracker-fts/Makefile
 	tests/libtracker-fts/limits/Makefile
@@ -2751,6 +2690,7 @@ AC_CONFIG_FILES([
 	utils/data-generators/cc/Makefile
 	utils/mtp/Makefile
 	utils/sandbox/Makefile
+	utils/tracker-sql/Makefile
 	utils/tracker-resdump/Makefile
 	examples/Makefile
 	examples/libtracker-miner/Makefile
@@ -2785,13 +2725,10 @@ Feature Support:
 	Unicode support library:                $with_unicode_support
 
 	Build with Journal support:             $have_tracker_journal
-	Build with SQLite FTS support:          $have_tracker_fts (built-in FTS: $have_builtin_fts5)
-	Build with Stemming support:            $have_libstemmer
+	Build with SQLite FTS support:          $have_tracker_fts (built-in FTS: $have_builtin_fts4)
 
 	Cache media art                         $have_libmediaart (libmediaart)
 	Install artwork                         $have_artwork
-
-	Bash completion support:                $with_bash_completion_dir ($BASH_COMPLETION_DIR)
 
 Data Miners / Writebacks:
 
@@ -2824,7 +2761,7 @@ Metadata Extractors:
 	Support XML / HTML:                     $have_libxml2
 	Support embedded / sidecar XMP:         $have_exempi
 	Support generic media formats:          $have_generic_media_handler ($have_generic_media_handler_app) (backend: $gstreamer_backend)
-	Support cue sheet parsing:              $have_libcue (libcue2.0: $have_libcue2)
+	Support cue sheet parsing:              $have_libcue
 	Support playlists (w/ Totem):           $have_playlist
 	Support ISO image parsing:              $have_libosinfo
 	Support AbiWord document parsing:       $have_abiword
@@ -2870,11 +2807,5 @@ WARNING:
         3.8.4.2:         https://mail.gnome.org/archives/tracker-list/2014-April/msg00001.html
 
 
-"
-fi
-
-if test "$have_libseccomp" = "no"; then
-echo "
-WARNING: libseccomp was not found, build will not be prevented, but this is a security flaw.
 "
 fi

@@ -448,7 +448,9 @@ tracker_file_system_class_init (TrackerFileSystemClass *klass)
 static void
 tracker_file_system_init (TrackerFileSystem *file_system)
 {
-	file_system->priv =
+	TrackerFileSystemPrivate *priv;
+
+	file_system->priv = priv =
 		G_TYPE_INSTANCE_GET_PRIVATE (file_system,
 		                             TRACKER_TYPE_FILE_SYSTEM,
 		                             TrackerFileSystemPrivate);
@@ -703,7 +705,6 @@ tracker_file_system_traverse (TrackerFileSystem             *file_system,
                               GFile                         *root,
                               GTraverseType                  order,
                               TrackerFileSystemTraverseFunc  func,
-                              gint                           max_depth,
                               gpointer                       user_data)
 {
 	TrackerFileSystemPrivate *priv;
@@ -728,7 +729,7 @@ tracker_file_system_traverse (TrackerFileSystem             *file_system,
 	g_node_traverse (node,
 	                 order,
 	                 G_TRAVERSE_ALL,
-	                 max_depth,
+	                 -1,
 	                 traverse_filesystem_func,
 	                 &data);
 
@@ -837,22 +838,21 @@ tracker_file_system_set_property (TrackerFileSystem *file_system,
 	}
 }
 
-gboolean
-tracker_file_system_get_property_full (TrackerFileSystem *file_system,
-                                       GFile             *file,
-                                       GQuark             prop,
-                                       gpointer          *prop_data)
+gpointer
+tracker_file_system_get_property (TrackerFileSystem *file_system,
+                                  GFile             *file,
+                                  GQuark             prop)
 {
 	FileNodeData *data;
 	FileNodeProperty property, *match;
 	GNode *node;
 
-	g_return_val_if_fail (TRACKER_IS_FILE_SYSTEM (file_system), FALSE);
-	g_return_val_if_fail (file != NULL, FALSE);
-	g_return_val_if_fail (prop > 0, FALSE);
+	g_return_val_if_fail (TRACKER_IS_FILE_SYSTEM (file_system), NULL);
+	g_return_val_if_fail (file != NULL, NULL);
+	g_return_val_if_fail (prop > 0, NULL);
 
 	node = file_system_get_node (file_system, file);
-	g_return_val_if_fail (node != NULL, FALSE);
+	g_return_val_if_fail (node != NULL, NULL);
 
 	data = node->data;
 	property.prop_quark = prop;
@@ -861,26 +861,7 @@ tracker_file_system_get_property_full (TrackerFileSystem *file_system,
 	                 data->properties->len, sizeof (FileNodeProperty),
 	                 search_property_node);
 
-	if (prop_data)
-		*prop_data = (match) ? match->value : NULL;
-
-	return match != NULL;
-}
-
-gpointer
-tracker_file_system_get_property (TrackerFileSystem *file_system,
-                                  GFile             *file,
-                                  GQuark             prop)
-{
-	gpointer data;
-
-	g_return_val_if_fail (TRACKER_IS_FILE_SYSTEM (file_system), NULL);
-	g_return_val_if_fail (file != NULL, NULL);
-	g_return_val_if_fail (prop > 0, NULL);
-
-	tracker_file_system_get_property_full (file_system, file, prop, &data);
-
-	return data;
+	return (match) ? match->value : NULL;
 }
 
 void
@@ -931,47 +912,6 @@ tracker_file_system_unset_property (TrackerFileSystem *file_system,
 	g_assert (index < data->properties->len);
 
 	g_array_remove_index (data->properties, index);
-}
-
-gpointer
-tracker_file_system_steal_property (TrackerFileSystem *file_system,
-                                    GFile             *file,
-                                    GQuark             prop)
-{
-	FileNodeData *data;
-	FileNodeProperty property, *match;
-	GNode *node;
-	guint index;
-	gpointer prop_value;
-
-	g_return_val_if_fail (TRACKER_IS_FILE_SYSTEM (file_system), NULL);
-	g_return_val_if_fail (file != NULL, NULL);
-	g_return_val_if_fail (prop > 0, NULL);
-
-	node = file_system_get_node (file_system, file);
-	g_return_val_if_fail (node != NULL, NULL);
-
-	data = node->data;
-	property.prop_quark = prop;
-
-	match = bsearch (&property, data->properties->data,
-	                 data->properties->len, sizeof (FileNodeProperty),
-	                 search_property_node);
-
-	if (!match) {
-		return NULL;
-	}
-
-	prop_value = match->value;
-
-	/* Find out the index from memory positions */
-	index = (guint) ((FileNodeProperty *) match -
-	                 (FileNodeProperty *) data->properties->data);
-	g_assert (index < data->properties->len);
-
-	g_array_remove_index (data->properties, index);
-
-	return prop_value;
 }
 
 typedef struct {

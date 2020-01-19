@@ -88,18 +88,15 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-noinst_PROGRAMS = ttl2sgml$(EXEEXT) ttlresource2sgml$(EXEEXT)
+noinst_PROGRAMS = ontology-graph$(EXEEXT) ttl2sgml$(EXEEXT)
 subdir = docs/tools
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/attributes.m4 \
-	$(top_srcdir)/m4/gsettings.m4 $(top_srcdir)/m4/gtk-doc.m4 \
-	$(top_srcdir)/m4/intltool.m4 $(top_srcdir)/m4/introspection.m4 \
+	$(top_srcdir)/m4/gtk-doc.m4 $(top_srcdir)/m4/intltool.m4 \
 	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/m4/nls.m4 \
-	$(top_srcdir)/m4/pkg.m4 \
-	$(top_srcdir)/m4/sqlite-auto-extension.m4 \
-	$(top_srcdir)/m4/sqlite-builtin-fts5.m4 \
+	$(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/sqlite-builtin-fts4.m4 \
 	$(top_srcdir)/m4/sqlite-threadsafe.m4 \
 	$(top_srcdir)/m4/tracker.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -110,13 +107,11 @@ CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
-am__objects_1 = ttl_loader.$(OBJEXT) ttl_model.$(OBJEXT) \
-	ttl_sgml.$(OBJEXT) qname.$(OBJEXT)
-am_ttl2sgml_OBJECTS = $(am__objects_1) ttl2sgml.$(OBJEXT)
-ttl2sgml_OBJECTS = $(am_ttl2sgml_OBJECTS)
-ttl2sgml_LDADD = $(LDADD)
+am_ontology_graph_OBJECTS = ontology-graph.$(OBJEXT)
+ontology_graph_OBJECTS = $(am_ontology_graph_OBJECTS)
+ontology_graph_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
-ttl2sgml_DEPENDENCIES =  \
+ontology_graph_DEPENDENCIES =  \
 	$(top_builddir)/src/libtracker-common/libtracker-common.la \
 	$(top_builddir)/src/libtracker-data/libtracker-data.la \
 	$(top_builddir)/src/libtracker-sparql-backend/libtracker-sparql-@TRACKER_API_VERSION@.la \
@@ -125,11 +120,11 @@ AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-am_ttlresource2sgml_OBJECTS = $(am__objects_1) \
-	ttlresource2sgml.$(OBJEXT)
-ttlresource2sgml_OBJECTS = $(am_ttlresource2sgml_OBJECTS)
-ttlresource2sgml_LDADD = $(LDADD)
-ttlresource2sgml_DEPENDENCIES =  \
+am_ttl2sgml_OBJECTS = ttl2sgml.$(OBJEXT) ttl_loader.$(OBJEXT) \
+	ttl_model.$(OBJEXT) qname.$(OBJEXT) ttl_sgml.$(OBJEXT)
+ttl2sgml_OBJECTS = $(am_ttl2sgml_OBJECTS)
+ttl2sgml_LDADD = $(LDADD)
+ttl2sgml_DEPENDENCIES =  \
 	$(top_builddir)/src/libtracker-common/libtracker-common.la \
 	$(top_builddir)/src/libtracker-data/libtracker-data.la \
 	$(top_builddir)/src/libtracker-sparql-backend/libtracker-sparql-@TRACKER_API_VERSION@.la \
@@ -168,8 +163,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(ttl2sgml_SOURCES) $(ttlresource2sgml_SOURCES)
-DIST_SOURCES = $(ttl2sgml_SOURCES) $(ttlresource2sgml_SOURCES)
+SOURCES = $(ontology_graph_SOURCES) $(ttl2sgml_SOURCES)
+DIST_SOURCES = $(ontology_graph_SOURCES) $(ttl2sgml_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -214,9 +209,6 @@ AVFORMAT_LIBS = @AVFORMAT_LIBS@
 AVUTIL_CFLAGS = @AVUTIL_CFLAGS@
 AVUTIL_LIBS = @AVUTIL_LIBS@
 AWK = @AWK@
-BASH_COMPLETION_CFLAGS = @BASH_COMPLETION_CFLAGS@
-BASH_COMPLETION_DIR = @BASH_COMPLETION_DIR@
-BASH_COMPLETION_LIBS = @BASH_COMPLETION_LIBS@
 BUILD_CFLAGS = @BUILD_CFLAGS@
 BUILD_LIBS = @BUILD_LIBS@
 BUILD_VALACFLAGS = @BUILD_VALACFLAGS@
@@ -259,6 +251,7 @@ GLIB_COMPILE_SCHEMAS = @GLIB_COMPILE_SCHEMAS@
 GLIB_MKENUMS = @GLIB_MKENUMS@
 GLIB_PREFIX = @GLIB_PREFIX@
 GMSGFMT = @GMSGFMT@
+GRAPHVIZ_FDP = @GRAPHVIZ_FDP@
 GREP = @GREP@
 GSETTINGS_DISABLE_SCHEMAS_COMPILE = @GSETTINGS_DISABLE_SCHEMAS_COMPILE@
 GSTREAMER_CFLAGS = @GSTREAMER_CFLAGS@
@@ -330,8 +323,6 @@ LIBOSINFO_LIBS = @LIBOSINFO_LIBS@
 LIBPNG_CFLAGS = @LIBPNG_CFLAGS@
 LIBPNG_LIBS = @LIBPNG_LIBS@
 LIBS = @LIBS@
-LIBSECCOMP_CFLAGS = @LIBSECCOMP_CFLAGS@
-LIBSECCOMP_LIBS = @LIBSECCOMP_LIBS@
 LIBTIFF_CFLAGS = @LIBTIFF_CFLAGS@
 LIBTIFF_LIBS = @LIBTIFF_LIBS@
 LIBTOOL = @LIBTOOL@
@@ -366,7 +357,6 @@ LT_CURRENT = @LT_CURRENT@
 LT_CURRENT_MINUS_AGE = @LT_CURRENT_MINUS_AGE@
 LT_RELEASE = @LT_RELEASE@
 LT_REVISION = @LT_REVISION@
-LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MEEGOTOUCH_CFLAGS = @MEEGOTOUCH_CFLAGS@
@@ -419,7 +409,8 @@ TRACKER_API_VERSION = @TRACKER_API_VERSION@
 TRACKER_API_VERSION_UNDERSCORES = @TRACKER_API_VERSION_UNDERSCORES@
 TRACKER_BINARY_AGE = @TRACKER_BINARY_AGE@
 TRACKER_BINARY_VERSION = @TRACKER_BINARY_VERSION@
-TRACKER_CFLAGS = @TRACKER_CFLAGS@
+TRACKER_CONTROL_CFLAGS = @TRACKER_CONTROL_CFLAGS@
+TRACKER_CONTROL_LIBS = @TRACKER_CONTROL_LIBS@
 TRACKER_EXTRACT_CFLAGS = @TRACKER_EXTRACT_CFLAGS@
 TRACKER_EXTRACT_LIBS = @TRACKER_EXTRACT_LIBS@
 TRACKER_EXTRACT_MODULES_CFLAGS = @TRACKER_EXTRACT_MODULES_CFLAGS@
@@ -427,7 +418,6 @@ TRACKER_EXTRACT_MODULES_DIR = @TRACKER_EXTRACT_MODULES_DIR@
 TRACKER_EXTRACT_MODULES_LIBS = @TRACKER_EXTRACT_MODULES_LIBS@
 TRACKER_EXTRACT_RULES_DIR = @TRACKER_EXTRACT_RULES_DIR@
 TRACKER_INTERFACE_AGE = @TRACKER_INTERFACE_AGE@
-TRACKER_LIBS = @TRACKER_LIBS@
 TRACKER_MAJOR_VERSION = @TRACKER_MAJOR_VERSION@
 TRACKER_MICRO_VERSION = @TRACKER_MICRO_VERSION@
 TRACKER_MINER_APPS_CFLAGS = @TRACKER_MINER_APPS_CFLAGS@
@@ -455,6 +445,8 @@ TRACKER_RESDUMP_CFLAGS = @TRACKER_RESDUMP_CFLAGS@
 TRACKER_RESDUMP_LIBS = @TRACKER_RESDUMP_LIBS@
 TRACKER_STORE_CFLAGS = @TRACKER_STORE_CFLAGS@
 TRACKER_STORE_LIBS = @TRACKER_STORE_LIBS@
+TRACKER_UTILS_CFLAGS = @TRACKER_UTILS_CFLAGS@
+TRACKER_UTILS_LIBS = @TRACKER_UTILS_LIBS@
 TRACKER_VERSION = @TRACKER_VERSION@
 TRACKER_WRITEBACK_CFLAGS = @TRACKER_WRITEBACK_CFLAGS@
 TRACKER_WRITEBACK_LIBS = @TRACKER_WRITEBACK_LIBS@
@@ -539,23 +531,19 @@ LDADD = \
 	$(LIBTRACKER_DATA_LIBS) \
 	$(BUILD_LIBS)
 
-TTL_LOADER_FILES = \
-	ttl_loader.c                                   \
-	ttl_loader.h                                   \
-	ttl_model.c                                    \
-	ttl_model.h                                    \
-	ttl_sgml.c                                     \
-	ttl_sgml.h                                     \
-	qname.c                                        \
-	qname.h
+ontology_graph_SOURCES = \
+	ontology-graph.c
 
 ttl2sgml_SOURCES = \
-	$(TTL_LOADER_FILES)                            \
-	ttl2sgml.c
-
-ttlresource2sgml_SOURCES = \
-	$(TTL_LOADER_FILES)                            \
-	ttlresource2sgml.c
+	ttl2sgml.c                                     \
+	ttl_loader.h                                   \
+	ttl_loader.c                                   \
+	ttl_model.h                                    \
+	ttl_model.c                                    \
+	qname.h                                        \
+	qname.c                                        \
+	ttl_sgml.h                                     \
+	ttl_sgml.c
 
 EXTRA_DIST = gen-doc.sh
 all: all-am
@@ -601,13 +589,13 @@ clean-noinstPROGRAMS:
 	echo " rm -f" $$list; \
 	rm -f $$list
 
+ontology-graph$(EXEEXT): $(ontology_graph_OBJECTS) $(ontology_graph_DEPENDENCIES) $(EXTRA_ontology_graph_DEPENDENCIES) 
+	@rm -f ontology-graph$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(ontology_graph_OBJECTS) $(ontology_graph_LDADD) $(LIBS)
+
 ttl2sgml$(EXEEXT): $(ttl2sgml_OBJECTS) $(ttl2sgml_DEPENDENCIES) $(EXTRA_ttl2sgml_DEPENDENCIES) 
 	@rm -f ttl2sgml$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(ttl2sgml_OBJECTS) $(ttl2sgml_LDADD) $(LIBS)
-
-ttlresource2sgml$(EXEEXT): $(ttlresource2sgml_OBJECTS) $(ttlresource2sgml_DEPENDENCIES) $(EXTRA_ttlresource2sgml_DEPENDENCIES) 
-	@rm -f ttlresource2sgml$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(ttlresource2sgml_OBJECTS) $(ttlresource2sgml_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -615,12 +603,12 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ontology-graph.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qname.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ttl2sgml.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ttl_loader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ttl_model.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ttl_sgml.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ttlresource2sgml.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

@@ -30,6 +30,7 @@
 #include <libtracker-sparql/tracker-sparql.h>
 
 #include "tracker-miner-object.h"
+#include "tracker-miner-common.h"
 #include "tracker-data-provider.h"
 #include "tracker-indexing-tree.h"
 
@@ -104,13 +105,9 @@ typedef struct {
 	                                       gint                  directories_ignored,
 	                                       gint                  files_found,
 	                                       gint                  files_ignored);
-	gboolean (* remove_file)              (TrackerMinerFS       *fs,
-	                                       GFile                *file,
-	                                       gboolean              children_only,
-	                                       TrackerSparqlBuilder *builder);
 
 	/* <Private> */
-	gpointer padding[8];
+	gpointer padding[9];
 } TrackerMinerFSClass;
 
 /**
@@ -145,13 +142,10 @@ void                  tracker_miner_fs_set_mtime_checking    (TrackerMinerFS  *f
 void                  tracker_miner_fs_set_initial_crawling  (TrackerMinerFS  *fs,
                                                               gboolean         do_initial_crawling);
 
-#ifndef TRACKER_DISABLE_DEPRECATED
 /* Setting locations to be processed in IndexingTree */
 void                  tracker_miner_fs_add_directory_without_parent
                                                              (TrackerMinerFS  *fs,
-                                                              GFile           *file)
-                                                             G_GNUC_DEPRECATED;
-#endif
+                                                              GFile           *file);
 
 void                  tracker_miner_fs_directory_add         (TrackerMinerFS  *fs,
                                                               GFile           *file,

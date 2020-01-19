@@ -99,7 +99,6 @@ persistence_symlink_get_file (GFileInfo *info)
 	GFile *file = NULL;
 	guint n_retries;
 
-	symlink_name = g_file_info_get_name (info);
 	symlink_target = g_file_info_get_symlink_target (info);
 
 	if (!g_path_is_absolute (symlink_target)) {
@@ -108,6 +107,7 @@ persistence_symlink_get_file (GFileInfo *info)
 		return NULL;
 	}
 
+	symlink_name = g_file_info_get_name (info);
 	md5 = g_compute_checksum_for_string (G_CHECKSUM_MD5, symlink_target, -1);
 	items = g_strsplit (symlink_name, "-", 2);
 	n_retries = g_strtod (items[0], NULL);
@@ -199,13 +199,14 @@ persistence_retrieve_files (TrackerExtractPersistence *persistence,
 
 	while ((info = g_file_enumerator_next_file (enumerator, NULL, NULL)) != NULL) {
 		GFile *file, *symlink_file;
+		gchar *symlink_name;
 		guint n_retries;
 
 		symlink_file = g_file_enumerator_get_child (enumerator, info);
 		file = persistence_symlink_get_file (info);
 
 		if (!file) {
-			/* If we got here, persistence_symlink_get_file() already emitted a g_critical */
+			g_critical ("Symlink has bad format: %s\n", symlink_name);
 			g_object_unref (symlink_file);
 			g_object_unref (info);
 			continue;

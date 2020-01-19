@@ -352,7 +352,6 @@ public class Tracker.Resources : Object {
 
 		if (signal_timeout != 0) {
 			Source.remove (signal_timeout);
-			signal_timeout = 0;
 		}
 	}
 

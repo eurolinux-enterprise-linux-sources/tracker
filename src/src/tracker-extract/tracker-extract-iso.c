@@ -35,7 +35,7 @@ G_MODULE_EXPORT gboolean
 tracker_extract_get_metadata (TrackerExtractInfo *info_)
 {
 	/* NOTE: This function has to exist, tracker-extract checks
-	 * the symbol table for this function and if it doesn't
+	 * the symbole table for this function and if it doesn't
 	 * exist, the module is not loaded to be used as an extractor.
 	 */
 
@@ -53,18 +53,17 @@ tracker_extract_get_metadata (TrackerExtractInfo *info_)
 	gboolean bootable;
 	const gchar *id;
 	const gchar *name;
-	GList *languages, *l;
-	TrackerResource *metadata;
+        GList *languages, *l;
+	TrackerSparqlBuilder *metadata;
+
+	metadata = tracker_extract_info_get_metadata_builder (info_);
 
 	file = tracker_extract_info_get_file (info_);
 	filename = g_file_get_path (file);
 
-	metadata = tracker_resource_new (NULL);
-
 	media = osinfo_media_create_from_location (filename, NULL, &error);
 	if (error != NULL) {
 		if (error->code != OSINFO_MEDIA_ERROR_NOT_BOOTABLE) {
-			g_object_unref (metadata);
 			g_message ("Could not extract iso info from '%s': %s",
 				   filename, error->message);
 			g_free (filename);
@@ -96,7 +95,8 @@ tracker_extract_get_metadata (TrackerExtractInfo *info_)
 	if (os == NULL)
 		goto unknown_os;
 
-	tracker_resource_add_uri (metadata, "rdf:type", "nfo:FilesystemImage");
+	tracker_sparql_builder_predicate (metadata, "a");
+	tracker_sparql_builder_object (metadata, "nfo:FilesystemImage");
 
 	variants = osinfo_media_get_os_variants (media);
 	if (osinfo_list_get_length (OSINFO_LIST (variants)) > 0) {
@@ -110,40 +110,44 @@ tracker_extract_get_metadata (TrackerExtractInfo *info_)
 	}
 
 	if (name != NULL) {
-		tracker_resource_set_string (metadata, "nie:title", name);
+		tracker_sparql_builder_predicate (metadata, "nie:title");
+		tracker_sparql_builder_object_string (metadata, name);
 	}
 
 	if (osinfo_media_get_live (media)) {
-		tracker_resource_add_uri (metadata, "rdf:type", "nfo:OperatingSystem");
+		tracker_sparql_builder_predicate (metadata, "a");
+		tracker_sparql_builder_object (metadata, "nfo:OperatingSystem");
 	}
 
 	if (osinfo_media_get_installer (media)) {
-		tracker_resource_add_uri (metadata, "rdf:type", "osinfo:Installer");
+		tracker_sparql_builder_predicate (metadata, "a");
+		tracker_sparql_builder_object (metadata, "osinfo:Installer");
 	}
 
-	tracker_resource_set_boolean (metadata, "nfo:isBootable", bootable);
+	tracker_sparql_builder_predicate (metadata, "nfo:isBootable");
+	tracker_sparql_builder_object_boolean (metadata, bootable);
 
 	id = osinfo_entity_get_id (OSINFO_ENTITY (os));
 	if (id != NULL) {
-		tracker_resource_set_string (metadata, "osinfo:id", id);
+		tracker_sparql_builder_predicate (metadata, "osinfo:id");
+		tracker_sparql_builder_object_string (metadata, id);
 	}
 
         id = osinfo_entity_get_id (OSINFO_ENTITY (media));
 	if (id != NULL) {
-		tracker_resource_set_string (metadata, "osinfo:mediaId", id);
+		tracker_sparql_builder_predicate (metadata, "osinfo:mediaId");
+		tracker_sparql_builder_object_string (metadata, id);
 	}
 
         languages = osinfo_media_get_languages (media);
         for (l = languages; l != NULL; l = l->next) {
-		tracker_resource_add_string (metadata, "osinfo:language", (char *)l->data);
+		tracker_sparql_builder_predicate (metadata, "osinfo:language");
+		tracker_sparql_builder_object_string (metadata, (char *) l->data);
         }
         g_list_free (languages);
 
 	g_object_unref (G_OBJECT (media));
 	g_object_unref (G_OBJECT (loader));
-
-	tracker_extract_info_set_resource (info_, metadata);
-	g_object_unref (metadata);
 
 	return TRUE;
 
@@ -153,7 +157,8 @@ unknown_os:
                 gchar *stripped = g_strdup (name);
 
                 g_strstrip (stripped);
-		tracker_resource_set_string (metadata, "nie:title", stripped);
+		tracker_sparql_builder_predicate (metadata, "nie:title");
+		tracker_sparql_builder_object_string (metadata, stripped);
                 g_free (stripped);
 	}
 
@@ -165,12 +170,11 @@ no_os:
 		g_object_unref (G_OBJECT (loader));
 	}
 
-	tracker_resource_add_uri (metadata, "rdf:type", "nfo:FilesystemImage");
+	tracker_sparql_builder_predicate (metadata, "a");
+	tracker_sparql_builder_object (metadata, "nfo:FilesystemImage");
 
-	tracker_resource_set_boolean (metadata, "nfo:isBootable", bootable);
-
-	tracker_extract_info_set_resource (info_, metadata);
-	g_object_unref (metadata);
+	tracker_sparql_builder_predicate (metadata, "nfo:isBootable");
+	tracker_sparql_builder_object_boolean (metadata, bootable);
 
 	return TRUE;
 }

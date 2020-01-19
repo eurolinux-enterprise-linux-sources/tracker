@@ -42,8 +42,7 @@ typedef struct _TrackerDecoratorInfo TrackerDecoratorInfo;
 /**
  * TrackerDecorator:
  *
- * Abstract miner object for passive extended metadata indexing, i.e.
- * data past the basic information such as file name, size, etc.
+ * Abstract miner object.
  **/
 struct _TrackerDecorator {
 	TrackerMiner parent_instance;

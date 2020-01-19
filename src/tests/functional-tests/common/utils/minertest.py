@@ -53,7 +53,8 @@ CONF_OPTIONS = {
 
 class CommonTrackerMinerTest (ut.TestCase):
 
-    def prepare_directories (self):
+    @classmethod
+    def __prepare_directories (self):
         #
         #     ~/test-monitored/
         #                     /file1.txt
@@ -91,7 +92,8 @@ class CommonTrackerMinerTest (ut.TestCase):
             self.tracker.await_resource_inserted(
                 'nfo:TextDocument', url=uri(tf))
 
-    def setUp (self):
+    @classmethod 
+    def setUpClass (self):
         for d in ['test-monitored', 'test-no-monitored']:
             dirname = path(d)
             if os.path.exists (dirname):
@@ -103,20 +105,8 @@ class CommonTrackerMinerTest (ut.TestCase):
         self.system.tracker_miner_fs_testing_start (CONF_OPTIONS)
         self.tracker = self.system.store
 
-        try:
-            self.prepare_directories ()
-            self.tracker.reset_graph_updates_tracking ()
-        except Exception as e:
-            self.tearDown ()
-            raise
+        self.__prepare_directories ()
 
-    def tearDown (self):
+    @classmethod
+    def tearDownClass (self):
         self.system.tracker_miner_fs_testing_stop ()
-
-    def assertResourceExists (self, urn):
-        if self.tracker.ask ("ASK { <%s> a rdfs:Resource }" % urn) == False:
-            self.fail ("Resource <%s> does not exist" % urn)
-
-    def assertResourceMissing (self, urn):
-        if self.tracker.ask ("ASK { <%s> a rdfs:Resource }" % urn) == True:
-            self.fail ("Resource <%s> should not exist" % urn)

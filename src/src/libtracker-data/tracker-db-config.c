@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2009, Nokia <ivan.frade@nokia.com>
- * Copyright (C) 2014, Lanedo <martyn@lanedo.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,15 +25,12 @@
 #include <glib.h>
 #include <gio/gio.h>
 
-#define G_SETTINGS_ENABLE_BACKEND
-#include <gio/gsettingsbackend.h>
-
-#include <libtracker-common/tracker-common.h>
+#include <libtracker-common/tracker-keyfile-object.h>
 
 #include "tracker-db-config.h"
 
-#define CONFIG_SCHEMA "org.freedesktop.Tracker.DB"
-#define CONFIG_PATH   "/org/freedesktop/tracker/db/"
+/* GKeyFile defines */
+#define GROUP_JOURNAL     "Journal"
 
 /* Default values */
 #define DEFAULT_JOURNAL_CHUNK_SIZE           50
@@ -57,6 +53,11 @@ enum {
 	/* Journal */
 	PROP_JOURNAL_CHUNK_SIZE,
 	PROP_JOURNAL_ROTATE_DESTINATION
+};
+
+static TrackerConfigMigrationEntry migration[] = {
+	{ G_TYPE_INT, GROUP_JOURNAL, "JournalChunkSize", "journal-chunk-size", FALSE, FALSE },
+	{ G_TYPE_STRING, GROUP_JOURNAL, "JournalRotateDestination", "journal-rotate-destination", FALSE, FALSE },
 };
 
 G_DEFINE_TYPE (TrackerDBConfig, tracker_db_config, G_TYPE_SETTINGS);
@@ -145,61 +146,32 @@ config_finalize (GObject *object)
 	(G_OBJECT_CLASS (tracker_db_config_parent_class)->finalize) (object);
 }
 
+
 static void
 config_constructed (GObject *object)
 {
-	GSettings *settings;
+	TrackerConfigFile *config_file;
 
 	(G_OBJECT_CLASS (tracker_db_config_parent_class)->constructed) (object);
 
-	settings = G_SETTINGS (object);
+	g_settings_delay (G_SETTINGS (object));
 
-	if (G_LIKELY (!g_getenv ("TRACKER_USE_CONFIG_FILES"))) {
-		g_settings_delay (settings);
+	/* Migrate keyfile-based configuration */
+	config_file = tracker_config_file_new ();
+	if (config_file) {
+		tracker_config_file_migrate (config_file,
+		                             G_SETTINGS (object), migration);
+		g_object_unref (config_file);
 	}
-
-	g_settings_bind (settings, "journal-chunk-size", object, "journal-chunk-size", G_SETTINGS_BIND_GET | G_SETTINGS_BIND_GET_NO_CHANGES);
-	g_settings_bind (settings, "journal-rotate-destination", object, "journal-rotate-destination", G_SETTINGS_BIND_GET | G_SETTINGS_BIND_GET_NO_CHANGES);
 }
 
 TrackerDBConfig *
 tracker_db_config_new (void)
 {
-	TrackerDBConfig *config = NULL;
-
-	/* FIXME: should we unset GSETTINGS_BACKEND env var? */
-
-	if (G_UNLIKELY (g_getenv ("TRACKER_USE_CONFIG_FILES"))) {
-		GSettingsBackend *backend;
-		gchar *filename;
-		gboolean need_to_save;
-
-		filename = g_build_filename (g_get_user_config_dir (), "tracker", "tracker-db.cfg", NULL);
-
-		need_to_save = g_file_test (filename, G_FILE_TEST_EXISTS) == FALSE;
-
-		backend = g_keyfile_settings_backend_new (filename, CONFIG_PATH, "General");
-		g_info ("Using config file '%s'", filename);
-		g_free (filename);
-
-		config = g_object_new (TRACKER_TYPE_DB_CONFIG,
-		                       "backend", backend,
-		                       "schema-id", CONFIG_SCHEMA,
-		                       "path", CONFIG_PATH,
-		                       NULL);
-		g_object_unref (backend);
-
-		if (need_to_save) {
-			g_info ("  Config file does not exist, using default values...");
-		}
-	} else {
-		config = g_object_new (TRACKER_TYPE_DB_CONFIG,
-		                       "schema-id", CONFIG_SCHEMA,
-		                       "path", CONFIG_PATH,
-		                       NULL);
-	}
-
-	return config;
+	return g_object_new (TRACKER_TYPE_DB_CONFIG,
+	                     "schema-id", "org.freedesktop.Tracker.DB",
+	                     "path", "/org/freedesktop/tracker/db/",
+	                     NULL);
 }
 
 gboolean

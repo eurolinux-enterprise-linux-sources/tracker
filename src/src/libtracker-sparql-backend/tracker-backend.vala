@@ -133,7 +133,7 @@ class Tracker.Sparql.Backend : Connection {
 		yield bus.update_async (sparql, priority, cancellable);
 	}
 
-	public async override GenericArray<Sparql.Error?>? update_array_async (string[] sparql, int priority = GLib.Priority.DEFAULT, Cancellable? cancellable = null) throws Sparql.Error, IOError, DBusError {
+	public async override GenericArray<Error?>? update_array_async (string[] sparql, int priority = GLib.Priority.DEFAULT, Cancellable? cancellable = null) throws Sparql.Error, IOError, DBusError {
 		if (bus == null) {
 			throw new Sparql.Error.UNSUPPORTED ("Update support not available for direct-only connection");
 		}
@@ -208,7 +208,7 @@ class Tracker.Sparql.Backend : Connection {
 			try {
 				direct = new Tracker.Direct.Connection ();
 			} catch (Error e) {
-				warning ("Falling back to bus backend, the direct backend failed to initialize: " + e.message);
+				debug ("Unable to initialize direct backend: " + e.message);
 			}
 
 			bus = new Tracker.Bus.Connection ();

@@ -35,7 +35,7 @@ typedef struct {
 static TrackerSparqlConnection *connection;
 
 static void
-delete_test_data ()
+insert_test_data ()
 {
 	GError *error = NULL;
 	const char *delete_query = "DELETE { "
@@ -44,20 +44,8 @@ delete_test_data ()
 	                           "<urn:testdata3> a rdfs:Resource ."
 	                           "<urn:testdata4> a rdfs:Resource ."
 	                           "}";
-
-	tracker_sparql_connection_update (connection, delete_query, 0, NULL, &error);
-	g_assert_no_error (error);
-}
-
-static void
-insert_test_data ()
-{
-	GError *error = NULL;
 	char *longName = g_malloc (LONG_NAME_SIZE);
 	char *filled_query;
-
-	/* Ensure data is deleted */
-	delete_test_data ();
 
 	memset (longName, 'a', LONG_NAME_SIZE);
 
@@ -69,6 +57,9 @@ insert_test_data ()
 	                                "    <urn:testdata3> a nmm:Artist ; nmm:artistName \"testArtist\" ."
 	                                "    <urn:testdata4> a nmm:Photo ; nao:identifier \"%s\" ."
 	                                "}", longName);
+
+	tracker_sparql_connection_update (connection, delete_query, 0, NULL, &error);
+	g_assert_no_error (error);
 
 	tracker_sparql_connection_update (connection, filled_query, 0, NULL, &error);
 	g_assert_no_error (error);
@@ -718,8 +709,6 @@ main (gint argc, gchar **argv)
 	g_test_add_func ("/steroids/tracker/tracker_sparql_update_async_cancel", test_tracker_sparql_update_async_cancel);
 	g_test_add_func ("/steroids/tracker/tracker_sparql_update_blank_async", test_tracker_sparql_update_blank_async);
 	g_test_add_func ("/steroids/tracker/tracker_sparql_update_array_async", test_tracker_sparql_update_array_async);
-
-	delete_test_data ();
 
 	return g_test_run ();
 }

@@ -23,6 +23,8 @@ libtracker_extract_la_SOURCES =  \
 	tracker-exif.c                                 \
 	tracker-exif.h                                 \
 	tracker-extract.h                              \
+	tracker-extract-client.c                       \
+	tracker-extract-client.h                       \
 	tracker-extract-info.c                         \
 	tracker-extract-info.h                         \
 	tracker-guarantee.c                            \
@@ -31,8 +33,6 @@ libtracker_extract_la_SOURCES =  \
 	tracker-iptc.h                                 \
 	tracker-module-manager.c                       \
 	tracker-module-manager.h                       \
-	tracker-resource-helpers.c                     \
-	tracker-resource-helpers.h                     \
 	tracker-utils.c                                \
 	tracker-utils.h                                \
 	tracker-xmp.c                                  \
@@ -42,6 +42,7 @@ noinst_HEADERS =                                       \
 	tracker-data.h                                 \
 	tracker-encoding.h                             \
 	tracker-exif.h                                 \
+	tracker-extract-client.h                       \
 	tracker-extract-info.h                         \
 	tracker-extract.h                              \
 	tracker-guarantee.h                            \

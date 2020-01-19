@@ -20,13 +20,14 @@
 """
 Send concurrent inserts and queries to the daemon to check the concurrency.
 """
-import sys,os
+import sys,os,dbus
 import unittest
 import time
 import random
 import commands
 import signal
 from gi.repository import GObject
+from dbus.mainloop.glib import DBusGMainLoop
 
 from common.utils import configuration as cfg
 import unittest2 as ut
@@ -72,26 +73,24 @@ class TestConcurrentQuery (CommonTrackerStoreTest):
         QUERY = "SELECT ?u WHERE { ?u a nco:PersonContact. FILTER regex (?u, 'test-09:ins')}"
         UPDATE = "INSERT { <test-09:picture-%d> a nmm:Photo. }"
         for i in range (0, AMOUNT_OF_QUERIES):
-            self.tracker.query(
-                QUERY,
-                result_handler=self.reply_cb,
-                error_handler=self.error_handler)
-            self.tracker.update(
-                UPDATE % (i),
-                result_handler=self.update_cb,
-                error_handler=self.error_handler)
-
+            self.tracker.get_tracker_iface ().SparqlQuery (QUERY,
+                                                           reply_handler=self.reply_cb,
+                                                           error_handler=self.error_handler)
+            self.tracker.get_tracker_iface ().SparqlUpdate (UPDATE % (i),
+                                                            reply_handler=self.update_cb,
+                                                            error_handler=self.error_handler)
+            
         # Safeguard of 50 seconds. The last reply should quit the loop
         GObject.timeout_add_seconds (60, self.timeout_cb)
         self.main_loop.run ()
         
-    def reply_cb (self, obj, results, data):
+    def reply_cb (self, results):
         self.finish_counter += 1
         self.assertEquals (len (results), AMOUNT_OF_TEST_INSTANCES)
         if (self.finish_counter >= AMOUNT_OF_QUERIES):
             self.timeout_cb ()
 
-    def update_cb (self, obj, results, data):
+    def update_cb (self):
         self.assertTrue (True)
 
     def error_handler (self):

@@ -19,9 +19,8 @@
 
 #include "config.h"
 
-#include <libtracker-sparql/tracker-sparql.h>
 #include <libtracker-extract/tracker-extract.h>
-
+#include <libtracker-common/tracker-ontologies.h>
 #include "tracker-extract-decorator.h"
 #include "tracker-extract-persistence.h"
 #include "tracker-extract-priority-dbus.h"
@@ -30,8 +29,8 @@ enum {
 	PROP_EXTRACTOR = 1
 };
 
-#define TRACKER_EXTRACT_DATA_SOURCE TRACKER_PREFIX_TRACKER "extractor-data-source"
-#define TRACKER_EXTRACT_FAILURE_DATA_SOURCE TRACKER_PREFIX_TRACKER "extractor-failure-data-source"
+#define TRACKER_EXTRACT_DATA_SOURCE TRACKER_TRACKER_PREFIX "extractor-data-source"
+#define TRACKER_EXTRACT_FAILURE_DATA_SOURCE TRACKER_TRACKER_PREFIX "extractor-failure-data-source"
 #define MAX_EXTRACTING_FILES 1
 
 #define TRACKER_EXTRACT_DECORATOR_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TRACKER_TYPE_EXTRACT_DECORATOR, TrackerExtractDecoratorPrivate))
@@ -73,7 +72,6 @@ static const gchar *supported_classes[] = {
 	"nfo:Image",
 	"nfo:Video",
 	"nfo:FilesystemImage",
-	"nmm:Playlist",
 	NULL
 };
 
@@ -146,34 +144,54 @@ decorator_save_info (TrackerSparqlBuilder    *sparql,
                      TrackerDecoratorInfo    *decorator_info,
                      TrackerExtractInfo      *info)
 {
-	const gchar *urn;
-	TrackerResource *resource = NULL;
-	gchar *sparql_command;
-
-	g_set_object (&resource, tracker_extract_info_get_resource (info));
-
-	if (resource == NULL) {
-		g_message ("Extract module returned no resource for %s",
-		           tracker_decorator_info_get_url (info));
-		/* We must still insert something into the store so that the correct
-		 * nie:dataSource triple get inserted. Otherwise, tracker-extract will
-		 * try to re-extract this file every time it starts.
-		 */
-		resource = tracker_resource_new (NULL);
-	}
+	const gchar *urn, *result, *where;
+	TrackerSparqlBuilder *builder;
+	gchar *str;
 
 	urn = tracker_decorator_info_get_urn (decorator_info);
 
-	tracker_resource_set_identifier (resource, urn);
-	tracker_resource_set_uri (resource, "nie:dataSource",
-	        tracker_decorator_get_data_source (TRACKER_DECORATOR (decorator)));
+	tracker_sparql_builder_insert_open (sparql, NULL);
+	tracker_sparql_builder_graph_open (sparql, TRACKER_MINER_FS_GRAPH_URN);
 
-	sparql_command = tracker_resource_print_sparql_update (
-	        resource, NULL, TRACKER_OWN_GRAPH_URN);
-	tracker_sparql_builder_append (sparql, sparql_command);
+	/* Set tracker-extract data source */
+	tracker_sparql_builder_subject_iri (sparql, urn);
+	tracker_sparql_builder_predicate (sparql, "nie:dataSource");
+	tracker_sparql_builder_object_iri (sparql,
+	                                   tracker_decorator_get_data_source (TRACKER_DECORATOR (decorator)));
 
-	g_object_unref (resource);
-	g_free (sparql_command);
+	/* Add extracted metadata */
+	str = g_strdup_printf ("<%s>", urn);
+	tracker_sparql_builder_append (sparql, str);
+	g_free (str);
+
+	builder = tracker_extract_info_get_metadata_builder (info);
+	result = tracker_sparql_builder_get_result (builder);
+	tracker_sparql_builder_append (sparql, result);
+
+	/* Close graph and insert statement, insert where clause */
+	tracker_sparql_builder_graph_close (sparql);
+        tracker_sparql_builder_insert_close (sparql);
+
+	where = tracker_extract_info_get_where_clause (info);
+
+	if (where && *where) {
+		tracker_sparql_builder_where_open (sparql);
+		tracker_sparql_builder_append (sparql, where);
+		tracker_sparql_builder_where_close (sparql);
+	}
+
+	/* Prepend/append pre/postupdate chunks */
+	builder = tracker_extract_info_get_preupdate_builder (info);
+	result = tracker_sparql_builder_get_result (builder);
+
+	if (result && *result)
+		tracker_sparql_builder_prepend (sparql, result);
+
+	builder = tracker_extract_info_get_postupdate_builder (info);
+	result = tracker_sparql_builder_get_result (builder);
+
+	if (result && *result)
+		tracker_sparql_builder_append (sparql, result);
 }
 
 static void
@@ -183,30 +201,25 @@ get_metadata_cb (TrackerExtract *extract,
 {
 	TrackerExtractDecoratorPrivate *priv;
 	TrackerExtractInfo *info;
-	GError *error = NULL;
 	GTask *task;
 
 	priv = TRACKER_EXTRACT_DECORATOR (data->decorator)->priv;
 	task = tracker_decorator_info_get_task (data->decorator_info);
-	info = tracker_extract_file_finish (extract, result, &error);
+	info = g_simple_async_result_get_op_res_gpointer (G_SIMPLE_ASYNC_RESULT (result));
 
 	tracker_extract_persistence_remove_file (priv->persistence, data->file);
 	g_hash_table_remove (priv->recovery_files, tracker_decorator_info_get_url (data->decorator_info));
 
-	if (error) {
-		if (error->domain == TRACKER_EXTRACT_ERROR) {
-			g_message ("Extraction failed: %s\n", error ? error->message : "no error given");
-			g_task_return_boolean (task, FALSE);
-			g_clear_error (&error);
-		} else {
-			g_task_return_error (task, error);
-		}
+	if (!info) {
+		GError *error = NULL;
+
+		g_simple_async_result_propagate_error (G_SIMPLE_ASYNC_RESULT (result), &error);
+		g_task_return_error (task, error);
 	} else {
 		decorator_save_info (g_task_get_task_data (task),
 		                     TRACKER_EXTRACT_DECORATOR (data->decorator),
 		                     data->decorator_info, info);
 		g_task_return_boolean (task, TRUE);
-		tracker_extract_info_unref (info);
 	}
 
 	priv->n_extracting_files--;
@@ -258,7 +271,7 @@ decorator_next_item_cb (TrackerDecorator *decorator,
 		    error->domain == tracker_decorator_error_quark ()) {
 			switch (error->code) {
 			case TRACKER_DECORATOR_ERROR_EMPTY:
-				g_message ("There are no further items to extract");
+				g_message ("Next item does not require 2nd stage metadata extraction (e.g. resource may not be a file)");
 				break;
 			case TRACKER_DECORATOR_ERROR_PAUSED:
 				g_message ("Next item is on hold because miner is paused");
@@ -284,6 +297,7 @@ decorator_next_item_cb (TrackerDecorator *decorator,
 	tracker_extract_file (priv->extractor,
 	                      tracker_decorator_info_get_url (info),
 	                      tracker_decorator_info_get_mimetype (info),
+	                      TRACKER_MINER_FS_GRAPH_URN,
 	                      g_task_get_cancellable (task),
 	                      (GAsyncReadyCallback) get_metadata_cb, data);
 }
@@ -563,7 +577,7 @@ decorator_retry_file (GFile    *file,
 	gchar *path;
 
 	path = g_file_get_uri (file);
-	g_hash_table_insert (priv->recovery_files, path, g_object_ref (file));
+	g_hash_table_insert (priv->recovery_files, path, file);
 	tracker_decorator_fs_prepend_file (TRACKER_DECORATOR_FS (decorator), file);
 }
 
@@ -580,12 +594,12 @@ decorator_ignore_file (GFile    *file,
 	g_message ("Extraction on file '%s' has been attempted too many times, ignoring", uri);
 
 	conn = tracker_miner_get_connection (TRACKER_MINER (decorator));
-	query = g_strdup_printf ("INSERT { GRAPH <" TRACKER_OWN_GRAPH_URN "> {"
+	query = g_strdup_printf ("INSERT { GRAPH <" TRACKER_MINER_FS_GRAPH_URN "> {"
 	                         "  ?urn nie:dataSource <" TRACKER_EXTRACT_DATA_SOURCE ">;"
 	                         "       nie:dataSource <" TRACKER_EXTRACT_FAILURE_DATA_SOURCE ">."
-	                         "} } WHERE {"
+	                         "} WHERE {"
 	                         "  ?urn nie:url \"%s\""
-	                         "}", uri);
+	                         "}}", uri);
 
 	tracker_sparql_connection_update (conn, query, G_PRIORITY_DEFAULT, NULL, &error);
 

@@ -215,10 +215,10 @@ static void       on_tracker_store_disappeared (GDBusConnection        *connecti
 /**
  * tracker_miner_error_quark:
  *
- * Gives the caller the #GQuark used to identify #TrackerMiner errors
- * in #GError structures. The #GQuark is used as the domain for the error.
+ * Gives the caller the #GQuark used to identify miner errors in
+ * GError structures.
  *
- * Returns: the #GQuark used for the domain of a #GError.
+ * Returns: the error #GQuark
  *
  * Since: 0.8
  **/

@@ -36,7 +36,7 @@
 /* Define if we should install artwork */
 #undef HAVE_ARTWORK
 
-/* Defined if Sqlite has FTS5 compiled in */
+/* Defined if Sqlite has FTS4 compiled in */
 #undef HAVE_BUILTIN_FTS
 
 /* Define to 1 if you have the declaration of `posix_fadvise', and to 0 if you
@@ -70,7 +70,7 @@
 /* Define to 1 if you have the `getpagesize' function. */
 #undef HAVE_GETPAGESIZE
 
-/* Define if we have GStreamer */
+/* Define if we have libav */
 #undef HAVE_GSTREAMER
 
 /* Define if we have HAL */
@@ -82,14 +82,8 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define if we have libav */
-#undef HAVE_LIBAV
-
 /* Define if we have libcue */
 #undef HAVE_LIBCUE
-
-/* Define if we have libcue 2 or up */
-#undef HAVE_LIBCUE2
 
 /* Define if we have libexif */
 #undef HAVE_LIBEXIF
@@ -130,14 +124,8 @@
 /* Define if we have libpng */
 #undef HAVE_LIBPNG
 
-/* Define if we have libseccomp */
-#undef HAVE_LIBSECCOMP
-
 /* Define to 1 if you have the `sqlite3' library (-lsqlite3). */
 #undef HAVE_LIBSQLITE3
-
-/* Define if we have libstemmer */
-#undef HAVE_LIBSTEMMER
 
 /* Define if we have libtiff */
 #undef HAVE_LIBTIFF
@@ -312,7 +300,8 @@
 /* Define to 1 if you have the `up_client_get_on_low_battery' function. */
 #undef HAVE_UP_CLIENT_GET_ON_LOW_BATTERY
 
-/* Define to the sub-directory where libtool stores uninstalled libraries. */
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
 #undef LT_OBJDIR
 
 /* Define if we are on win32 */
@@ -378,6 +367,9 @@
 # undef __EXTENSIONS__
 #endif
 
+
+/* Define that Tracker will try to use external generic media players */
+#undef USING_EXTERNAL_GENERIC_MEDIA_PLAYER
 
 /* Unzip ps.gz files */
 #undef USING_UNZIPPSFILES

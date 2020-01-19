@@ -24,18 +24,18 @@
 
 #include <glib.h>
 
-#include <libtracker-sparql/tracker-sparql.h>
+#include <libtracker-common/tracker-ontologies.h>
 
 #include "tracker-namespace.h"
 #include "tracker-ontologies.h"
 #include "tracker-property.h"
 
-#define XSD_BOOLEAN  TRACKER_PREFIX_XSD "boolean"
-#define XSD_DATE     TRACKER_PREFIX_XSD "date"
-#define XSD_DATETIME TRACKER_PREFIX_XSD "dateTime"
-#define XSD_DOUBLE   TRACKER_PREFIX_XSD "double"
-#define XSD_INTEGER  TRACKER_PREFIX_XSD "integer"
-#define XSD_STRING   TRACKER_PREFIX_XSD "string"
+#define XSD_BOOLEAN  TRACKER_XSD_PREFIX "boolean"
+#define XSD_DATE     TRACKER_XSD_PREFIX "date"
+#define XSD_DATETIME TRACKER_XSD_PREFIX "dateTime"
+#define XSD_DOUBLE   TRACKER_XSD_PREFIX "double"
+#define XSD_INTEGER  TRACKER_XSD_PREFIX "integer"
+#define XSD_STRING   TRACKER_XSD_PREFIX "string"
 
 #define GET_PRIV(obj) (((TrackerProperty*) obj)->priv)
 #define TRACKER_PROPERTY_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), TRACKER_TYPE_PROPERTY, TrackerPropertyPrivate))
@@ -55,7 +55,6 @@ struct _TrackerPropertyPrivate {
 	gint           id;
 	gboolean       indexed;
 	TrackerProperty *secondary_index;
-	gboolean       orig_fulltext_indexed;
 	gboolean       fulltext_indexed;
 	gboolean       multiple_values;
 	gboolean       last_multiple_values;
@@ -71,8 +70,6 @@ struct _TrackerPropertyPrivate {
 	GArray        *super_properties;
 	GArray        *domain_indexes;
 	GArray        *last_super_properties;
-	gboolean       cardinality_changed;
-	gboolean       orig_multiple_values;
 };
 
 static void property_finalize     (GObject      *object);
@@ -144,7 +141,6 @@ tracker_property_init (TrackerProperty *property)
 	priv->super_properties = g_array_new (TRUE, TRUE, sizeof (TrackerProperty *));
 	priv->domain_indexes = g_array_new (TRUE, TRUE, sizeof (TrackerClass *));
 	priv->last_super_properties = NULL;
-	priv->cardinality_changed = FALSE;
 
 	/* Make GET_PRIV working */
 	property->priv = priv;
@@ -492,18 +488,6 @@ tracker_property_get_fulltext_indexed (TrackerProperty *property)
 }
 
 gboolean
-tracker_property_get_orig_fulltext_indexed (TrackerProperty *property)
-{
-	TrackerPropertyPrivate *priv;
-
-	g_return_val_if_fail (property != NULL, FALSE);
-
-	priv = GET_PRIV (property);
-
-	return priv->orig_fulltext_indexed;
-}
-
-gboolean
 tracker_property_get_is_new (TrackerProperty *property)
 {
 	TrackerPropertyPrivate *priv;
@@ -565,18 +549,6 @@ tracker_property_get_db_schema_changed (TrackerProperty *property)
 }
 
 gboolean
-tracker_property_get_cardinality_changed (TrackerProperty *property)
-{
-	TrackerPropertyPrivate *priv;
-
-	g_return_val_if_fail (TRACKER_IS_PROPERTY (property), FALSE);
-
-	priv = GET_PRIV (property);
-
-	return priv->cardinality_changed;
-}
-
-gboolean
 tracker_property_get_multiple_values (TrackerProperty *property)
 {
 	TrackerPropertyPrivate *priv;
@@ -613,18 +585,6 @@ tracker_property_get_last_multiple_values (TrackerProperty *property)
 	priv = GET_PRIV (property);
 
 	return priv->last_multiple_values;
-}
-
-gboolean
-tracker_property_get_orig_multiple_values (TrackerProperty *property)
-{
-	TrackerPropertyPrivate *priv;
-
-	g_return_val_if_fail (TRACKER_IS_PROPERTY (property), FALSE);
-
-	priv = GET_PRIV (property);
-
-	return priv->orig_multiple_values;
 }
 
 gboolean
@@ -999,32 +959,6 @@ tracker_property_set_db_schema_changed (TrackerProperty *property,
 }
 
 void
-tracker_property_set_cardinality_changed (TrackerProperty *property,
-                                          gboolean         value)
-{
-	TrackerPropertyPrivate *priv;
-
-	g_return_if_fail (TRACKER_IS_PROPERTY (property));
-
-	priv = GET_PRIV (property);
-
-	priv->cardinality_changed = value;
-}
-
-void
-tracker_property_set_orig_fulltext_indexed (TrackerProperty *property,
-                                            gboolean         value)
-{
-	TrackerPropertyPrivate *priv;
-
-	g_return_if_fail (TRACKER_IS_PROPERTY (property));
-
-	priv = GET_PRIV (property);
-
-	priv->orig_fulltext_indexed = value;
-}
-
-void
 tracker_property_set_fulltext_indexed (TrackerProperty *property,
                                        gboolean         value)
 {
@@ -1062,20 +996,6 @@ tracker_property_set_last_multiple_values (TrackerProperty *property,
 
 	priv->last_multiple_values = value;
 }
-
-void
-tracker_property_set_orig_multiple_values (TrackerProperty *property,
-                                           gboolean         value)
-{
-	TrackerPropertyPrivate *priv;
-
-	g_return_if_fail (TRACKER_IS_PROPERTY (property));
-
-	priv = GET_PRIV (property);
-
-	priv->orig_multiple_values = value;
-}
-
 
 void
 tracker_property_set_is_inverse_functional_property (TrackerProperty *property,

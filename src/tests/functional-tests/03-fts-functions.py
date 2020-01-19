@@ -22,6 +22,7 @@
 These tests use only the store. They insert instances with known text
 and run sparql with fts functions to check the results.
 """
+import dbus
 import unittest
 import random
 

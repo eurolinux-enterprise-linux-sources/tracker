@@ -35,17 +35,12 @@ typedef struct {
 
 typedef struct {
 	GModule *module;
+	TrackerModuleThreadAwareness thread_awareness;
 	TrackerExtractMetadataFunc extract_func;
 	TrackerExtractInitFunc init_func;
 	TrackerExtractShutdownFunc shutdown_func;
 	guint initialized : 1;
 } ModuleInfo;
-
-static gboolean dummy_extract_func (TrackerExtractInfo *info);
-
-static ModuleInfo dummy_module = {
-	NULL, dummy_extract_func, NULL, NULL, TRUE
-};
 
 static GHashTable *modules = NULL;
 static GHashTable *mimetype_map = NULL;
@@ -60,34 +55,20 @@ struct _TrackerMimetypeInfo {
 };
 
 static gboolean
-dummy_extract_func (TrackerExtractInfo *info)
-{
-	return TRUE;
-}
-
-static gboolean
 load_extractor_rule (GKeyFile  *key_file,
                      GError   **error)
 {
-	GError *local_error = NULL;
 	gchar *module_path, **mimetypes;
 	gsize n_mimetypes, i;
 	RuleInfo rule = { 0 };
 
-	module_path = g_key_file_get_string (key_file, "ExtractorRule", "ModulePath", &local_error);
+	module_path = g_key_file_get_string (key_file, "ExtractorRule", "ModulePath", error);
 
-	if (local_error) {
-		if (!g_error_matches (local_error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_KEY_NOT_FOUND)) {
-			g_propagate_error (error, local_error);
-			return FALSE;
-		} else {
-			/* Ignore */
-			g_clear_error (&local_error);
-		}
+	if (!module_path) {
+		return FALSE;
 	}
 
-	if (module_path &&
-	    !G_IS_DIR_SEPARATOR (module_path[0])) {
+	if (!G_IS_DIR_SEPARATOR (module_path[0])) {
 		gchar *tmp;
 		const gchar *extractors_dir;
 
@@ -103,15 +84,10 @@ load_extractor_rule (GKeyFile  *key_file,
 		module_path = tmp;
 	}
 
-	mimetypes = g_key_file_get_string_list (key_file, "ExtractorRule", "MimeTypes", &n_mimetypes, &local_error);
+	mimetypes = g_key_file_get_string_list (key_file, "ExtractorRule", "MimeTypes", &n_mimetypes, error);
 
 	if (!mimetypes) {
 		g_free (module_path);
-
-		if (local_error) {
-			g_propagate_error (error, local_error);
-		}
-
 		return FALSE;
 	}
 
@@ -321,10 +297,6 @@ load_module (RuleInfo *info,
 {
 	ModuleInfo *module_info = NULL;
 
-	if (!info->module_path) {
-		return &dummy_module;
-	}
-
 	if (modules) {
 		module_info = g_hash_table_lookup (modules, info->module_path);
 	}
@@ -373,7 +345,7 @@ load_module (RuleInfo *info,
 		if (module_info->init_func) {
 			GError *error = NULL;
 
-			if (!(module_info->init_func) (&error)) {
+			if (!(module_info->init_func) (&module_info->thread_awareness, &error)) {
 				g_critical ("Could not initialize module %s: %s",
 					    g_module_name (module_info->module),
 					    (error) ? error->message : "No error given");
@@ -384,6 +356,8 @@ load_module (RuleInfo *info,
 
 				return NULL;
 			}
+		} else {
+			module_info->thread_awareness = TRACKER_MODULE_MAIN_THREAD;
 		}
 
 		module_info->initialized = TRUE;
@@ -526,10 +500,12 @@ tracker_extract_module_manager_get_mimetype_handlers (const gchar *mimetype)
  * tracker_mimetype_info_get_module:
  * @info: a #TrackerMimetypeInfo
  * @extract_func: (out): (allow-none): return value for the extraction function
+ * @thread_awareness: (out): (allow-none): thread awareness of the extractor module
  *
  * Returns the #GModule that @info is currently pointing to, if @extract_func is
  * not %NULL, it will be filled in with the pointer to the metadata extraction
- * function.
+ * function. If @thread_awareness is not %NULL, it will be filled in with the
+ * module thread awareness description.
  *
  * Returns: The %GModule currently pointed to by @info.
  *
@@ -537,7 +513,8 @@ tracker_extract_module_manager_get_mimetype_handlers (const gchar *mimetype)
  **/
 GModule *
 tracker_mimetype_info_get_module (TrackerMimetypeInfo          *info,
-                                  TrackerExtractMetadataFunc   *extract_func)
+                                  TrackerExtractMetadataFunc   *extract_func,
+                                  TrackerModuleThreadAwareness *thread_awareness)
 {
 	g_return_val_if_fail (info != NULL, NULL);
 
@@ -547,6 +524,10 @@ tracker_mimetype_info_get_module (TrackerMimetypeInfo          *info,
 
 	if (extract_func) {
 		*extract_func = info->cur_module_info->extract_func;
+	}
+
+	if (thread_awareness) {
+		*thread_awareness = info->cur_module_info->thread_awareness;
 	}
 
 	return info->cur_module_info->module;

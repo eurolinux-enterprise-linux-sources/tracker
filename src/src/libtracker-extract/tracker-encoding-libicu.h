@@ -26,8 +26,7 @@ G_BEGIN_DECLS
 
 G_GNUC_INTERNAL
 gchar *tracker_encoding_guess_icu (const gchar *buffer,
-                                   gsize        size,
-                                   gdouble     *confidence);
+				   gsize        size);
 
 G_END_DECLS
 

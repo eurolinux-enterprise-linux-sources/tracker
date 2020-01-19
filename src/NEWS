@@ -1,399 +1,22 @@
-NEW in 1.10.5 - 2017-02-23
-==========================
+NEW in 1.2.6: 2015-04-09
+========================
 
-  * tracker-extract: Further sandboxing fixes. Compiling with
-    --disable-libmediaart is still advised on the 1.10 branch
-  * tracker-store: Fix low-probability memory corruption
+  * Fixes #746401, Fix possible maxCardinality constraint breaks in epub extractor
+  * Fixes #746194, Ambiguous vala references
+  * Fixes #735406, Restrict the amount of data that is logged for errors
+  * Fixes #742035, Fix logic in guarantee title from file
+  * Fixes #678986, Fix item_move() if source file does not exist
 
-NEW in 1.10.4 - 2017-01-19
-==========================
+Translations: bs, cs, de, hu, id, lt, pl, pt_BR, sk, sl, sr, sr@latin, sv
 
-  * tracker-extract: Whitelist multiple inocuous syscalls that were
-    reported to raise false positives in the extraction sandbox.
-  * Fixed tracker-extract insertion of pre-defined resources
-  * Fixed TrackerResource SPARQL generation of rdfs:Resource properties
-    with cardinality>1
+NEW in 1.2.5: 2014-12-10
+========================
 
-NEW in 1.10.3 - 2016-12-16
-==========================
-
-  * tracker-extract: Whitelisted further syscalls in the sandbox. False
-    positives were being triggered in i686 platforms, plus other syscalls
-    that have been missed in 1.10.2.
-
-NEW in 1.10.2 - 2016-12-08
-==========================
-
-  * tracker-extract: Sandbox extractor threads. Filesystem and network
-    access are limited to being read and local only.
-  * libtracker-sparql: Fix compile on C++ compilers
-  * tracker-extract: Use CUE info as a last resort on FLACs
-  * tracker-extract: Minor improvements on albumartist extraction
-  * libtracker-data: Handle overflows on libicu-based normalization
-
-Translations: nb, zh_CN
-
-NEW in 1.10.1 - 2016-10-14
-==========================
-
-  * Tracker-extract:
-    - Fixed FD leak in flac extractor
-    - Fixes to tag parsing in flac extractor
-    - Memory leak fixes in libav extractor
-  * Libtracker-sparl:
-    - Fixes to tracker:uri-is-descendant() error checks
-    - Fix namespace of Errors in libtracker-sparql API
-  * Misc:
-    - Fixes on functional tests
-
-Translations: ca, eu, fur, it
-
-NEW in 1.10.0 - 2016-09-19
-=========================
-
-Translations: da, el, en_GB
-
-NEW in 1.9.2 - 2016-09-14
-=========================
-
-  * Restore trailing colon in nfo:Equipment URIs
-  * Add new mime-types for comic books
-
-Translations: da, fur, fr, gl, kk, ko, lv, pl, pt_BR, sr, sr@latin, sv, vi
-
-NEW in 1.9.1 - 2016-08-23
-=========================
-
-  * Tracker-resource: New API to describe RDF resources that can be serialized
-      into SPARQL updates and various data formats. TrackerSparqlBuilder will
-      be eventually phased out by this API.
-  * Tracker-extract:
-    * Use tracker resource integrally.
-    * Fixed blacklisting of crashy files.
-    * Fixes in gstreamer module for 32-bit platforms
-  * Libtracker-control:
-    * Expose "index for process" miner API
-  * Command line tools:
-    * Add "tracker extract" subcommand
-  * SPARQL:
-    * Accept INSERT DATA, DELETE DATA and DELETE WHERE syntax again.
-  * Libtracker miner: Fix accounting in TrackerPriorityQueue when removing
-       elements.
-
-Translations: cs, de, es, fr, hu, id, lt, pl, pt, sk
-
-NEW in 1.9.0 - 2016-06-21
-=========================
-
-  * Adapt to new GKqueue monitor mapping.
-  * Remove build time dependency on gnome-common
-  * Fix error handling of tracker-extract-persistence
-  * Fix tracker-miner-fs to honor all configuration options at runtime.
-  * Stop recommending hard resets all through
-    * tracker reset -r will now warn and request the user to explicitly allow
-      the operation.
-    * tracker-preferences won't show anymore a big "reset and restart" button.
-  * Added "tracker reset -f $filename" subcommand. This will recursively reset
-    all indexed content for the given filename/uri, and trigger reindexing if
-    appropriate, so contents are just like freshly indexed.
-  * Fixed possible crash in MP3 extractor
-  * Favor embedded/external cue sheets before flac files' TOC.
-  * store albumArtist from TPE2 tag in MP3 extractor
-  * Avoid possible integer overflow in GIF extractor
-  * Support regular expressions for fn:replace
-  * Mark most internal functions as SQLITE_DETERMINISTIC
-  * Logging changes in tracker-miner-fs, sparql errors no longer end up with
-    full insert queries being logged, but a loud warning with instructions to
-    get more info will be printed instead.
-  * Fix FS size calculations on OpenBSD
-  * Add MS Office "owner files" to ignored-files
-  * Add systemd user services corresponding to D-Bus session services
-  * Handle DjVu files
-  * Fixes in handling of BIND()
-  * miner-fs: Fix handling files moved soon after creating
-  * Improved console output of tracker subcommands
-
-Translations: de, es, oc, pt, pt_BR, sk
-
-NEW in 1.8.0 - 2016-03-21
-=========================
-
-Changes since 1.7.5:
-  * libtracker-miner: Adapt to libcue 2.0
-  * translations: da
-
-Overview of changes since 1.6.x:
-  * Better support of the Sparql 1.1 syntax:
-    - Support for many builtin functions:
-      * String: CONCAT, CONTAINS, LCASE, UCASE, STRLEN, SUBSTR, STRSTARTS, STRENDS,
-        STRBEFORE, STRAFTER, ENCODE_FOR_URI.
-      * Numeric: ABS, ROUND, CEIL, FLOOR, RAND.
-      * Date/Time: YEAR, MONTH, DAY, HOUR, MINUTES, SECONDS, NOW.
-      * Checksum: MD5, SHA1, SHA256, SHA512.
-  * Support for Sparql 1.1's DELETE {} INSERT {} WHERE {} syntax. This allows for
-    performing complex updates in a single operation, without the shortcomings of
-    the tracker specific INSERT OR REPLACE {} syntax.
-  * Support for Sparql 1.1's BIND(). This allows mapping complex evaluations to a
-    variable within the triple pattern, so usable within it.
-  * The latter two applied allowed tracker-miner-fs to halve the time spent in
-    handling move operations.
-  * Many fixes to tracker-miner-fs and libtracker-miner, it is now a lot more robust
-    esp. around cancellation situations (eg. deleting/unmounting the folder currently
-    being indexed).
-  * Many fixes to tracker-extract modules, many consistency fixes have been fixed where
-    modules would produce invalid Sparql (eg. breaking cardinality limits of certain
-    variables) if given files with unexpected metadata.
-  * As a result of the last two points, 1.8.0 fixes most of the warnings/criticals that
-    have been reported as "spamming journald".
-  * Tracker now uses GTask, except for vala code.
-
-NEW in 1.7.5 - 2016-03-14
-=========================
-
-  * Add back .trackerignore match to ignored-directories-with-content
-  * tracker-extract: Fix gstreamer module cuesheet handling
-  * libtracker-miner: Avoid querying file type in crawling queries
-  * libtracker-data: Handle inserts where the subproperty cardinality is larger than the parents'
-  * tracker-extract: Protect all single-valued properties in abiword extractor
-  * tracker-extract: Protect all single-valued properties in EPUB extractor
-  * tracker-extract: Protect all single-valued properties in ooxml extractor
-  * tracker-extract: Protect all single-valued properties in oasis extractor
-  * tracker-extract: Protect all single-valued properties in HTML extractor
-  * tracker-extract: Check string length before parsing XMP in PDF extractor
-  * tracker-extract: Add missing application/msword mimetype
-  * libtracker-miner: Cut some slack on the reentry counter
-  * libtracker-miner: Avoid changing order of elements in processing queue
-  * libtracker-extract: Delete TrackerExtractClient
-  * tracker-extract: Remove old dbus interface xml
-  * tracker-extract: propagate urn to the TrackerExtractInfo
-  * tracker-extract: Use safer method to insert tags in PDF module
-  * tracker-extract: Use safer method to insert tags in GIF module
-  * tracker-extract: Use safer method to insert tags in JPEG module
-  * tracker-extract: Use safer method to insert tags in TIFF module
-  * tracker-extract: Use safer method to insert tags in PNG module
-  * libtracker-miner: Initialize all NodeData memory
-  * libtracker-miner: Ensure the directory root is removed when its indexing root is
-
-NEW in 1.7.4 - 2016-03-01
-=========================
-
-  * Update to FTS5.
-  * libtracker-miner: Many fixes to TrackerFileNotifier cancellation
-  * libtracker-direct: Handle cancellable argument in queries
-  * libtracker-miner: Plug fd leak on TrackerCrawler cancellation
-  * libtracker-extract: Fix year-only date extraction in gstreamer module
-  * libtracker-extract: Use tracker-guarantee to ensure a title in playlists
-  * tracker-miner-fs: Ignore git repositories. Modify the ignored-directories-with-content
-      setting if you found this convenient.
-  * tracker-miner-fs: Ignore #*# vim backups
-
-Translations: oc
-
-NEW in 1.7.3 - 2016-02-16
-=========================
-
-  * libtracker-miner: Many indexing fixes leading to stale elements in the database.
-      If "UNIQUE constraint failed: nie:DataObject.nie:url" errors are seen in
-      journald, running tracker-miner-fs once with the TRACKER_MINER_FORCE_CHECK_UPDATED
-      envvar is recommended. you will need to terminate miners before that with
-      tracker daemon -t
-  * libtracker-miner: Do not insert partial/empty sparql on error
-  * libtracker-miner: Pass a builder in UPDATE state to TrackerMinerFS::remove-file
-  * libtracker-miner: Remove children recursively from queues on directory deleted
-  * libtracker-miner: Fix generated Sparql query in sparql_contents_compose_query()
-  * libtracker-miner: Fix some memory leaks of TrackerTask
-  * libtracker-miner: Invalidate files iri recursively in case of file removal
-  * libtracker-miner: Reset of reentry counter is not needed anymore
-  * libtracker-fts: Fix invalid blob length calculation
-  * libtracker-common: Use guint64 for free space calculations
-  * libtracker-data, docs, libtracker-miner: Fix compile warnings
-  * libtracker-data: misc code fixes
-  * libtracker-data: Fix g_warning() missing argument
-  * Update AppData to spec version 0.7+
-
-Translations: lv
-
-NEW in 1.7.2 - 2016-01-17
-=========================
-
-  * Many leak fixes.
-  * libtracker-data: Reverted code to clean up stale Resources, can't just be done yet.
-  * tracker tool: Removed tracker-compatibility CLI wrapper for older commands.
-  * libtracker-common: Fix possible warnings on libicu unaccent code
-  * ontology: Set domain index on nie:contentCreated for nmo:Message
-  * libtracker-miner: Add ::remove-file signal vfunc
-  * libtracker-common: Return total available space if running as admin.
-
-Translations: lt
-
-NEW in 1.7.1 - 2015-12-17
-=========================
-
-  * libtracker-data: Support for Sparql 1.1 BIND and
-    DELETE {...} INSERT {...} WHERE {...} syntax.
-  * libtracker-data: Support for Sparql 1.1 functions: NOW, RAND
-  * libtracker-miner: Improved performance of move operations in TrackerMinerFS
-  * libtracker-data: Silence criticals on REGEX() with empty strings
-  * libtracker-miner, libtracker-extract: Fix double frees
-
-Translations: sl, sv
-
-NEW in 1.7.0 - 2015-11-25
-=========================
-
-  * libtracker-data: Support for Sparql 1.1 functions: CONCAT, CONTAINS, LCASE/UCASE, STRLEN,
-    SUBSTR, STRSTARTS/STRENDS, ABS, ROUND, ENCODE_FOR_URI, STRBEFORE/STRAFTER, CEIL/FLOOR,
-    YEAR/MONTH/DAY/HOUR/MINUTES/SECONDS, MD5/SHA1/SHA256/SHA512
-  * libtracker-miner: Move previous data deletion on file updates to TrackerMinerFS implementations
-  * libtracker-miner/libtracker-data/libtracker-extract: Partial port to GTask
-  * tracker tool: Fixes to UID detection
-  * libtracker-miner: Fix cancellation of tasks during TrackerFileNotifier destruction
-  * libtracker-miner: Handle failure to get a TrackerSparqlConnection
-  * libtracker-common: Fix buffer overrun in libunistring-based unaccenting
-  * libtracker-control: Documentation fixes
-  * tracker-extract: Photo orientation extraction fixes (TIFF, XMP)
-  * Many fixes to functional tests
-
-Translations: eu, it, sr, sr@latin, zh_CN
-
-NEW in 1.6.0 - 2015-09-22
-=========================
-
-  * tracker-extract: Fix synchronization with tracker-miner-fs when wait-for-miner-fs=TRUE
-  * tracker-miner-fs: Fix crash during startup
-  * tracker-extract: Fix builtin dummy module struct
-
-Translations: da, de, el, fr, gl, id, ko, pl, pt_BR, nb, sl, sv, tr, ru, zh_TW
-
-NEW in 1.5.2 - 2015-08-20
-=========================
-
-  * libtracker-data: Fix printf string format
-  * libtracker-miner: Fallback to basename checks on hidden files
-  * rss: Set website url as a nfo:WebSite
-  * rss: Simplify GrssFeedChannel list creation
-  * libtracker-data: Clean up stale URIs on startup
-  * rss: Optimize deletes
-  * rss: Perform extraction/insertion of feed items at once
-  * ontology: Remove cardinality limits on nmo:communicationChannel
-  * libtracker-common: String to date conversion to return with GError when null string
-  * libtracker-extract: Add builtin dummy extractor
-  * tracker-extract: Use dummy fastpath for svg extraction
-  * libtracker-extract: Plug leaks
-  * libtracker-miner: Cancellation on unmount fixes
-  * libtracker-miner: Deprecate tracker_miner_fs_add_directory_without_parent
-  * tracker-miner-fs: Keep cache of IndexFile requesters on directories
-
-Translations: ca, cz, lt, pl, pt_BR, pt, sk, tr
-
-NEW in 1.5.1 - 2015-07-21
-=========================
-
-  * Many fixes to RSS miner:
-    - Dumps more complete data on tracker-store.
-    - Stability fixes.
-    - Leak fixes.
-    - Performs automatic maintenance of feed messages.
-  * Bumped libgrss dependency on 0.7
-  * Performance improvements on tracker-store delete operations
-  * Performance improvements on tracker-miner-fs delete operation handling.
-  * Fix main Resource table id/urn leaks
-  * Fix unnecessary queries in tracker-extract
-
-Translations: es, hu, pt
-
-NEW in 1.5.0 - 2015-07-13
-=========================
-
-  * Fix possible scenarios for high memory consumption in tracker-extract
-  * Ontology documentation has been revamped
-  * Add search by tags functionality to tracker-needle
-  * Fix spurious "out of space" checks succeeding (#748907)
-  * Fix tracker-miner-fs not entering idle state (#751172)
-  * File monitoring fixes (#750394)
-  * MP3 extraction fixes (#733136, #728252, #735515)
-  * EPUB extraction fixes (#746401)
-  * Fixes on gstreamer-based album extraction (#748227, #732236)
-  * GSF-based extraction fixes (#730085, #746437)
-  * Fix various compiler warnings (#746381, #746194, #751051)
-  * OpenBSD portability fixes (#697719)
-  * Made tracker-needle use gsettings (#740302)
-  * Added infrastructure to rebuild FTS tokens on tokenizer changes
-  * Fixed first index of gnome user docs (#751992)
-  * Allow dummy .rule files for extractors (#735610)
-
-Translations: bg, ca, cs, de, es, hu, id, it, pl, pt, pt_BR, sk, sl, sv, tr, zh_TW
-
-
-NEW in 1.3.6 - 2015-03-17
-=========================
-
-  * Fix spurious folder deletes/reindexes (#741852)
-  * Fix nie:url UNIQUE constraint asserts on downloaded files (RH#1192224)
-  * Clear tracker-store watchdog timeout (#745565)
-  * Support fn:replace (#745917)
-  * Spam stderr less for not-so-uncommon error conditions (#746256)
-
-Translations: ko, bs, sr, sl, da
-
-
-NEW in 1.3.5 - 2015-03-06
-=========================
-
-  * Fix major database migration bug, skip Tracker 1.3.4. (#745737)
-  * Build only libiptc test if libjpeg is enabled (#745583)
-  * Put absolute path in shell script (#743738)
-
-Translations: ru
-
-
-NEW in 1.3.4 - 2015-03-03
-=========================
-
-  * Fixed playlists being processed by tracker-extract
-  * Fixes: #743727, Account for cardinality=0 on DB migration
-  * Fixes: #745219, mp3 passes album instead of song title to libmediaart
-
-Translations: zh_TW, sk, eo, nb, lt, eu, po
-
-
-NEW in 1.3.3 - 2015-02-05
-=========================
-
-  * Fixes: GB#681698, Disc number may be incorrect for multi-disc vorbis / flac albums
-  * Fixes: GB#741109, BMP extractor doesn't retrieve image height and width
-  * Fixes: GB#743250, libmediart-2.0 support
-  * Fixes: GB#735406, Tracker spams my log with "Unable to insert multiple values for subject ..."
-  * Fixes: GB#742391, applications, userguides: Don't detect locale changes if we failed to create the miner
-  * Fixes: GB#742035, 1.2.5 unit test failures
-  * Fixes: GB#739234, Tracker sometimes ignores SIGINT/SIGTERM
-  * Fixes: GB#663687, Missing accessible label names on tracker-needle widgets
-  * Fixes: GB#741777, libtracker-sparql: Document requirement to escape constructed queries
-  * Fixes: GB#678986, item_move() creates invalid SPARQL if source file does not exist
-  * Reverted: GB#733536, Remove --enable-guarantee metadata, always guarantee nie:title and nie:contentCreated
-
-Translations:
-
-  * Updated cs: Marek Černocký
-  * Updated de: Christian Kirbach, Bernd Homuth
-  * Updated el: Dimitris Spingos, Dimitris Spingos (Δημήτρης Σπίγγος)
-  * Updated es: Daniel Mustieles
-  * Updated eu: Inaki Larranaga Murgoitio, Iñaki Larrañaga Murgoitio
-  * Updated gl: Fran Dieguez
-  * Updated hu: Balázs Úr
-  * Updated pt_BR: Rafael Ferreira
-
-
-NEW in 1.3.2 - 2014-12-11
-=========================
-
-  * New Feature: 'tracker' binary: All pre-existing tracker-* command line tools have been merged into this new binary. Man pages are shown for 'help' sub-commands. This brings more of a "git" feel to the tracker's command line tools. There is a backwards compatible 'tracker-command' script and compatibility layer provided to ensure existing commands still work for a limited time. The old 'tracker-control' actions are now part of 'tracker daemon', 'tracker reset' and 'tracker index'. Additionally, the 'tracker-sql' utility has been integrated to allow SQL operations directly on the DB.
-  * Fixes: GB#741317, miner-fs: use GFile to check for homedir
   * Fixes: GB#741141, Tracker crashes every 5-10 minutes
+  * Fixes: GB#733536, Remove --enable-guarantee metadata, always guarantee nie:title and nie:contentCreated
+  * Fixes: GB#740268, System tab - very ambiguous about what is being removed
+  * Fixes: GB#739149, Bump glib version (g_str_match_string is only in glib >= 2.40)
   * Fixes: RH#1133042, [abrt] tracker: persistence_store_file(): tracker-extract killed by SIGSEGV
-  * all: Move all code from tracker_info() to g_info() new in GLib 2.40.
-  * gvdb: Fixed LDFLAGS and CFLAGS, was using unused variables
-  * gvdb: Move away from g_file_delete() to unlink() to avoid GIO dep for one line in unit tests
   * libtracker-fts: Make property list per-thread data to fix uninitialisation issues
   * libtracker-fts: Fixed compilation errors when --disable-tracker-fts is used
   * tracker-extract: Fixed potential use of uninitialised hash table in persistence_invalidate()
@@ -403,67 +26,67 @@ NEW in 1.3.2 - 2014-12-11
 
 Translations:
 
-  * Updated pl: Piotr Drąg
-
-
-NEW in 1.3.1 - 2014-12-03
-=========================
-
-  * Fixes: GB#733536, Remove --enable-guarantee metadata, always guarantee nie:title and nie:contentCreated
-  * Fixes: GB#739260, srcdir != builddir issue with latest git
-  * Fixes: GB#741012, should not override "all" target
-  * Fixes: GB#740268, System tab - very ambiguous about what is being removed
-  * Fixes: GB#740864, Symlink target for D-Bus service files includes DESTDIR
-
-Translations:
-
-  * Updated cs: Marek Černocký
-  * Updated es: Daniel Mustieles
-  * Updated hu: Balázs Úr
-  * Updated nb: Kjartan Maraas
+  * Updated fi: Lasse Liehu, Jiri Grönroos
   * Updated pt: Duarte Loreto, Pedro Albuquerque
 
 
-NEW in 1.3.0 - 2014-11-06
-=========================
+NEW in 1.2.4: 2014-11-06
+========================
 
-The main changes since 1.2.x are:
-
-  * build: Require GLib >= 2.4.0, for g_str_match_string() and g_info()
-  * all: Migrate to GKeyfileSettingsBackend, including:
-   * Now when using TRACKER_USE_CONFIG_FILES env var, we use this backend
-   * MAN pages which previously didn't exist for configurations are generated from xml gschemas
-  * libstemmer: Removed imported code and depend on external version
-  * libtracker-miner: Major update to Vala bindings
-  * libtracker-common: Major clean up and removal of unused internal APIs, including:
-    * Removed os-dependent APIs (mainly process spawning GLib does now anyway)
-    * Removed tracker_file_(un)lock() API which was unused
-    * Removed all run-time locale management, GNOME handles this between logins, so do we
-    * Removed TrackerConfigFile and TrackerKeyfileObject classes, use GSettings instead
-    * Removed unused type utils functions (e.g. tracker_*_to_string() and more)
-    * Moved tracker-ontologies.h (with prefix, etc definitions) into libtracker-sparql
-    * Moved CRC32 API into libtracker-data (the only place it's used)
-    * Moved TrackerStorage class to tracker-miner-fs (only place it's used)
-  * data: Now moved into their respective binary dirs, including:
-    * .desktop: Desktop files (moved from data/ into src/tracker-store, etc)
-    * .pc: Pkgconfig files (moved from data/ into src/libtracker-miner, etc)
-    * .service: DBus files (moved from data/dbus/* to src/tracker-store, etc)
-    * .png, .svg: Moved artwork into src/tracker-needle)
-    * .gschema.xml: GSettings files (moved from data/gschemas into src, tracker-store, etc)
-    * .ontology: Ontologies are now in src/ontologies
-    * stopwords.*: Stop words per language (moved from data/stopwords into src/libtracker-common for TrackerLanguage)
-  * data: Merged all data miner .desktop files with existing DBus .service files
-  * functional-tests: Many updates to fix broken functional tests, including:
-    * Writeback and miner base class clean ups
-    * Removing IgnoreNextUpdate wrapper and 'wait for miner to be idle' calls
-    * Waiting properly for resource addition / removal
-  * Fixes GB#737663, Avoid the use of setrlimit() causing SIGABRT in tracker-extract
+  * Fixes: GB#739237, Ownership reference not added in tracker-file-notifier.c
 
 Translations:
 
-  * Updated fi: Timo Jyrinki, Jiri Grönroos
   * Updated hu: Gábor Kelemen, Gabor Kelemen
+
+
+NEW in 1.2.3: 2014-10-17
+========================
+
+  * Fixes: GB#737768, fs: TrackerCrawler can crash due to invalid container pointers
+  * Fixes: GB#738522, libtracker-data: Guard against failure to create a FTS update statement
+  * Fixes: GB#738450, libtracker-data: Guard against failure to open the database
+  * libtracker-miner: _NO_STAT breaks in FileNotifier without a GFileInfo
+  * libtracker-miner: Handle multiple nfo:belongsToContainer properties to 1 nie:url
+  * tracker-writeback: Remove broken code to set file attributes
+  * functional-tests: Clean up writebacktest base class
+  * functional-tests: Clean up minertest base class
+  * functional-tests: Remove IgnoreNextUpdate wrapper, nobody should be using this
+  * functional-tests: Remove all remaining 'wait for miner to be idle' calls
+  * functional-tests: Allow waiting on a specific property, and fix tests that need this
+  * functional-tests: Await resource addition / removal properly in 300, 310, 600
+  * functional-tests: Improve the wait-for-change code in helpers.StoreHelper
+  * functional-tests: Partially fix writeback tests
+
+Translations:
+
   * Updated it: Milo Casagrande
+  * Updated sr: Мирослав Николић
+  * Updated sr@latin: Мирослав Николић, Miroslav Nikolić
+
+
+NEW in 1.2.2 - 2014-09-24
+=========================
+
+The main changes since 1.2.1 are:
+
+  * Fixes: GB#737243, API break with tracker_indexing_tree_new()
+  * libtracker-miner: Fixed missing Vala bindings for new DirectoryFlags.{PRIORITY|NO_STAT} enums
+
+
+NEW in 1.2.1 - 2014-09-23
+=========================
+
+The main changes since 1.2.0 are:
+
+  * ontology: Revert nfo:hasMediaStream max cardinality change until
+    Philip merges his feature branch to allow database migration and
+    coping for it. This won't be in the 1.2.x releases but likely in
+    1.4. and master branch.
+
+    For packagers, skipping 1.2.0 and using 1.2.1 should avoid data
+    loss by way of a reindex that may be forced when users upgrade.
+    This is highly important and something we want to avoid.
 
 
 NEW in 1.2.0 - 2014-09-22

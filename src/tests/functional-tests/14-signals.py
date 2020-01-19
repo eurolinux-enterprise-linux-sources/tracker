@@ -27,9 +27,10 @@ import unittest2 as ut
 from common.utils.storetest import CommonTrackerStoreTest as CommonTrackerStoreTest
 from common.utils import configuration as cfg
 
-from gi.repository import Gio
 from gi.repository import GObject
 from gi.repository import GLib
+import dbus
+from dbus.mainloop.glib import DBusGMainLoop
 import time
 
 GRAPH_UPDATED_SIGNAL = "GraphUpdated"
@@ -48,11 +49,10 @@ class TrackerStoreSignalsTests (CommonTrackerStoreTest):
     """
     def setUp (self):
         self.clean_up_list = []
-
         self.loop = GObject.MainLoop()
+        dbus_loop = DBusGMainLoop(set_as_default=True)
+        self.bus = dbus.SessionBus (dbus_loop)
         self.timeout_id = 0
-
-        self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 
         self.results_classname = None
         self.results_deletes = None
@@ -69,14 +69,11 @@ class TrackerStoreSignalsTests (CommonTrackerStoreTest):
         """
         After connecting to the signal, call self.__wait_for_signal.
         """
-        self.cb_id = self.bus.signal_subscribe(
-            sender=cfg.TRACKER_BUSNAME,
-            interface_name=SIGNALS_IFACE,
-            member=GRAPH_UPDATED_SIGNAL,
-            object_path=SIGNALS_PATH,
-            arg0=CONTACT_CLASS_URI,
-            flags=Gio.DBusSignalFlags.NONE,
-            callback=self.__signal_received_cb)
+        self.cb_id = self.bus.add_signal_receiver (self.__signal_received_cb,
+                                                   signal_name=GRAPH_UPDATED_SIGNAL,
+                                                   path = SIGNALS_PATH,
+                                                   dbus_interface = SIGNALS_IFACE,
+                                                   arg0 = CONTACT_CLASS_URI)
 
     def __wait_for_signal (self):
         """
@@ -94,12 +91,10 @@ class TrackerStoreSignalsTests (CommonTrackerStoreTest):
             uri, prop, value = self.tracker.query ("SELECT tracker:uri (%s), tracker:uri (%s), tracker:uri (%s) WHERE {}" % (s, o, p))
             print " - (", "-".join ([g, uri, prop, value]), ")"
                                     
-    def __signal_received_cb (self, connection, sender_name, object_path, interface_name, signal_name, parameters):
+    def __signal_received_cb (self, classname, deletes, inserts):
         """
         Save the content of the signal and disconnect the callback
         """
-        classname, deletes, inserts = parameters.unpack()
-
         self.results_classname = classname
         self.results_deletes = deletes
         self.results_inserts = inserts
@@ -108,7 +103,7 @@ class TrackerStoreSignalsTests (CommonTrackerStoreTest):
             GLib.source_remove (self.timeout_id )
             self.timeout_id = 0
         self.loop.quit ()
-        self.bus.signal_unsubscribe(self.cb_id)
+        self.bus._clean_up_signal_match (self.cb_id)
 
 
     def test_01_insert_contact (self):
